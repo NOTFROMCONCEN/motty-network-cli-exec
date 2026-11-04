@@ -3014,6 +3014,11 @@ var englishTools = ToolsMessages{
 	AlgoNegotiatedFmt:                 "algorithms %s",
 	UpdateFailedFmt:                   "Could not check for updates: %v",
 	LoginFailedFmt:                    "Could not change starting at login: %v",
+	ExecModeField:                     "Command execution",
+	ExecModeAuto:                      "Auto",
+	ExecModeShell:                     "Shell",
+	ExecModeNetworkCLI:                "Network CLI",
+	CLIPlatformField:                  "Device platform",
 }
 var englishRuleManagement = RuleManagementMessages{
 	Manage: "Manage rules", CountFmt: "%d rules", SelectedFmt: "%d selected",

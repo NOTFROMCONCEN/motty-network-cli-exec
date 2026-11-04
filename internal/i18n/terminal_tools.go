@@ -1212,6 +1212,11 @@ type ToolsMessages struct {
 	AlgoNegotiatedFmt                 string
 	UpdateFailedFmt                   string
 	LoginFailedFmt                    string
+	ExecModeField                     string
+	ExecModeAuto                      string
+	ExecModeShell                     string
+	ExecModeNetworkCLI                string
+	CLIPlatformField                  string
 
 	// The file list's configurable columns and default download destination.
 	FilesColumns                         string

@@ -3014,6 +3014,11 @@ var chineseTools = ToolsMessages{
 	AlgoNegotiatedFmt:                 "算法 %s",
 	UpdateFailedFmt:                   "无法检查更新:%v",
 	LoginFailedFmt:                    "无法更改开机自启:%v",
+	ExecModeField:                     "命令执行",
+	ExecModeAuto:                      "自动",
+	ExecModeShell:                     "Shell",
+	ExecModeNetworkCLI:                "网络 CLI",
+	CLIPlatformField:                  "设备平台",
 }
 var chineseRuleManagement = RuleManagementMessages{
 	Manage: "管理规则", CountFmt: "%d 条规则", SelectedFmt: "已选 %d 条",
