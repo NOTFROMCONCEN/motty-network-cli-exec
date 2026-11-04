@@ -296,7 +296,7 @@ func TestCheckingForUpdatesSaysSoWhenCurrentOrFailed(t *testing.T) {
 	}
 }
 
-func TestTheAutoCheckIsOnByDefaultRunsAndCanBeTurnedOff(t *testing.T) {
+func TestTheAutoCheckStaysOffUntilTheUserTurnsItOn(t *testing.T) {
 	_, options := newWorld(t)
 	options.Invalidate = func() {}
 	options.CheckUpdate = func() (update.Release, error) {
@@ -304,24 +304,36 @@ func TestTheAutoCheckIsOnByDefaultRunsAndCanBeTurnedOff(t *testing.T) {
 	}
 	state := New(options)
 	t.Cleanup(state.Close)
-	if !state.updateAtStart {
-		t.Fatal("the automatic check is not on by default")
+	// A fresh copy never calls the release feed on its own.
+	if state.updateAtStart || state.update.timer != nil {
+		t.Fatal("the automatic check is on without the user asking for it")
+	}
+	// The user turns it on; it runs, and the choice survives a restart.
+	state.Click(hitSettingsUpdateStartToggle)
+	if state.update.timer == nil {
+		t.Fatal("turning the check on armed no timer")
 	}
 	state.update.firstDelay, state.update.every = time.Millisecond, time.Hour
 	waitUpdate(t, state, func() bool { return state.update.available })
 	if !strings.Contains(state.status, "99.0.0") {
 		t.Fatalf("status %q does not announce the version", state.status)
 	}
-	state.Click(hitUpdateLater)
-	state.Click(hitSettingsUpdateStartToggle)
-	if state.update.timer != nil {
-		t.Fatal("turning the check off left a timer armed")
-	}
 	state.Close()
 
 	again := New(options)
 	defer again.Close()
-	if again.updateAtStart {
+	if !again.updateAtStart {
+		t.Fatal("turning the check on was not saved")
+	}
+	again.Click(hitSettingsUpdateStartToggle)
+	if again.update.timer != nil {
+		t.Fatal("turning the check off left a timer armed")
+	}
+	again.Close()
+
+	onceMore := New(options)
+	defer onceMore.Close()
+	if onceMore.updateAtStart {
 		t.Fatal("turning the check off was not saved")
 	}
 }
@@ -337,6 +349,7 @@ func TestTheAutoCheckAsksAgainAfterItsInterval(t *testing.T) {
 	state := New(options)
 	t.Cleanup(state.Close)
 	state.update.firstDelay, state.update.every = time.Millisecond, 5*time.Millisecond
+	state.Click(hitSettingsUpdateStartToggle)
 	waitUpdate(t, state, func() bool { return calls.Load() >= 2 })
 }
 
