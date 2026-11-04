@@ -146,6 +146,16 @@ try {
     $releaseArgs += @($setup, $out)
     Invoke-WithRetry "gh release create $tag" { gh @releaseArgs }
 
+    # The manifest is mirrored on the feed branch — one branch, one file — so
+    # CDNs can serve it where github.com refuses connections. The branch is a
+    # parentless commit holding only latest.json, replaced wholesale each
+    # release.
+    Write-Host "==> publishing the feed branch" -ForegroundColor Cyan
+    $blob = git hash-object -w $out
+    $tree = "100644 blob $blob`tlatest.json" | git mktree
+    $feedCommit = git commit-tree $tree -m "feed: $tag"
+    Invoke-WithRetry "git push -f fork feed" { git push -f fork "${feedCommit}:refs/heads/feed" }
+
     Write-Host ""
     Write-Host "released $tag" -ForegroundColor Green
     Write-Host "installed builds check for it when 设置 → 通用 → 启动时检查更新 is on."
