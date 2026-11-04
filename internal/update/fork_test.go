@@ -47,11 +47,90 @@ func noAssets(string) string {
 const goodSignature = "c2lnbmF0dXJl" // any base64: this package parses signatures, it does not verify them
 
 func goodManifest(version, file string, size int64, sum string) string {
-	return fmt.Sprintf(`{"version":%q,"tag":"v%s","source":"https://github.com/owner/repo/releases/tag/v%s","notes":"notes","files":[{"name":%q,"size":%d,"sha256":%q,"signature":%q}]}`,
-		version, version, version, file, size, sum, goodSignature)
+	return manifestFor(version, "v"+version, file, size, sum)
+}
+
+// manifestFor is a manifest naming its release both ways the fork publishes:
+// the machine-facing version and the tag it was released under.
+func manifestFor(version, tag, file string, size int64, sum string) string {
+	return fmt.Sprintf(`{"version":%q,"tag":%q,"source":"https://github.com/owner/repo/releases/tag/%s","notes":"notes","files":[{"name":%q,"size":%d,"sha256":%q,"signature":%q}]}`,
+		version, tag, tag, file, size, sum, goodSignature)
 }
 
 const setupName = "motty-0.3.1-windows-amd64-setup.exe"
+
+func TestTagForNamesBuildsOnTheUpstreamBase(t *testing.T) {
+	for _, test := range []struct {
+		version, base, codename, want string
+	}{
+		{version: "0.3.1", base: "0.3.0", codename: "Arknights", want: "v0.3.0-netcli-build.1-arknights"},
+		{version: "0.3.12", base: "0.3.0", codename: "Arknights", want: "v0.3.0-netcli-build.12-arknights"},
+		{version: "0.3.1", base: "0.3.0", codename: "arknights", want: "v0.3.0-netcli-build.1-arknights"},
+		// A build on a newer upstream line names that line.
+		{version: "0.4.3", base: "0.4.0", codename: "Arknights", want: "v0.4.0-netcli-build.3-arknights"},
+		// Not on the base's line, or no counter yet: a plain tag, so a
+		// misconfigured build never borrows the fork's name.
+		{version: "0.4.1", base: "0.3.0", codename: "Arknights", want: "v0.4.1"},
+		{version: "1.0.1", base: "0.3.0", codename: "Arknights", want: "v1.0.1"},
+		{version: "0.3.0", base: "0.3.0", codename: "Arknights", want: "v0.3.0"},
+	} {
+		if got := TagFor(test.version, test.base, test.codename); got != test.want {
+			t.Errorf("TagFor(%q, %q, %q) = %q, want %q", test.version, test.base, test.codename, got, test.want)
+		}
+	}
+}
+
+func TestVersionFromTagReadsBothShapes(t *testing.T) {
+	for _, test := range []struct {
+		tag  string
+		want string
+		ok   bool
+	}{
+		{tag: "v0.3.0-netcli-build.2-arknights", want: "0.3.2", ok: true},
+		{tag: "v0.4.0-netcli-build.12-arknights", want: "0.4.12", ok: true},
+		// Releases published before this naming keep working.
+		{tag: "v0.3.1", want: "0.3.1", ok: true},
+		// A shape the scheme does not use is not a tag this fork publishes.
+		{tag: "v0.3.0-nightly", ok: false},
+		{tag: "v0.3.0-netcli-build.9-arknights-evil", ok: false},
+		{tag: "v0.3.1-rc1", ok: false},
+		{tag: "nightly", ok: false},
+	} {
+		got, ok := VersionFromTag(test.tag)
+		if ok != test.ok || (ok && got != test.want) {
+			t.Errorf("VersionFromTag(%q) = %q, %v; want %q, %v", test.tag, got, ok, test.want, test.ok)
+		}
+	}
+}
+
+func TestLatestForkReadsATaggedBuild(t *testing.T) {
+	const tag = "v0.3.0-netcli-build.2-arknights"
+	server := forkServer(t, releaseWithAssets(tag),
+		manifestFor("0.3.2", tag, "motty-0.3.2-windows-amd64-setup.exe", 42, goodHash))
+	release, err := LatestFork(context.Background(), server.Client(), server.URL+"/latest", forkRepo, "windows", "amd64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if release.Version != "0.3.2" {
+		t.Fatalf("release %+v", release)
+	}
+	// The download comes from the tagged directory, under the machine-facing
+	// name the installer itself carries.
+	want := "https://github.com/owner/repo/releases/download/" + tag + "/motty-0.3.2-windows-amd64-setup.exe"
+	if release.Asset.URL != want || release.Asset.Name != "motty-0.3.2-windows-amd64-setup.exe" {
+		t.Fatalf("asset %+v", release.Asset)
+	}
+}
+
+func TestLatestForkRefusesAManifestForAnotherTag(t *testing.T) {
+	// A manifest whose tag does not match the release it came with is a stale
+	// copy, whichever naming it was written for.
+	server := forkServer(t, releaseWithAssets("v0.3.0-netcli-build.2-arknights"),
+		`{"version":"0.3.2","tag":"v0.3.1","source":"https://github.com/owner/repo/releases/tag/v0.3.1","files":[]}`)
+	if _, err := LatestFork(context.Background(), server.Client(), server.URL+"/latest", forkRepo, "windows", "amd64"); err == nil {
+		t.Fatal("a manifest for another tag was accepted")
+	}
+}
 
 func TestLatestForkReadsTheReleaseAndItsManifest(t *testing.T) {
 	server := forkServer(t, releaseWithAssets("v0.3.1"), goodManifest("0.3.1", setupName, 42, goodHash))
