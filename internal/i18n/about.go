@@ -6,6 +6,9 @@ type AboutMessages struct {
 	Title string // the settings category, and the page's title
 
 	Tagline string
+	// ForkNotice says this build is a third-party fork, not the official
+	// Motty, and that its updates come from the fork's own releases.
+	ForkNotice string
 
 	// The facts of the build. BuildUnavailable stands in for the commit when
 	// this copy was built without one.
@@ -38,6 +41,10 @@ type AboutMessages struct {
 	RepoDescription    string
 	Docs               string
 	DocsDescription    string
+	// Fork is this fork's own repository: where this build's source and
+	// releases live, next to the upstream card above it.
+	Fork            string
+	ForkDescription string
 	// Viva is the desktop framework Motty is built on: one more place to read
 	// what draws the window.
 	Viva            string
