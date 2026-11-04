@@ -10,6 +10,7 @@ import (
 	"github.com/vivaui/viva/text"
 	"motty/internal/charset"
 	"motty/internal/i18n"
+	"motty/internal/netcli"
 	"motty/internal/otp"
 	"motty/internal/serial"
 	"motty/internal/sshconfig"
@@ -130,6 +131,14 @@ type hostEditor struct {
 	// console and standardSecurity are RDP's own: the server's console
 	// (administrative) session, and Standard RDP Security without TLS or NLA.
 	viaSSH, clipboard, console, standardSecurity, chromeless bool
+	// execChoice is the "Command execution" choice: follow the transport's
+	// default, or pin the shell capture or the network CLI. cliPlatform indexes
+	// the platform list and matters only for the network CLI.
+	execChoice execChoice
+	// cliPlatform is the chosen network CLI platform and cliPlatformOpen its
+	// list being open.
+	cliPlatform     int
+	cliPlatformOpen bool
 	// ports are the serial ports found when the picker was last opened.
 	ports     []serial.Port
 	portsOpen bool
@@ -343,6 +352,9 @@ func (editor *hostEditor) load(host Host) {
 	editor.noHistory = host.NoHistory
 	editor.proxy, editor.proxyPassword = cloneOutboundProxy(host.Proxy), ""
 	editor.transfer = host.Transfer
+	editor.execChoice = execChoiceFor(host.ExecMode)
+	editor.cliPlatform = platformIndexFor(host.CLIPlatform)
+	editor.cliPlatformOpen = false
 	editor.advancedOpen = host.isSSH() && (host.Algo != nil || host.ForwardX11 || host.AgentForward || host.InteractiveOnly || host.NoHistory || host.IdentitiesOnly || host.LoginCommand != "")
 	if idleKeepAliveProtocol(host.Protocol) && (host.IdleKeepAlive > 0 || host.IdleInput != idleInputProtocolDefault) {
 		editor.advancedOpen = true
@@ -433,6 +445,14 @@ func (editor *hostEditor) host(id uint32) Host {
 		editor.protocol == protocolSSH && editor.auth.usesPassword() {
 		host.Credential = editor.credential
 	}
+	if execPaintable(editor.protocol) {
+		host.ExecMode = savedExecMode(editor.execChoice)
+		ids := netcliIDs()
+		platform := ids[min(editor.cliPlatform, len(ids)-1)]
+		if platform != netcli.GenericID {
+			host.CLIPlatform = platform
+		}
+	}
 	host.normalizeEndpoint()
 	setHostTags(&host, tags)
 	host.finish()
@@ -469,6 +489,7 @@ func (editor *hostEditor) reset() {
 	editor.forwardX11, editor.agentForward, editor.noHistory, editor.transfer = false, false, false, transferAuto
 	editor.agentAccess = false
 	editor.agentAccessChanged = false
+	editor.execChoice, editor.cliPlatform, editor.cliPlatformOpen = execChoiceAuto, 0, false
 	editor.proxy, editor.proxyPassword = nil, ""
 	editor.advancedOpen = false
 	editor.port.Insert(strconv.Itoa(defaultPort))
