@@ -1264,6 +1264,8 @@ var chineseAISettings = AISettingsMessages{
 	ContextLines:     "终端上下文",
 	ContextLinesDesc: "在询问模式下，随问题发送的可见终端行数。",
 	ContextOff:       "关闭",
+	CLITimeout:       "Net CLI 超时",
+	CLITimeoutDesc:   "AI 在网络设备上执行命令时至少等待的秒数；设备回到提示符即提前结束。",
 	Redact:           "隐藏敏感信息",
 	RedactDesc:       "发送给模型前，遮盖密码、密钥和令牌。",
 	History:          "保存历史",
