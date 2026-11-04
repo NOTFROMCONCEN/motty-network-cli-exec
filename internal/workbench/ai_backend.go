@@ -63,8 +63,9 @@ func (b *aiBackend) Sessions(ctx context.Context) ([]gate.SessionInfo, error) {
 			}
 			out = append(out, gate.SessionInfo{
 				ID: sessionHandle(session.ID), Title: session.Title, Address: session.Address,
-				Active: session.ID == b.state.activeSessionID,
-				Ready:  session.term.shell != nil && session.term.live,
+				Active:   session.ID == b.state.activeSessionID,
+				Ready:    session.term.shell != nil && session.term.live,
+				ExecMode: session.execModeName(), Platform: session.cliPlatformName(),
 			})
 		}
 		return out, nil
