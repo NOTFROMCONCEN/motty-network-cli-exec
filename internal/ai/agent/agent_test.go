@@ -94,7 +94,7 @@ func (b *fakeBackend) Exec(ctx context.Context, a tools.TerminalExecArgs) (gate.
 	if out == "" {
 		out = "out:" + a.Command
 	}
-	return gate.ExecResult{Output: out}, nil
+	return gate.ExecResult{Output: out, ExitKnown: true}, nil
 }
 func (b *fakeBackend) JobStart(context.Context, tools.TerminalStartArgs) (gate.JobStatus, error) {
 	return gate.JobStatus{}, errors.New("not used")

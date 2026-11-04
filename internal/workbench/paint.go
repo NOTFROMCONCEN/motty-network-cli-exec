@@ -2841,6 +2841,15 @@ func (state *State) declareHostFormBody(c ui.C, title string) {
 					b.transfer = ui.Slot(c).Grow(1)
 				}
 			})
+			if execPaintable(editor.protocol) {
+				// The execution setting: a shell capture or a device CLI, with
+				// the platform named when the device CLI is the choice.
+				b.execRow = ui.Slot(c).Height(rowHeight)
+				b.execCLI = editor.execChoice == execChoiceCLI
+				if b.execCLI {
+					b.cliPlatform = ui.Slot(c).Height(rowHeight)
+				}
+			}
 			if networkHost {
 				// The proxy is its own row: sharing the icon row clipped both the
 				// icon value and the proxy summary on VNC, RDP and Telnet.
@@ -2967,6 +2976,12 @@ func (state *State) paintHostFormFields(canvas *gfx.Canvas) {
 	state.paintHostTags(canvas, b.tags.Rect())
 	state.paintHostIconChoice(canvas, b.iconField.Rect())
 	state.paintHostColorChoice(canvas, b.colorField.Rect())
+	if execPaintable(protocol) {
+		state.paintExecModeChoice(canvas, b.execRow.Rect())
+		if b.execCLI {
+			state.paintCLIPlatformChoice(canvas, b.cliPlatform.Rect())
+		}
+	}
 	if networkHost {
 		state.paintHostProxyRow(canvas)
 	}
