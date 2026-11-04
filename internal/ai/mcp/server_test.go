@@ -50,7 +50,7 @@ func (b *fakeBackend) Exec(ctx context.Context, a tools.TerminalExecArgs) (gate.
 		case <-b.execRelease:
 		}
 	}
-	return gate.ExecResult{Output: "out", ExitCode: 3}, nil
+	return gate.ExecResult{Output: "out", ExitCode: 3, ExitKnown: true}, nil
 }
 func (b *fakeBackend) ListDir(context.Context, tools.SFTPListArgs) ([]gate.FileEntry, error) {
 	return []gate.FileEntry{{Name: "a", Size: 1}}, nil
