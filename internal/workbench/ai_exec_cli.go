@@ -3,6 +3,7 @@ package workbench
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"motty/internal/ai/gate"
 	"motty/internal/ai/tools"
@@ -21,11 +22,32 @@ var (
 	errCLINoPrompt = errors.New("no device prompt is visible in this terminal yet; wait until the device shows one (for example after its login banner) before running commands")
 )
 
+// cliWaitFloor is the smallest wait a network CLI command gets, from the
+// assistant's Net CLI timeout setting; 0 keeps whatever the call asked for.
+func cliWaitFloor(seconds int) time.Duration {
+	if seconds <= 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+// effectiveWait raises the call's requested wait to the command's floor. A
+// device command ends when its prompt comes back, so the wait is only a
+// ceiling: a floor never delays a finished command, it only keeps a slow or
+// paging device from being given up on too early.
+func (exec *aiExec) effectiveWait(requested time.Duration) time.Duration {
+	if exec.cliWait > requested {
+		return exec.cliWait
+	}
+	return requested
+}
+
 // beginCLIExec builds the collector for one raw device command. It refuses
 // anything that is not a single command line and any session whose terminal
 // does not currently show a recognizable device prompt: both would send the
-// device something nobody could match later.
-func beginCLIExec(session *Session, t *terminal, args tools.TerminalExecArgs) (*aiExec, []byte, error) {
+// device something nobody could match later. The floor stamps the command's
+// smallest wait (see effectiveWait).
+func beginCLIExec(session *Session, t *terminal, args tools.TerminalExecArgs, floor time.Duration) (*aiExec, []byte, error) {
 	command := strings.TrimSpace(args.Command)
 	if command == "" || strings.ContainsAny(command, "\n\r\t") || strings.IndexByte(command, 0) >= 0 {
 		return nil, nil, errCLIOneLine
@@ -49,7 +71,7 @@ func beginCLIExec(session *Session, t *terminal, args tools.TerminalExecArgs) (*
 	tap := netcli.NewTap(plat, prompt, command, maxExecOutput)
 	tap.SetSend(func(p []byte) bool { return t.sendProtocol(p) })
 	send := append([]byte(command), '\r')
-	return &aiExec{t: t, tap: cliTap{tap}, cli: tap, done: make(chan gate.ExecResult, 1)}, send, nil
+	return &aiExec{t: t, tap: cliTap{tap}, cli: tap, cliWait: floor, done: make(chan gate.ExecResult, 1)}, send, nil
 }
 
 // sendCLI types one raw command line into a device CLI session. Unlike the
