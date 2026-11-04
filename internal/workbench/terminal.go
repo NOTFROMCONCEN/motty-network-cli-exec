@@ -14,6 +14,7 @@ import (
 	"motty/internal/autofill"
 	"motty/internal/cmdhistory"
 	"motty/internal/i18n"
+	"motty/internal/netcli"
 	"motty/internal/sessionlog"
 	"motty/internal/sshconn"
 	"motty/internal/term"
@@ -765,12 +766,19 @@ func (state *State) pump(session *Session) {
 	}
 	data := t.rx
 	pending := false
+	if finished && t.exec != nil && t.exec.cli != nil {
+		// A network CLI command cannot finish without the device: end the wait
+		// now and say the connection closed, instead of running it to the shell
+		// timeout while nothing more can ever arrive.
+		t.endExec(netcli.StatusDisconnected, false, false)
+	}
 	if len(data) > pumpBudget && !finished && t.exec == nil && state.options.Invalidate != nil {
 		data, pending = data[:pumpBudget], true
 	}
 	wasExec := t.exec != nil
 	if wasExec && len(data) > 0 {
 		data = append(data[:0], t.feedExec(data)...)
+		state.watchCLIExec(t) // arm or retract the CLI quiet-window confirmation
 	}
 	if len(data) > 0 {
 		data = state.scanTransfer(session, data)

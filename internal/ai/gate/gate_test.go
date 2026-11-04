@@ -26,7 +26,7 @@ func (b *fakeBackend) ReadTerminal(context.Context, tools.TerminalReadArgs) (str
 func (b *fakeBackend) Exec(_ context.Context, a tools.TerminalExecArgs) (ExecResult, error) {
 	b.execs.Add(1)
 	b.lastCommand = a.Command
-	return ExecResult{Output: "out", ExitCode: 3}, nil
+	return ExecResult{Output: "out", ExitCode: 3, ExitKnown: true}, nil
 }
 func (b *fakeBackend) ListDir(context.Context, tools.SFTPListArgs) ([]FileEntry, error) {
 	return []FileEntry{{Name: "a", Size: 1}, {Name: "d", Dir: true}}, nil
@@ -247,7 +247,7 @@ func (b *fleetBackend) Exec(_ context.Context, a tools.TerminalExecArgs) (ExecRe
 	if b.notOK[a.Session] {
 		return ExecResult{}, errors.New("connection lost")
 	}
-	return ExecResult{Output: "output of " + a.Session}, nil
+	return ExecResult{Output: "output of " + a.Session, ExitKnown: true}, nil
 }
 
 func TestABatchIsApprovedOnceWithEveryTargetNamedAndRunsOnEach(t *testing.T) {

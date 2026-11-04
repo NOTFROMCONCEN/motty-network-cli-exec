@@ -10,6 +10,7 @@ import (
 	"motty/internal/ai/capture"
 	"motty/internal/ai/gate"
 	"motty/internal/ai/tools"
+	"motty/internal/netcli"
 	"motty/internal/shellkind"
 )
 
@@ -17,8 +18,57 @@ import (
 // waiting to see finish. A terminal has at most one.
 type aiExec struct {
 	t    *terminal
-	tap  *capture.Tap
+	tap  execTap
+	cli  *netcli.Tap          // the network CLI collector; nil on the shell path
 	done chan gate.ExecResult // buffered; receives exactly once
+	// confirm is the quiet-window timer behind a candidate prompt (see
+	// netcli.Tap.Pending); nil while the shell path runs or output keeps
+	// arriving.
+	confirm *time.Timer
+}
+
+// execTap is the per-command collector the pump feeds shell output through: it
+// filters what the terminal shows and reports the command's output and how it
+// ended. The shell capture and the network CLI collector both satisfy it.
+type execTap interface {
+	Feed(p []byte) (display []byte, done bool)
+	// Abort releases what the collector still holds back from the display, so
+	// the terminal keeps everything after the wait ended.
+	Abort() (display []byte)
+	Result() gate.ExecResult
+}
+
+// shellTap adapts the POSIX capture Tap; the displayed bytes and the recorded
+// output are the shell path's own, unchanged.
+type shellTap struct{ tap *capture.Tap }
+
+func (s shellTap) Feed(p []byte) ([]byte, bool) { return s.tap.Feed(p) }
+
+func (s shellTap) Abort() []byte { return s.tap.Abort() }
+
+func (s shellTap) Result() gate.ExecResult {
+	r := s.tap.Result()
+	return gate.ExecResult{Output: r.Output, ExitCode: r.ExitCode, Truncated: r.Truncated, ExitKnown: true}
+}
+
+// cliTap adapts the network CLI collector: everything the device sent is shown
+// unchanged, and the result carries completion instead of an exit status.
+type cliTap struct{ tap *netcli.Tap }
+
+func (c cliTap) Feed(p []byte) ([]byte, bool) { return p, c.tap.Feed(p) }
+
+func (cliTap) Abort() []byte { return nil }
+
+func (c cliTap) Result() gate.ExecResult {
+	r := c.tap.Result()
+	return gate.ExecResult{
+		Output:    r.Output,
+		Truncated: r.Truncated,
+		TimedOut:  r.Status == netcli.StatusTimeout,
+		ExitKnown: false,
+		Status:    r.Status.String(),
+		CLIError:  r.CLIError,
+	}
 }
 
 // maxExecOutput bounds the output kept for the model, whatever the terminal shows.
@@ -67,7 +117,9 @@ func (t *terminal) shellKind() shellkind.Kind {
 	return shellkind.Unknown
 }
 
-// beginExec types the command into the session's terminal. Window thread.
+// beginExec types the command into the session's terminal. Window thread. The
+// session's execution mode picks the backend: a shell gets the capture wrapper
+// typed for its family, a network device gets its raw command line.
 func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 	session, err := state.aiSession(args.Session)
 	if err != nil {
@@ -80,11 +132,54 @@ func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 	if t.exec != nil {
 		return nil, errExecBusy
 	}
+	var exec *aiExec
+	var send []byte
+	if session.sessionExecMode() == cliMode {
+		if exec, send, err = beginCLIExec(session, t, args); err != nil {
+			return nil, err
+		}
+	} else {
+		exec, send, err = beginShellExec(t, args)
+		if err != nil {
+			return nil, err
+		}
+	}
+	t.exec = exec
+	if t.aiRows == nil {
+		t.aiRows = map[uint64]struct{}{}
+	}
+	// The prompt row is where the assistant's command will be shown, so mark it
+	// before the shell echoes anything. A line ID survives scrolling.
+	line := t.screen.Row(t.screen.Cursor().Y).ID
+	t.aiStartID = line
+	t.aiRows[line] = struct{}{}
+	// A CLI command is typed as the device expects it and the terminal shows
+	// exactly that, so it goes into the session's recording like a user's own
+	// input; the shell wrapper never does.
+	sender := t.sendAssistant
+	if exec.cli != nil {
+		sender = t.sendCLI
+	}
+	if !sender(send) {
+		delete(t.aiRows, line)
+		t.exec = nil
+		return nil, errExecRefuse
+	}
+	return t.exec, nil
+}
+
+// beginShellExec builds the shell capture for one command, exactly as before:
+// the wrapped bytes are typed into the shell, and the tap hides the wrapper's
+// echo and waits for the marker.
+// beginShellExec builds the shell capture for one command, typed for the
+// shell's family: the wrapped bytes are typed into the shell, and the tap
+// hides the wrapper's echo and waits for the marker.
+func beginShellExec(t *terminal, args tools.TerminalExecArgs) (*aiExec, []byte, error) {
 	kind := t.shellKind()
 	nonce := capture.NewNonce()
 	wrapped, err := capture.WrapFor(kind, args.Command, nonce)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tap := capture.NewTap(nonce, maxExecOutput)
 	tap.SetEcho(wrapped)
@@ -95,21 +190,7 @@ func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 	if kind != shellkind.PowerShell {
 		tap.SetDisplay(capture.DisplayCommandFor(kind, args.Command))
 	}
-	t.exec = &aiExec{t: t, tap: tap, done: make(chan gate.ExecResult, 1)}
-	if t.aiRows == nil {
-		t.aiRows = map[uint64]struct{}{}
-	}
-	// The prompt row is where the assistant's command will be shown, so mark it
-	// before the shell echoes anything. A line ID survives scrolling.
-	line := t.screen.Row(t.screen.Cursor().Y).ID
-	t.aiStartID = line
-	t.aiRows[line] = struct{}{}
-	if !t.sendAssistant(wrapped) {
-		delete(t.aiRows, line)
-		t.exec = nil
-		return nil, errExecRefuse
-	}
-	return t.exec, nil
+	return &aiExec{t: t, tap: shellTap{tap}, done: make(chan gate.ExecResult, 1)}, wrapped, nil
 }
 
 // markAIBlock gives the assistant's command and its output rows the AI gutter
@@ -152,23 +233,99 @@ func (t *terminal) feedExec(output []byte) []byte {
 	return display
 }
 
+// cliQuiet is how long a device must have stopped sending before a candidate
+// prompt counts as the command's end (see netcli.Tap.Pending).
+const cliQuiet = 400 * time.Millisecond
+
+// watchCLIExec arms the quiet-window confirmation of a network CLI command
+// after each output chunk: a candidate prompt is confirmed only once the
+// device has stayed silent for cliQuiet, and retracted by any output in
+// between. Window thread.
+func (state *State) watchCLIExec(t *terminal) {
+	exec := t.exec
+	if exec == nil || exec.cli == nil {
+		return
+	}
+	switch {
+	case !exec.cli.Pending():
+		if exec.confirm != nil {
+			exec.confirm.Stop()
+			exec.confirm = nil
+		}
+	case exec.confirm != nil:
+		exec.confirm.Reset(cliQuiet)
+	default:
+		exec.confirm = time.AfterFunc(cliQuiet, func() {
+			state.aiPost(func(*State) {
+				if t.exec == exec && exec.cli.Confirm() {
+					t.endConfirmed(exec)
+				}
+			})
+		})
+	}
+}
+
+// endConfirmed completes a network CLI command whose quiet window passed.
+func (t *terminal) endConfirmed(exec *aiExec) {
+	if t.exec != exec {
+		return
+	}
+	t.exec = nil
+	if exec.confirm != nil {
+		exec.confirm.Stop()
+		exec.confirm = nil
+	}
+	// The shell path finishes inside the pump, which marks the block right
+	// after; this path ends on a timer, so it closes the mark itself.
+	t.markAIBlock(true)
+	exec.done <- exec.tap.Result()
+}
+
 // finishExec ends the running command: normally when its marker arrived, or
 // because the wait timed out, was canceled, or the user pressed Ctrl-C. The
 // command may still be running on the remote side then, so an interrupt is sent.
 func (t *terminal) finishExec(timedOut, interrupt bool) {
+	t.endExec(netcli.StatusCancelled, timedOut, interrupt)
+}
+
+// endExec is finishExec with a say in how a network CLI wait ended: a timeout
+// and a cancellation read differently from a connection that died under the
+// command. A shell command ignores the status; its result is its exit code.
+func (t *terminal) endExec(cliStatus netcli.Status, timedOut, interrupt bool) {
 	exec := t.exec
 	if exec == nil {
 		return
 	}
 	t.exec = nil
+	if exec.confirm != nil {
+		exec.confirm.Stop()
+		exec.confirm = nil
+	}
+	if exec.cli != nil {
+		// A network device gets no interrupt character from us: the same bytes
+		// mean different things to different CLIs, so a timed-out or cancelled
+		// wait ends quietly and says so, and the user's own Ctrl-C reaches the
+		// device through their typing.
+		status := cliStatus
+		if timedOut {
+			status = netcli.StatusTimeout
+		}
+		exec.cli.Abort(status)
+	}
 	if rest := exec.tap.Abort(); len(rest) > 0 {
 		t.writeRemote(rest, t.recordingNow())
 	}
 	result := exec.tap.Result()
-	if interrupt && t.shell != nil {
+	result.TimedOut = result.TimedOut || timedOut
+	if interrupt && exec.cli == nil && t.shell != nil {
 		t.sendProtocol([]byte{3})
 	}
-	exec.done <- gate.ExecResult{Output: result.Output, ExitCode: result.ExitCode, Truncated: result.Truncated, TimedOut: timedOut}
+	if exec.cli != nil {
+		// The pump closes a shell block's mark itself; a CLI wait that ends
+		// here never sees the pump again.
+		t.markAIBlock(true)
+	}
+	exec.done <- result
 }
 
 // userInterrupts reports whether keyboard input contains Ctrl-C, which ends the
