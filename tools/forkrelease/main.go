@@ -84,11 +84,11 @@ func keygen(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeFile(*privatePath, privateText, 0o600); err != nil {
+	if err := os.WriteFile(*privatePath, privateText, 0o600); err != nil {
 		return err
 	}
 	if *publicPath != "" {
-		if err := writeFile(*publicPath, publicText, 0o644); err != nil {
+		if err := os.WriteFile(*publicPath, publicText, 0o644); err != nil {
 			return err
 		}
 	}
@@ -167,7 +167,7 @@ func manifest(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeFile(*out, append(data, '\n'), 0o644); err != nil {
+	if err := os.WriteFile(*out, append(data, '\n'), 0o644); err != nil {
 		return err
 	}
 	fmt.Printf("%s: %s (%d bytes)\n", name, sum, size)
@@ -227,8 +227,4 @@ func fileDigest(path string) (size int64, sum string, err error) {
 		return 0, "", err
 	}
 	return size, hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-func writeFile(path string, data []byte, mode os.FileMode) error {
-	return os.WriteFile(path, data, mode)
 }
