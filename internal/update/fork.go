@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -24,7 +25,52 @@ const (
 	ForkFeed = "https://api.github.com/repos/" + ForkRepo + "/releases/latest"
 	// ForkManifest is the asset carrying sizes, checksums and signatures.
 	ForkManifest = "latest.json"
+	// ForkBase is the upstream release this fork's version line sits on, and
+	// ForkCodename names this era of the fork, until upstream publishes its
+	// next version. The fork's major and minor never exceed the base's, so a
+	// build of this fork never outranks upstream's own line.
+	ForkBase     = "0.3.0"
+	ForkCodename = "Arknights"
 )
+
+// forkTagPattern is the tag a fork release carries: the upstream base it was
+// built on, a netcli marker, a build counter and the era's codename, as in
+// v0.3.0-netcli-build.1-arknights.
+var forkTagPattern = regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)-netcli-build\.(\d+)-([a-z0-9]+)$`)
+
+// TagFor names a build the way the fork publishes it: the upstream base, the
+// marker, a build counter and the codename — v0.3.0-netcli-build.1-arknights
+// for 0.3.1. The counter is the version's own patch number, so the name and
+// the machine-readable version move together. NSIS and the update comparison
+// only take plain dotted versions, which is why the name is a layer above
+// them, not a replacement. A version from another line keeps a plain tag.
+func TagFor(version, base, codename string) string {
+	v, okV := parse(version)
+	b, okB := parse(base)
+	if !okV || !okB || v[0] != b[0] || v[1] != b[1] || v[2] <= 0 {
+		return "v" + version
+	}
+	return fmt.Sprintf("v%s-netcli-build.%d-%s", base, v[2], strings.ToLower(codename))
+}
+
+// VersionFromTag reads a tag the fork publishes back into the dotted version
+// the update machinery compares: v0.3.0-netcli-build.2-arknights is 0.3.2. A
+// plain numbered tag keeps working, so releases published before this naming
+// stay readable.
+func VersionFromTag(tag string) (string, bool) {
+	if match := forkTagPattern.FindStringSubmatch(tag); match != nil {
+		version := match[1] + "." + match[2] + "." + match[4]
+		if _, ok := parse(version); ok {
+			return version, true
+		}
+		return "", false
+	}
+	version := strings.TrimPrefix(tag, "v")
+	if _, ok := parse(version); !ok {
+		return "", false
+	}
+	return version, true
+}
 
 // LatestFork reads the newest release of repo and the manifest attached to it.
 // The package URL is built from repo and the tag, never taken from either
@@ -103,13 +149,10 @@ func forkRelease(ctx context.Context, client *http.Client, feed string) (Release
 		return Release{}, "", "", err
 	}
 	tag := strings.TrimSpace(body.Tag)
-	version := strings.TrimPrefix(tag, "v")
-	// The tag names the download directory, so it has to be a plain version:
-	// nothing else is allowed to reach a URL the app builds.
-	if !tagPattern.MatchString(tag) {
-		return Release{}, "", "", errors.New("update: the release feed has no usable version")
-	}
-	if _, ok := parse(version); !ok || body.Draft || body.Prerelease {
+	version, ok := VersionFromTag(tag)
+	// The tag names the download directory, so it has to be one this fork
+	// publishes: its own tagged builds or a plain numbered one.
+	if !ok || body.Draft || body.Prerelease {
 		return Release{}, "", "", errors.New("update: the release feed has no usable version")
 	}
 	if !strings.HasPrefix(body.URL, "https://") {
