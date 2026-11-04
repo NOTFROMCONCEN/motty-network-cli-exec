@@ -20,6 +20,13 @@
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Version,
+    # The published name carries the upstream base and the era's codename on
+    # top of the numeric version: 0.3.2 becomes v0.3.0-netcli-build.2-arknights.
+    # The counter is the version's own patch number, so the two move together.
+    # Both stay until upstream publishes its next version, when the base moves
+    # and a new codename may take over.
+    [string]$Base = "0.3.0",
+    [string]$Codename = "Arknights",
     [string]$NotesPath = "",
     [string]$KeyPath = "",
     [string]$Branch = "feature/network-cli-exec",
@@ -30,7 +37,9 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
 $forkRepo = "NOTFROMCONCEN/motty-network-cli-exec"
-$tag = "v$Version"
+$patch = [int]($Version -split '\.')[2]
+if ($patch -lt 1) { throw "the build counter (the version's patch number) must be at least 1" }
+$tag = "v$Base-netcli-build.$patch-$($Codename.ToLowerInvariant())"
 
 if ($Version -notmatch '^\d+\.\d+\.\d+$') {
     throw "version '$Version' must be three dot-separated numbers, for example 0.3.1"
@@ -80,7 +89,7 @@ try {
 
     Write-Host "==> signing the manifest" -ForegroundColor Cyan
     $out = Join-Path $repo "build/dist/latest.json"
-    $signArgs = @("run", "./tools/forkrelease", "manifest", "-version", $Version, "-pkg", $setup, "-key", $KeyPath, "-out", $out, "-repo", $forkRepo)
+    $signArgs = @("run", "./tools/forkrelease", "manifest", "-version", $Version, "-base", $Base, "-codename", $Codename, "-pkg", $setup, "-key", $KeyPath, "-out", $out, "-repo", $forkRepo)
     if ($NotesPath -ne "") { $signArgs += @("-notes", $NotesPath) }
     & $GoBinary @signArgs
     if ($LASTEXITCODE -ne 0) { throw "signing the manifest failed" }
@@ -96,7 +105,7 @@ try {
         Write-Host "  git add viva.toml internal/update/update.go"
         Write-Host "  git commit -m `"chore(release): $tag`""
         Write-Host "  git push fork $Branch"
-        Write-Host "  gh release create $tag --repo $forkRepo --target $Branch --title `"Motty $tag`" --notes-file <notes> `"$setup`" `"$out`""
+        Write-Host "  gh release create $tag --repo $forkRepo --target $Branch --title `"Motty NetCLI $tag`" --notes-file <notes> `"$setup`" `"$out`""
         return
     }
 
@@ -116,7 +125,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "git push failed" }
 
     Write-Host "==> creating the release" -ForegroundColor Cyan
-    $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty $tag")
+    $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty NetCLI $tag")
     $releaseArgs += if ($NotesPath -ne "") { @("--notes-file", $NotesPath) } else { @("--generate-notes") }
     $releaseArgs += @($setup, $out)
     gh @releaseArgs
