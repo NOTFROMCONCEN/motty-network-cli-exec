@@ -100,6 +100,11 @@ type aiSettings struct {
 	contextLines int
 	redact       bool
 	keepHistory  bool
+
+	// cliTimeoutSeconds is the smallest wait for a command the assistant runs
+	// on a network CLI session, in seconds; zero until read falls back to the
+	// default below.
+	cliTimeoutSeconds int
 	// External access (MCP): whether it is enabled and the shared access level.
 	mcpEnabled bool
 	mcpMode    gate.Mode
@@ -110,7 +115,7 @@ type aiSettings struct {
 }
 
 func defaultAISettings() aiSettings {
-	return aiSettings{autoUpTo: risk.Low, maxSteps: 12, contextLines: 60, redact: true, keepHistory: true, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}
+	return aiSettings{autoUpTo: risk.Low, maxSteps: 12, contextLines: 60, cliTimeoutSeconds: 60, redact: true, keepHistory: true, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}
 }
 
 // aiState is everything the assistant keeps in a window. It costs nothing until
@@ -287,6 +292,11 @@ func (state *State) reloadAI() {
 	read("ai.context_lines", func(v string) {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 500 {
 			ai.settings.contextLines = n
+		}
+	})
+	read("ai.netcli_timeout", func(v string) {
+		if n, err := strconv.Atoi(v); err == nil && n >= 10 && n <= 600 {
+			ai.settings.cliTimeoutSeconds = n
 		}
 	})
 	read("ai.redact", func(v string) { ai.settings.redact = v != "off" })

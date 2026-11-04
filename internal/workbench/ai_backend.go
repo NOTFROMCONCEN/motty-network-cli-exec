@@ -116,7 +116,7 @@ func (b *aiBackend) Exec(ctx context.Context, args tools.TerminalExecArgs) (gate
 	if err != nil {
 		return gate.ExecResult{}, err
 	}
-	return b.state.aiExecWait(exec, execTimeout(args.TimeoutSeconds), ctx.Done()), nil
+	return b.state.aiExecWait(exec, exec.effectiveWait(execTimeout(args.TimeoutSeconds)), ctx.Done()), nil
 }
 
 // remote returns the session's SFTP client, opening it on first use.

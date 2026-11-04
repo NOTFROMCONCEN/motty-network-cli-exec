@@ -225,6 +225,7 @@ func (state *State) eachSettingsEntry(add func(settingsEntry)) {
 	group(settingsAssistant, ai.BehaviourTitle, ai.AutoRun, ai.AutoRunDesc)
 	group(settingsAssistant, ai.BehaviourTitle, ai.MaxSteps, ai.MaxStepsDesc)
 	group(settingsAssistant, ai.BehaviourTitle, ai.ContextLines, ai.ContextLinesDesc)
+	group(settingsAssistant, ai.BehaviourTitle, ai.CLITimeout, ai.CLITimeoutDesc)
 	group(settingsAssistant, ai.BehaviourTitle, ai.Redact, ai.RedactDesc)
 	group(settingsAssistant, ai.BehaviourTitle, ai.History, ai.HistoryDesc)
 	group(settingsAssistant, ai.BehaviourTitle, ai.ClearHistory, ai.ClearHistoryDesc)
