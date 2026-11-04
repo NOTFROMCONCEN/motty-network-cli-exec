@@ -236,6 +236,8 @@ type AISettingsMessages struct {
 	ClearTitle              string
 	ClearBody               string
 	ClearConfirm            string
+	CLITimeout              string
+	CLITimeoutDesc          string
 
 	// External access.
 	MCPEnable          string
