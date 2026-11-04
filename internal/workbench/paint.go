@@ -2019,6 +2019,8 @@ func (state *State) paintHostDialog(canvas *ui.Canvas, viewport ui.Rect) {
 	vncHost := state.editor.protocol == protocolVNC || state.editor.protocol == protocolRDP
 	var vncRows flex.Box
 	var protocol, label, endpoint, group, tags, iconField, colorField, transfer, proxy, advanced flex.Box
+	var execRow, cliPlatform flex.Box
+	execHost := execPaintable(state.editor.protocol)
 	form := &state.editor.form
 	form.count = 0
 	if form.lastError != state.dialogError {
@@ -2056,6 +2058,14 @@ func (state *State) paintHostDialog(canvas *ui.Canvas, viewport ui.Rect) {
 				transfer = f.Slot().Grow(1)
 			}
 		})
+		if execHost {
+			// The execution setting: a shell capture or a device CLI, with the
+			// platform named when the device CLI is the choice.
+			execRow = f.Slot().Height(rowHeight)
+			if state.editor.execChoice == execChoiceCLI {
+				cliPlatform = f.Slot().Height(rowHeight)
+			}
+		}
 		if networkHost {
 			// The proxy is its own row: sharing the icon row clipped both the
 			// icon value and the proxy summary on VNC, RDP and Telnet.
@@ -2089,6 +2099,12 @@ func (state *State) paintHostDialog(canvas *ui.Canvas, viewport ui.Rect) {
 	if ssh {
 		state.paintTransferChoice(canvas, transfer.Rect())
 		state.paintAdvancedSection(canvas, advanced.Rect())
+	}
+	if execHost {
+		state.paintExecModeChoice(canvas, execRow.Rect())
+		if state.editor.execChoice == execChoiceCLI {
+			state.paintCLIPlatformChoice(canvas, cliPlatform.Rect())
+		}
 	}
 
 	area.EndContent()
