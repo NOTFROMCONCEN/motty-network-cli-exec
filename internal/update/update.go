@@ -130,22 +130,12 @@ func cutUTF8(text string, limit int) string {
 	return text[:limit]
 }
 
-// Check asks the mirror for the newest release and, when the mirror cannot
-// answer, GitHub. The package is chosen for goos and goarch; a GitHub answer has
-// none, because it carries no checksums to hold a download to.
+// Check asks the fork's newest release for a build of this platform. This fork
+// ships the network CLI work upstream does not have yet, so an upstream release
+// is never a newer version of what is installed here: there is no fallback to
+// it. See fork.go.
 func Check(ctx context.Context, client *http.Client, goos, goarch string) (Release, error) {
-	return checkFeeds(ctx, client, MirrorFeed, Feed, goos, goarch)
-}
-
-func checkFeeds(ctx context.Context, client *http.Client, mirrorFeed, githubFeed, goos, goarch string) (Release, error) {
-	release, err := LatestMirror(ctx, client, mirrorFeed, goos, goarch)
-	if err == nil {
-		return release, nil
-	}
-	if fallback, fallbackErr := Latest(ctx, client, githubFeed); fallbackErr == nil || errors.Is(fallbackErr, ErrNoRelease) {
-		return fallback, fallbackErr
-	}
-	return Release{}, err
+	return LatestFork(ctx, client, ForkFeed, ForkRepo, goos, goarch)
 }
 
 // StableName is the name the mirror gives the package of a platform, or "" for
