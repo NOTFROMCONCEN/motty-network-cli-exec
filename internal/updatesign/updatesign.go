@@ -18,11 +18,12 @@ import (
 	"aead.dev/minisign"
 )
 
-// releaseKeyText is the public half of the release signing key. The private
-// half lives in the release workflow (MOTTY_UPDATE_SIGNING_KEY) and in the
-// owner's offline backup, never in this repository.
-const releaseKeyText = `untrusted comment: minisign public key: C4B1B4A98B79DE2D
-RWQt3nmLqbSxxNUcSrHSz1RYgkrnE2U6eioEHTy355AsjTQhIypdhNkj`
+// releaseKeyText is the public half of this fork's release signing key. The
+// private half lives outside the repository (tools/.tools/motty-fork-signing.key
+// on the build machine) and in its owner's backup, never here. Releases this
+// build installs are signed with it; upstream's key would not match.
+const releaseKeyText = `untrusted comment: minisign public key: EA3DE85C3EACBF2A
+RWQqv6w+XOg96pbm2bMQ4GFK6xJZAR34ZURkxhEIxb+cR4AjCAyawoeI`
 
 // ErrUnsigned means the release names no signature for the package.
 var ErrUnsigned = errors.New("updatesign: the release has no signature")
