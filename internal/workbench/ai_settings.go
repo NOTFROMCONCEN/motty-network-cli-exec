@@ -84,6 +84,10 @@ var (
 	hitAISetText1             = tree.ID(aiSettingsHits, "ai-set-text1")
 	hitAISetText4             = tree.ID(aiSettingsHits, "ai-set-text4")
 	hitAISetText8             = tree.ID(aiSettingsHits, "ai-set-text8")
+	hitAISetCLITo30           = tree.ID(aiSettingsHits, "ai-set-cli-to-30")
+	hitAISetCLITo60           = tree.ID(aiSettingsHits, "ai-set-cli-to-60")
+	hitAISetCLITo120          = tree.ID(aiSettingsHits, "ai-set-cli-to-120")
+	hitAISetCLITo300          = tree.ID(aiSettingsHits, "ai-set-cli-to-300")
 	hitAISetRedact            = tree.ID(aiSettingsHits, "ai-set-redact")
 	hitAISetHistory           = tree.ID(aiSettingsHits, "ai-set-history")
 	hitAISetClearHistory      = tree.ID(aiSettingsHits, "ai-set-clear-history")
@@ -360,6 +364,14 @@ func (state *State) aiSettingsClick(id ui.ID) bool {
 		state.aiPut("ai.attachment_text_mib", "4")
 	case id == hitAISetText8:
 		state.aiPut("ai.attachment_text_mib", "8")
+	case id == hitAISetCLITo30:
+		state.aiPut("ai.netcli_timeout", "30")
+	case id == hitAISetCLITo60:
+		state.aiPut("ai.netcli_timeout", "60")
+	case id == hitAISetCLITo120:
+		state.aiPut("ai.netcli_timeout", "120")
+	case id == hitAISetCLITo300:
+		state.aiPut("ai.netcli_timeout", "300")
 	case id == hitAISetRedact:
 		state.aiPut("ai.redact", onOff(!state.ai.settings.redact))
 	case id == hitAISetHistory:
@@ -666,6 +678,9 @@ func (state *State) aiSettingsKey(event ui.KeyEvent) (ui.EventResult, bool) {
 	case hitAISetText1, hitAISetText4, hitAISetText8:
 		textLimits := state.aiTextLimitOptions()
 		options = textLimits[:]
+	case hitAISetCLITo30, hitAISetCLITo60, hitAISetCLITo120, hitAISetCLITo300:
+		timeouts := state.aiCLITimeoutOptions()
+		options = timeouts[:]
 	case hitAISetMCPObserve, hitAISetMCPAsk, hitAISetMCPAllowAll:
 		modes = state.aiMCPModeOptions()
 		options = modes[:]
@@ -762,6 +777,12 @@ func (state *State) aiContextOptions() [4]components.SegmentOption {
 func (state *State) aiTextLimitOptions() [3]components.SegmentOption {
 	return [...]components.SegmentOption{
 		{ID: hitAISetText1, Label: "1 MiB"}, {ID: hitAISetText4, Label: "4 MiB"}, {ID: hitAISetText8, Label: "8 MiB"},
+	}
+}
+
+func (state *State) aiCLITimeoutOptions() [4]components.SegmentOption {
+	return [...]components.SegmentOption{
+		{ID: hitAISetCLITo30, Label: "30"}, {ID: hitAISetCLITo60, Label: "60"}, {ID: hitAISetCLITo120, Label: "120"}, {ID: hitAISetCLITo300, Label: "300"},
 	}
 }
 

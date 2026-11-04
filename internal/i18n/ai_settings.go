@@ -204,6 +204,30 @@ type AISettingsMessages struct {
 	ClearTitle              string
 	ClearBody               string
 	ClearConfirm            string
+	BehaviourTitle          string
+	AutoRun                 string
+	AutoRunDesc             string
+	RiskLow                 string
+	RiskMedium              string
+	RiskHigh                string
+	MaxSteps                string
+	MaxStepsDesc            string
+	ContextLines            string
+	ContextLinesDesc        string
+	ContextOff              string
+	CLITimeout              string
+	CLITimeoutDesc          string
+	Redact                  string
+	RedactDesc              string
+	History                 string
+	HistoryDesc             string
+	ClearHistory            string
+	ClearHistoryDesc        string
+	ClearHistoryDone        string
+	ClearHistoryBusy        string
+	ClearTitle              string
+	ClearBody               string
+	ClearConfirm            string
 
 	// External access.
 	MCPEnable          string
