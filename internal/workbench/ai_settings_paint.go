@@ -39,6 +39,7 @@ var (
 	aiRiskChoices         = [...]risk.Level{risk.Low, risk.Medium, risk.High}
 	aiStepsChoices        = [...]int{6, 12, 24}
 	aiContextChoices      = [...]int{0, 30, 60, 120}
+	aiCLITimeoutChoices   = [...]int{30, 60, 120, 300}
 	aiTextLimitChoices    = [...]int{1, 4, 8} // MiB, as stored in ai.attachment_text_mib
 	aiMCPModeChoices      = [...]gate.Mode{gate.ModeObserve, gate.ModeAsk, gate.ModeAllowAll}
 	aiAgentModeChoices    = [...]gate.Mode{gate.ModeObserve, gate.ModeAsk, gate.ModeAllowAll}
@@ -630,6 +631,9 @@ func (state *State) paintAIBehaviour(page *settingsPage) {
 		lines := settings.contextLines
 		settingsChoiceRow(page, m.ContextLines, m.ContextLinesDesc, &lines, aiContextChoices[:], state.aiContextLabel,
 			func() { state.aiPut("ai.context_lines", strconv.Itoa(lines)) }, nil)
+		timeout := settings.cliTimeoutSeconds
+		settingsChoiceRow(page, m.CLITimeout, m.CLITimeoutDesc, &timeout, aiCLITimeoutChoices[:], strconv.Itoa,
+			func() { state.aiPut("ai.netcli_timeout", strconv.Itoa(timeout)) }, nil)
 		text := settings.maxTextBytes >> 20
 		settingsChoiceRow(page, m.AttachmentTextLimit, m.AttachmentTextLimitDesc, &text, aiTextLimitChoices[:], aiTextLimitLabel,
 			func() { state.aiPut("ai.attachment_text_mib", strconv.Itoa(text)) }, nil)

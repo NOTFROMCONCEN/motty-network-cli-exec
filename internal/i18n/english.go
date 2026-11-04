@@ -1438,6 +1438,8 @@ var englishAISettings = AISettingsMessages{
 	AttachmentTextLimit:     "Text attachment limit",
 	AttachmentTextLimitDesc: "Maximum text per file or extracted Office document; sent to the model. SSH uploads are unaffected. A model may still reject long inputs.",
 	ContextOff:              "Off",
+	CLITimeout:              "Net CLI timeout",
+	CLITimeoutDesc:          "Minimum seconds the AI waits for a command on a network device CLI; it ends early once the prompt returns.",
 	Redact:                  "Hide secrets",
 	RedactDesc:              "Mask passwords, keys and tokens before text is sent to the model.",
 	History:                 "Keep history",

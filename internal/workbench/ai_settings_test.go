@@ -814,25 +814,25 @@ func TestAIBehaviourChoicesPersistAndSurviveANewWindow(t *testing.T) {
 	world := newSettingsWorld(t, newLister())
 	state := world.state
 	m := state.messages.AISettings
-	for _, label := range []string{m.RiskHigh, "24", "120", "8 MiB"} {
+	for _, label := range []string{m.RiskHigh, "24", "120", "8 MiB", "300"} {
 		clickSettingsChoice(t, state, label)
 	}
 	state.Click(hitAISetRedact)
 	state.Click(hitAISetHistory)
 	db := world.db(t)
 	for key, want := range map[string]string{
-		"ai.auto_up_to": "high", "ai.max_steps": "24", "ai.context_lines": "120", "ai.attachment_text_mib": "8", "ai.redact": "off", "ai.history": "off",
+		"ai.auto_up_to": "high", "ai.max_steps": "24", "ai.context_lines": "120", "ai.attachment_text_mib": "8", "ai.netcli_timeout": "300", "ai.redact": "off", "ai.history": "off",
 	} {
 		if got := settingValue(t, db, key); got != want {
 			t.Errorf("%s = %q, want %q", key, got, want)
 		}
 	}
-	want := aiSettings{autoUpTo: risk.High, maxSteps: 24, contextLines: 120, maxTextBytes: 8 << 20, redact: false, keepHistory: false, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}
+	want := aiSettings{autoUpTo: risk.High, maxSteps: 24, contextLines: 120, maxTextBytes: 8 << 20, cliTimeoutSeconds: 300, redact: false, keepHistory: false, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}
 	if state.ai.settings != want {
 		t.Fatalf("settings = %+v, want %+v", state.ai.settings, want)
 	}
-	if world.changed != 6 {
-		t.Fatalf("the application was told %d times, want 6", world.changed)
+	if world.changed != 7 {
+		t.Fatalf("the application was told %d times, want 7", world.changed)
 	}
 	state.Close()
 	again := world.open(t)
@@ -850,9 +850,10 @@ func TestAIBehaviourChoicesPersistAndSurviveANewWindow(t *testing.T) {
 	clickSettingsChoice(t, again, "6")
 	clickSettingsChoice(t, again, m.ContextOff)
 	clickSettingsChoice(t, again, "4 MiB")
+	clickSettingsChoice(t, again, "60")
 	again.Click(hitAISetRedact)
 	again.Click(hitAISetHistory)
-	if got, want := again.ai.settings, (aiSettings{autoUpTo: risk.Low, maxSteps: 6, contextLines: 0, maxTextBytes: attach.MaxTextBytes, redact: true, keepHistory: true, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}); got != want {
+	if got, want := again.ai.settings, (aiSettings{autoUpTo: risk.Low, maxSteps: 6, contextLines: 0, maxTextBytes: attach.MaxTextBytes, cliTimeoutSeconds: 60, redact: true, keepHistory: true, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}); got != want {
 		t.Fatalf("settings = %+v, want %+v", got, want)
 	}
 }
@@ -1080,8 +1081,7 @@ func TestAISettingsFocusOrderFollowsThePage(t *testing.T) {
 		choice(state.messages.AISettings.RiskLow), choice("12"), choice("60"), choice("4 MiB"),
 		hitAISetProviderRow.At(0), hitAISetProviderSwitch.At(0), hitAISetProviderEdit.At(0), hitAISetProviderDelete.At(0), hitAISetProviderAdd,
 		hitAISetFetchModels, hitAISetModelUse.At(1), hitAISetModelSwitch.At(1), hitAISetModelInput, hitAISetModelAdd,
-		hitAISetRedact, hitAISetHistory, hitAISetClearHistory,
-	}
+		hitAISetRedact, hitAISetHistory, hitAISetClearHistory}
 	position := -1
 	for _, id := range want {
 		found := -1
