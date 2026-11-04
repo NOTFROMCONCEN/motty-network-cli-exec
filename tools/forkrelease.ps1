@@ -61,15 +61,15 @@ try {
     $utf8 = [System.Text.UTF8Encoding]::new($false)
     $manifest = "viva.toml"
     $text = [IO.File]::ReadAllText((Join-Path $repo $manifest))
-    $updated = [regex]::Replace($text, '(?m)^version\s*=\s*"[^"]+"', "version = `"$Version`"", 1)
-    if ($updated -eq $text) { throw "no version line was found in viva.toml" }
-    [IO.File]::WriteAllText((Join-Path $repo $manifest), $updated, $utf8)
+    $pattern = '(?m)^version\s*=\s*"[^"]+"'
+    if (-not [regex]::IsMatch($text, $pattern)) { throw "no version line was found in viva.toml" }
+    [IO.File]::WriteAllText((Join-Path $repo $manifest), [regex]::Replace($text, $pattern, "version = `"$Version`"", 1), $utf8)
 
     $current = "internal/update/update.go"
     $text = [IO.File]::ReadAllText((Join-Path $repo $current))
-    $updated = [regex]::Replace($text, 'const Current = "[^"]+"', "const Current = `"$Version`"", 1)
-    if ($updated -eq $text) { throw "no Current line was found in internal/update/update.go" }
-    [IO.File]::WriteAllText((Join-Path $repo $current), $updated, $utf8)
+    $pattern = 'const Current = "[^"]+"'
+    if (-not [regex]::IsMatch($text, $pattern)) { throw "no Current line was found in internal/update/update.go" }
+    [IO.File]::WriteAllText((Join-Path $repo $current), [regex]::Replace($text, $pattern, "const Current = `"$Version`"", 1), $utf8)
 
     Write-Host "==> packaging Motty $Version" -ForegroundColor Cyan
     & $GoBinary run ../viva/cmd/viva package -C . --target windows --arch amd64 --format nsis
