@@ -582,7 +582,11 @@ func (state *State) restoreSFTPSettings(saved savedState) {
 	if state.defaultEditor == editorCustom && state.customEditorPath == "" {
 		state.defaultEditor = editorNone
 	}
-	state.updateAtStart = saved.UpdateCheck != "off"
+	// The check is off until the user turns it on — the README says so, and a
+	// copy that has never saved a choice must not start calling the release
+	// feed on its own. Older files written before this line say "on" for the
+	// same read, and keep it.
+	state.updateAtStart = saved.UpdateCheck == "on"
 	state.closeAction = closeActionFromString(saved.CloseAction)
 	state.relaunchAction = relaunchActionFromString(saved.RelaunchAction)
 	state.trayHintShown = saved.TrayHintShown
