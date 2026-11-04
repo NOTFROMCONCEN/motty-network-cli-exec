@@ -408,3 +408,82 @@ func TestListSessionsShowsTheExecutionMode(t *testing.T) {
 		t.Fatalf("sessions %+v", got.sessions)
 	}
 }
+
+func TestBeginCLIExecStampsTheSettingFloor(t *testing.T) {
+	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
+	seedPrompt(t, state, shell, "<Huawei>")
+	state.ai.settings.cliTimeoutSeconds = 120
+	exec, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "display version"})
+	if err != nil {
+		t.Fatalf("beginExec: %v", err)
+	}
+	if exec.cliWait != 120*time.Second {
+		t.Fatalf("cliWait = %v, want the 2m floor", exec.cliWait)
+	}
+}
+
+func TestBeginShellExecKeepsNoFloor(t *testing.T) {
+	state, _, session := cliTestSession(t, "", "")
+	state.ai.settings.cliTimeoutSeconds = 120
+	exec, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "echo hello"})
+	if err != nil {
+		t.Fatalf("beginExec: %v", err)
+	}
+	if exec.cliWait != 0 {
+		t.Fatalf("a shell command got the CLI floor: %v", exec.cliWait)
+	}
+}
+
+func TestEffectiveWaitRaisesToTheFloor(t *testing.T) {
+	floored := &aiExec{cliWait: 2 * time.Minute}
+	if got := floored.effectiveWait(30 * time.Second); got != 2*time.Minute {
+		t.Fatalf("30s under a 2m floor = %v", got)
+	}
+	if got := floored.effectiveWait(5 * time.Minute); got != 5*time.Minute {
+		t.Fatalf("5m over a 2m floor = %v", got)
+	}
+	if got := (&aiExec{}).effectiveWait(time.Second); got != time.Second {
+		t.Fatalf("without a floor the call kept %v", got)
+	}
+}
+
+func TestBackendExecWaitUsesTheCLIFloor(t *testing.T) {
+	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
+	seedPrompt(t, state, shell, "<Huawei>")
+	state.ai.settings.cliTimeoutSeconds = 2 // a floor above the call's own one second
+	backend := &aiBackend{state: state}
+	type reply struct {
+		result gate.ExecResult
+		err    error
+	}
+	delivered := make(chan reply, 1)
+	started := time.Now()
+	go func() {
+		result, err := backend.Exec(context.Background(), tools.TerminalExecArgs{
+			Session: sessionHandle(session.ID), Command: "display log", TimeoutSeconds: 1,
+		})
+		delivered <- reply{result, err}
+	}()
+	var got reply
+	done := false
+	pumpUntil(t, state, "the backend wait to give up", func() bool {
+		if done {
+			return true
+		}
+		select {
+		case got = <-delivered:
+			done = true
+		default:
+		}
+		return done
+	})
+	if got.err != nil {
+		t.Fatalf("Exec: %v", got.err)
+	}
+	if !got.result.TimedOut || got.result.Status != "timeout" {
+		t.Fatalf("result %+v", got.result)
+	}
+	if elapsed := time.Since(started); elapsed < 1500*time.Millisecond {
+		t.Fatalf("the wait gave up after %v; the 2s floor did not apply", elapsed)
+	}
+}
