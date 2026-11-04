@@ -17,6 +17,19 @@ import (
 
 	"motty/internal/ai/risk"
 	"motty/internal/ai/tools"
+	"motty/internal/netcli"
+)
+
+// Execution modes: how terminal_exec runs a command in a session. A session's
+// mode is independent of how it is connected: SSH can carry a device CLI and
+// Telnet can carry a login shell.
+const (
+	// ExecModeShell runs POSIX shell commands with the shell capture wrapper
+	// and reports the real exit status.
+	ExecModeShell = "shell"
+	// ExecModeNetworkCLI sends one raw command line to a network device CLI
+	// and reports how the command ended instead of an exit status.
+	ExecModeNetworkCLI = "network_cli"
 )
 
 // SessionInfo describes one open session for list_sessions.
@@ -26,6 +39,11 @@ type SessionInfo struct {
 	Address string
 	Active  bool
 	Ready   bool // a shell is open and can take commands
+	// ExecMode is how commands run here: ExecModeShell or ExecModeNetworkCLI.
+	ExecMode string
+	// Platform names the device CLI platform of a network CLI session; empty
+	// on a shell session.
+	Platform string
 }
 
 type HostInfo struct {
@@ -46,6 +64,15 @@ type ExecResult struct {
 	TimedOut   bool
 	Retained   string
 	RetainLost bool
+	// ExitKnown says the command ran under shell semantics and ExitCode is its
+	// real status. False on a network CLI command, which reports no exit
+	// status: then Status names how the command ended and ExitCode is unused.
+	ExitKnown bool
+	// Status is a network CLI command's completion: "prompt_restored",
+	// "timeout", "cancelled" or "disconnected"; empty on a shell command.
+	Status string
+	// CLIError is the device error line a network CLI command printed, or "".
+	CLIError string
 }
 
 // FileEntry is one SFTP directory entry.
@@ -299,7 +326,22 @@ func (g Gate) Run(ctx context.Context, name string, raw []byte) Result {
 		if args.Session, err = g.targetSession(args.Session); err != nil {
 			return failure(err)
 		}
-		assessment := risk.Classify(args.Command)
+		// A command is rated by how the session executes it: shell text is
+		// parsed like a shell, while a device CLI line is matched against its
+		// platform, where anything that is not a known read-only command asks.
+		// A shell-style command sent to a device therefore cannot run
+		// unattended either: it is unrecognized there.
+		mode, platform := g.sessionExec(ctx, args.Session)
+		var assessment risk.Assessment
+		switch {
+		case mode == ExecModeNetworkCLI && !isOneLine(args.Command):
+			assessment = risk.Assessment{Level: risk.High, Reasons: []string{
+				"a network CLI takes one command line; send each line as its own call"}}
+		case mode == ExecModeNetworkCLI:
+			assessment = netcli.Classify(platform, args.Command)
+		default:
+			assessment = risk.Classify(args.Command)
+		}
 		if denied := g.ask(ctx, name, tools.Exec, args.Session, args.Command, assessment); denied != nil {
 			return *denied
 		}
@@ -326,7 +368,7 @@ func (g Gate) Run(ctx context.Context, name string, raw []byte) Result {
 				}
 			}
 		}
-		response := Result{Text: text, IsError: result.TimedOut}
+		response := Result{Text: text, IsError: result.TimedOut || result.CLIError != ""}
 		if args.RetainOutput {
 			fields := struct {
 				Preview          string `json:"preview"`
@@ -429,19 +471,25 @@ func (g Gate) readySession(ctx context.Context) (string, error) {
 // execMany runs one command on several sessions. The user is asked once, with
 // every target named, and a command is never run on a host that was not in that
 // list. A batch is always at least medium risk: even a harmless command is a
-// bigger decision across several machines.
+// bigger decision across several machines. A batch that would mix a shell
+// session with a network CLI session is refused: one text cannot be both a
+// shell command line and a device command.
 func (g Gate) execMany(ctx context.Context, name string, args tools.TerminalExecManyArgs) Result {
 	sessions, err := g.Backend.Sessions(ctx)
 	if err != nil {
 		return failure(err)
 	}
 	labels := make(map[string]string, len(args.Sessions))
+	modes := make(map[string]string, len(args.Sessions))
 	var problems []string
 	for _, id := range args.Sessions {
-		label, ready := "", false
+		label, ready, mode := "", false, ExecModeShell
 		for _, candidate := range sessions {
 			if candidate.ID == id {
 				label, ready = candidate.Title, candidate.Ready
+				if candidate.ExecMode != "" {
+					mode = candidate.ExecMode
+				}
 			}
 		}
 		switch {
@@ -451,14 +499,59 @@ func (g Gate) execMany(ctx context.Context, name string, args tools.TerminalExec
 			problems = append(problems, id+" ("+label+") has no shell that can take commands")
 		}
 		labels[id] = label
+		modes[id] = mode
 	}
 	if len(problems) > 0 {
 		return Result{Text: "nothing was run: " + strings.Join(problems, "; "), IsError: true}
 	}
 
-	assessment := risk.Classify(args.Command)
-	if assessment.Level < risk.Medium {
-		assessment.Level = risk.Medium
+	// The batch runs one text everywhere, so it needs one execution mode. Each
+	// session without an explicit mode counts as a shell session here; naming
+	// that in the refusal keeps a mixed batch from running anything at all.
+	var assessment risk.Assessment
+	platforms := map[string]bool{}
+	cli, shell := 0, 0
+	for _, id := range args.Sessions {
+		if modes[id] == ExecModeNetworkCLI {
+			cli++
+			continue
+		}
+		shell++
+	}
+	switch {
+	case cli > 0 && shell > 0:
+		var cliNames, shellNames []string
+		for _, id := range args.Sessions {
+			if modes[id] == ExecModeNetworkCLI {
+				cliNames = append(cliNames, id)
+			} else {
+				shellNames = append(shellNames, id)
+			}
+		}
+		return Result{Text: "nothing was run: the batch mixes network CLI sessions (" + strings.Join(cliNames, ", ") +
+			") with shell sessions (" + strings.Join(shellNames, ", ") + "); run them as separate terminal_exec calls", IsError: true}
+	case cli > 0:
+		// Rate the command against every platform in the batch and keep the
+		// highest level, so the approval prompt covers the strictest target.
+		for _, id := range args.Sessions {
+			if modes[id] == ExecModeNetworkCLI {
+				platforms[platformOf(sessions, id)] = true
+			}
+		}
+		for platform := range platforms {
+			a := netcli.Classify(platform, args.Command)
+			if a.Level > assessment.Level {
+				assessment = a
+			}
+		}
+		if assessment.Level < risk.Medium {
+			assessment.Level = risk.Medium
+		}
+	default:
+		assessment = risk.Classify(args.Command)
+		if assessment.Level < risk.Medium {
+			assessment.Level = risk.Medium
+		}
 	}
 	assessment.Reasons = append(assessment.Reasons, fmt.Sprintf("runs on %d sessions", len(args.Sessions)))
 	targets := make([]string, len(args.Sessions))
@@ -615,6 +708,38 @@ func joinReasons(a risk.Assessment) string {
 
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
+// sessionExec reports how a session executes commands: the shell mode unless
+// its Sessions entry says network CLI. A session that is not listed at all
+// reads as a shell session; running in it will fail with the backend's own
+// error instead of a wrong risk rating standing in for one.
+func (g Gate) sessionExec(ctx context.Context, session string) (mode, platform string) {
+	sessions, err := g.Backend.Sessions(ctx)
+	if err != nil {
+		return ExecModeShell, ""
+	}
+	for _, candidate := range sessions {
+		if candidate.ID == session && candidate.ExecMode == ExecModeNetworkCLI {
+			return ExecModeNetworkCLI, candidate.Platform
+		}
+	}
+	return ExecModeShell, ""
+}
+
+// platformOf is a session's platform in a batch lookup, "" when unknown.
+func platformOf(sessions []SessionInfo, id string) string {
+	for _, candidate := range sessions {
+		if candidate.ID == id {
+			return candidate.Platform
+		}
+	}
+	return ""
+}
+
+// isOneLine reports whether text can be a single device CLI command line.
+func isOneLine(command string) bool {
+	return !strings.ContainsAny(command, "\n\r\t") && strings.IndexByte(command, 0) < 0
+}
+
 func formatSessions(sessions []SessionInfo) string {
 	if len(sessions) == 0 {
 		return "no sessions are open"
@@ -629,7 +754,15 @@ func formatSessions(sessions []SessionInfo) string {
 		if s.Active {
 			active = " (active)"
 		}
-		fmt.Fprintf(&b, "%s: %s %s [%s]%s\n", s.ID, s.Title, s.Address, state, active)
+		mode := ""
+		if s.ExecMode == ExecModeNetworkCLI {
+			mode = " (network CLI: send one raw device command per call; no exit status"
+			if s.Platform != "" {
+				mode += ", platform " + s.Platform
+			}
+			mode += ")"
+		}
+		fmt.Fprintf(&b, "%s: %s %s [%s]%s%s\n", s.ID, s.Title, s.Address, state, active, mode)
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -666,13 +799,27 @@ func formatExec(r ExecResult) string {
 	if r.Output != "" && !strings.HasSuffix(r.Output, "\n") {
 		b.WriteByte('\n')
 	}
+	if r.CLIError != "" {
+		fmt.Fprintf(&b, "[device CLI error: %s]\n", r.CLIError)
+	}
 	switch {
+	case r.TimedOut && !r.ExitKnown:
+		b.WriteString("[timed out; the device never showed its prompt again, so whether the command finished is unknown]")
 	case r.TimedOut:
 		b.WriteString("[timed out; the command may still be running on the host]")
-	case r.ExitCode < 0 && r.Truncated:
-		b.WriteString("[output truncated] [exit status unknown: the command returned to the prompt]")
-	case r.ExitCode < 0:
-		b.WriteString("[exit status unknown: the command returned to the prompt]")
+	case !r.ExitKnown && r.Status != "":
+		// A network CLI command: how it ended is the result, there is no exit
+		// status to report.
+		switch r.Status {
+		case "prompt_restored":
+			b.WriteString("[device prompt restored; the command finished]")
+		case "cancelled":
+			b.WriteString("[interrupted; whether the command finished is unknown]")
+		case "disconnected":
+			b.WriteString("[connection closed; whether the command finished is unknown]")
+		default:
+			b.WriteString("[the command's end is unknown]")
+		}
 	case r.Truncated:
 		fmt.Fprintf(&b, "[output truncated] [exit status %d]", r.ExitCode)
 	default:

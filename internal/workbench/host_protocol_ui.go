@@ -280,6 +280,7 @@ func (state *State) clickHostProtocol(id gfx.ID) bool {
 	case state.clickHostAuthentication(id):
 	case state.clickHostCredential(id):
 	case state.clickTransferChoice(id):
+	case state.clickExecChoice(id):
 	case state.clickHostColor(id):
 	case id == hitDialogOTPRemove:
 		editor.otpRemove = !editor.otpRemove
@@ -371,6 +372,12 @@ func (state *State) hostFormHeight() float32 {
 	if state.editor.protocol == protocolSSH {
 		// The jump route row sits under the proxy row.
 		height += hostFormRowHeight
+	}
+	if execPaintable(state.editor.protocol) {
+		height += hostFormRowHeight
+		if state.editor.execChoice == execChoiceCLI {
+			height += hostFormRowHeight // the platform list
+		}
 	}
 	if state.dialogError != "" {
 		height += 32
