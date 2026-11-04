@@ -301,6 +301,7 @@ func sameSavedHost(left, right savedHost) bool {
 		left.ForwardX11 == right.ForwardX11 && left.AgentForward == right.AgentForward &&
 		left.InteractiveOnly == right.InteractiveOnly &&
 		left.NoHistory == right.NoHistory && left.LoginCommand == right.LoginCommand && left.Transfer == right.Transfer &&
+		left.ExecMode == right.ExecMode && left.CLIPlatform == right.CLIPlatform &&
 		left.ViaSSH == right.ViaSSH && left.Clipboard == right.Clipboard && left.Console == right.Console &&
 		left.Chromeless == right.Chromeless
 }
