@@ -37,13 +37,15 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
 $forkRepo = "NOTFROMCONCEN/motty-network-cli-exec"
-$patch = [int]($Version -split '\.')[2]
-if ($patch -lt 1) { throw "the build counter (the version's patch number) must be at least 1" }
-$tag = "v$Base-netcli-build.$patch-$($Codename.ToLowerInvariant())"
-
 if ($Version -notmatch '^\d+\.\d+\.\d+$') {
     throw "version '$Version' must be three dot-separated numbers, for example 0.3.1"
 }
+if ($Base -notmatch '^\d+\.\d+\.\d+$') {
+    throw "base '$Base' must be three dot-separated numbers"
+}
+$patch = [int]($Version -split '\.')[2]
+if ($patch -lt 1) { throw "the build counter (the version's patch number) must be at least 1" }
+$tag = "v$Base-netcli-build.$patch-$($Codename.ToLowerInvariant())"
 if ($KeyPath -eq "") {
     $KeyPath = Join-Path (Split-Path $repo -Parent) ".tools/motty-fork-signing.key"
 }
@@ -54,6 +56,21 @@ if ($GoBinary -eq "") {
     # The build machine may have Go only beside the repository.
     $candidate = Join-Path (Split-Path $repo -Parent) ".tools/go/bin/go.exe"
     $GoBinary = if (Get-Command go -ErrorAction SilentlyContinue) { "go" } elseif (Test-Path $candidate) { $candidate } else { throw "go was not found on PATH" }
+}
+
+# Invoke-WithRetry runs a command and tries again while it fails: github.com
+# refuses or resets connections often enough that a release should not die on
+# one bad network moment.
+function Invoke-WithRetry([string]$what, [scriptblock]$command) {
+    for ($attempt = 1; $attempt -le 4; $attempt++) {
+        if ($attempt -gt 1) {
+            Write-Host "    $what failed; retrying (attempt $attempt of 4)" -ForegroundColor Yellow
+            Start-Sleep -Seconds (20 * $attempt)
+        }
+        & $command
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+    throw "$what failed after 4 attempts"
 }
 
 Push-Location $repo
@@ -121,15 +138,13 @@ try {
     }
 
     Write-Host "==> pushing to fork" -ForegroundColor Cyan
-    git push fork $Branch
-    if ($LASTEXITCODE -ne 0) { throw "git push failed" }
+    Invoke-WithRetry "git push fork $Branch" { git push fork $Branch }
 
     Write-Host "==> creating the release" -ForegroundColor Cyan
     $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty NetCLI $tag")
     $releaseArgs += if ($NotesPath -ne "") { @("--notes-file", $NotesPath) } else { @("--generate-notes") }
     $releaseArgs += @($setup, $out)
-    gh @releaseArgs
-    if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
+    Invoke-WithRetry "gh release create $tag" { gh @releaseArgs }
 
     Write-Host ""
     Write-Host "released $tag" -ForegroundColor Green
