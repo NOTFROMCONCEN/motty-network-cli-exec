@@ -130,14 +130,18 @@ func cutUTF8(text string, limit int) string {
 	return text[:limit]
 }
 
-// Check asks the mirror for the newest release and, when the mirror cannot
-// answer, GitHub. The package is chosen for goos and goarch; a GitHub answer has
-// none, because it carries no checksums to hold a download to.
+// Check asks the fork's newest release for a build of this platform. This fork
+// ships the network CLI work upstream does not have yet, so an upstream release
+// is never a newer version of what is installed here: there is no fallback to
+// it. See fork.go.
 func Check(ctx context.Context, client *http.Client, goos, goarch string) (Release, error) {
 	return CheckPackage(ctx, client, goos, goarch, PackageArchive)
 }
 
-// Package identifies the installation format, not just the host operating system.
+// Package identifies the installation format, not just the host operating
+// system. The fork publishes one archive per platform and no system packages,
+// so the choice never changes what the feed answers; it stays for the surface
+// the workbench and the installer share with upstream.
 type Package uint8
 
 const (
@@ -147,23 +151,9 @@ const (
 )
 
 // CheckPackage selects the package matching the installation on this machine.
+// This fork has one package per platform, so every choice reads the fork feed.
 func CheckPackage(ctx context.Context, client *http.Client, goos, goarch string, pkg Package) (Release, error) {
-	return checkFeedsPackage(ctx, client, MirrorFeed, Feed, goos, goarch, pkg)
-}
-
-func checkFeeds(ctx context.Context, client *http.Client, mirrorFeed, githubFeed, goos, goarch string) (Release, error) {
-	return checkFeedsPackage(ctx, client, mirrorFeed, githubFeed, goos, goarch, PackageArchive)
-}
-
-func checkFeedsPackage(ctx context.Context, client *http.Client, mirrorFeed, githubFeed, goos, goarch string, pkg Package) (Release, error) {
-	release, err := latestMirrorPackage(ctx, client, mirrorFeed, goos, goarch, pkg)
-	if err == nil {
-		return release, nil
-	}
-	if fallback, fallbackErr := Latest(ctx, client, githubFeed); fallbackErr == nil || errors.Is(fallbackErr, ErrNoRelease) {
-		return fallback, fallbackErr
-	}
-	return Release{}, err
+	return LatestFork(ctx, client, ForkFeed, ForkRepo, goos, goarch)
 }
 
 // StableName is the name the mirror gives the package of a platform, or "" for
