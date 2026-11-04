@@ -2508,7 +2508,7 @@ var chineseTools = ToolsMessages{
 	GeneralRelaunchRaise:            "显示已有窗口",
 	GeneralRelaunchNewWindow:        "新建窗口",
 	GeneralUpdate:                   "检查更新",
-	GeneralUpdateDescription:        "到 GitHub 查找新版本并打开下载页,不会替你安装任何东西。",
+	GeneralUpdateDescription:        "检查本 fork（NOTFROMCONCEN）发布的新版本；通过校验的更新会自动下载并安装，官方原版的发布不在检查范围内。",
 	GeneralUpdateCheck:              "立即检查",
 	GeneralUpdateDirectRetry:        "直连重试",
 	GeneralUpdateDirectRetryNote:    "直连重试将在本次尝试中绕过系统代理。",
@@ -3219,8 +3219,9 @@ var chineseDesktop = DesktopMessages{
 	ErrNoDesktop:              "该连接没有远程桌面。",
 }
 var chineseAbout = AboutMessages{
-	Title:   "关于",
-	Tagline: "SSH、SFTP、端口转发、远程桌面和 AI 助手，都在一个原生窗口里。",
+	Title:      "关于",
+	Tagline:    "SSH、SFTP、端口转发、远程桌面和 AI 助手，都在一个原生窗口里。",
+	ForkNotice: "第三方 fork 构建，并非官方原版 Motty；本副本的更新来自这个 fork 自己的发布页。",
 
 	InfoTitle:        "版本信息",
 	Version:          "版本",
@@ -3247,12 +3248,14 @@ var chineseAbout = AboutMessages{
 	Issues:             "问题反馈",
 	IssuesDescription:  "在 GitHub 上报告 Bug 或提功能建议。",
 	ProjectTitle:       "项目",
-	Repo:               "开源仓库",
-	RepoDescription:    "源码、发布版本和讨论都在 GitHub。",
+	Repo:               "上游原版仓库",
+	RepoDescription:    "官方 Motty（t8y2/motty）的源码与社区。",
 	Docs:               "官网与文档",
 	DocsDescription:    "安装、使用和开发说明在 motty.page。",
 	Viva:               "Viva",
 	VivaDescription:    "Motty 所用的 Go 优先、GPU 原生桌面框架。",
+	Fork:               "本 fork 仓库",
+	ForkDescription:    "本构建的源码与发布：NOTFROMCONCEN/motty-network-cli-exec。",
 	Join:               "加入",
 	Open:               "打开",
 }
