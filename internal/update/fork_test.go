@@ -219,3 +219,122 @@ func TestLatestForkRefusesAPlainHTTPFeed(t *testing.T) {
 		t.Fatal("a plain http feed was accepted")
 	}
 }
+
+// checkServers is one TLS server standing in for every host the check reads:
+// the GitHub feed at /latest, GitHub's manifest at /manifest, and the CDN
+// mirrors at /mirror. Which of them answer is the test's choice.
+type checkServers struct {
+	feedStatus int
+	feedBody   string
+	manifestOn bool
+	mirrorOn   bool
+	mirrorBad  bool // the mirror serves a manifest that contradicts itself
+}
+
+func (s *checkServers) start(t *testing.T) (*http.Client, func()) {
+	t.Helper()
+	savedFeed, savedMirrors := forkFeedURL, feedMirrors
+	var manifestURL string
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/latest":
+			if s.feedStatus != http.StatusOK {
+				w.WriteHeader(s.feedStatus)
+				return
+			}
+			fmt.Fprintf(w, `{"tag_name":"v0.3.0-netcli-build.3-arknights","html_url":"https://github.com/owner/repo/releases/tag/v0.3.0-netcli-build.3-arknights","assets":[{"name":"latest.json","browser_download_url":%q}]}`, manifestURL)
+		case "/manifest":
+			if !s.manifestOn {
+				http.NotFound(w, r)
+				return
+			}
+			fmt.Fprint(w, manifestFor("0.3.3", "v0.3.0-netcli-build.3-arknights", "motty-0.3.3-windows-amd64-setup.exe", 42, goodHash))
+		case "/mirror":
+			if !s.mirrorOn {
+				http.NotFound(w, r)
+				return
+			}
+			if s.mirrorBad {
+				fmt.Fprint(w, manifestFor("0.3.3", "v0.3.0-netcli-build.2-arknights", "motty-0.3.3-windows-amd64-setup.exe", 42, goodHash))
+				return
+			}
+			fmt.Fprint(w, manifestFor("0.3.3", "v0.3.0-netcli-build.3-arknights", "motty-0.3.3-windows-amd64-setup.exe", 42, goodHash))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	manifestURL = server.URL + "/manifest"
+	forkFeedURL = server.URL + "/latest"
+	feedMirrors = []string{server.URL + "/mirror"}
+	return server.Client(), func() { forkFeedURL, feedMirrors = savedFeed, savedMirrors }
+}
+
+func TestCheckPrefersGitHubAndFallsBackInOrder(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		servers  checkServers
+		want     string // the version the check concludes, "" for an error
+		wantPage bool   // a release with its page and no package
+	}{
+		{
+			name:    "github in full",
+			servers: checkServers{feedStatus: 200, manifestOn: true},
+			want:    "0.3.3",
+		},
+		{
+			name:    "manifest unreachable, a mirror has it",
+			servers: checkServers{feedStatus: 200, mirrorOn: true},
+			want:    "0.3.3",
+		},
+		{
+			name:     "manifest nowhere, the release page still answers",
+			servers:  checkServers{feedStatus: 200},
+			want:     "0.3.3",
+			wantPage: true,
+		},
+		{
+			name:    "feed down, a mirror has the manifest",
+			servers: checkServers{feedStatus: http.StatusInternalServerError, mirrorOn: true},
+			want:    "0.3.3",
+		},
+		{
+			name:    "nothing anywhere",
+			servers: checkServers{feedStatus: http.StatusInternalServerError},
+			want:    "",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			client, restore := test.servers.start(t)
+			defer restore()
+			release, err := Check(context.Background(), client, "windows", "amd64")
+			if test.want == "" {
+				if err == nil {
+					t.Fatalf("an all-around failure answered %+v", release)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Check: %v", err)
+			}
+			if release.Version != test.want {
+				t.Fatalf("version %q, want %q", release.Version, test.want)
+			}
+			if release.Asset.Has() == test.wantPage {
+				t.Fatalf("asset %+v, wantPage %v", release.Asset, test.wantPage)
+			}
+		})
+	}
+}
+
+func TestCheckRejectsAMirrorServingAnotherRelease(t *testing.T) {
+	// A manifest whose tag and version contradict each other is not a release
+	// this fork publishes; with nothing else answering, the check fails
+	// instead of passing the manifest off as news.
+	servers := checkServers{feedStatus: http.StatusInternalServerError, mirrorOn: true, mirrorBad: true}
+	client, restore := servers.start(t)
+	defer restore()
+	if _, err := Check(context.Background(), client, "windows", "amd64"); err == nil {
+		t.Fatal("an incoherent mirror manifest was accepted")
+	}
+}
