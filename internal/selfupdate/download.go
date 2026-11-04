@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,8 +37,14 @@ func Download(ctx context.Context, client *http.Client, asset update.Asset, dir 
 	}
 	if client == nil {
 		// No overall timeout: a large package on a slow link is allowed to take
-		// its time, and the caller's context ends it.
-		client = &http.Client{}
+		// its time, and the caller's context ends it. The connect phases are
+		// still bounded, so a host that refuses to answer ends the wait instead
+		// of holding the progress bar forever.
+		client = &http.Client{Transport: &http.Transport{
+			DialContext:           (&net.Dialer{Timeout: 20 * time.Second}).DialContext,
+			TLSHandshakeTimeout:   20 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+		}}
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
