@@ -71,6 +71,17 @@ type Host struct {
 	linkPassword string
 	// Transfer is the file protocol of the host's file panel.
 	Transfer transferMode
+	// ExecMode pins how AI-run commands are executed in this host's terminals:
+	// "shell" keeps the POSIX capture wrapper, "network_cli" sends one raw
+	// command line to a network device CLI. Empty follows the transport's
+	// default (Telnet and serial speak to a device, everything else to a
+	// shell). It is independent of Protocol: SSH can carry a device CLI and
+	// Telnet can carry a login shell.
+	ExecMode string
+	// CLIPlatform is the network CLI platform of the host, a netcli id such as
+	// "huawei_vrp"; empty is the generic table. Only read when ExecMode
+	// resolves to the network CLI.
+	CLIPlatform string
 	// Proxy overrides the global outbound proxy for this host. Nil inherits the
 	// global proxy; an explicit ProxyNone forces a direct connection.
 	Proxy *outboundProxy

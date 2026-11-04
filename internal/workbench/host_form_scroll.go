@@ -59,6 +59,11 @@ type hostFormBody struct {
 	proxyAction, jumpAction ui.Box
 	// endpointSlots are the rows the endpoint block declared for its fields.
 	endpointSlots hostEndpointSlots
+	// execRow and cliPlatform are the execution setting's slots, and execCLI
+	// whether the layout named a platform row: the choices a protocol switch
+	// paints later must not resurrect a row this layout did not declare.
+	execRow, cliPlatform ui.Box
+	execCLI              bool
 	// advancedHeader and advancedHeaderIcon are the row that opens the Advanced
 	// section and the chevron it paints, both declared by the page.
 	advancedHeader, advancedHeaderIcon ui.Box

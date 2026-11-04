@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"motty/internal/charset"
+	"motty/internal/netcli"
 	"motty/internal/serial"
 	"motty/internal/sftpclient"
 	"motty/internal/sshconfig"
@@ -133,6 +134,13 @@ type savedTransport struct {
 	// Transfer is "sftp" or "scp" for an SSH host whose file panel does not
 	// choose by itself.
 	Transfer string `json:"transfer,omitempty"`
+	// ExecMode is "shell" or "network_cli" when the user pinned how AI-run
+	// commands are executed; empty follows the transport's default (Telnet and
+	// serial default to the network CLI, everything else to the shell).
+	ExecMode string `json:"exec_mode,omitempty"`
+	// CLIPlatform is the network CLI platform, a netcli id such as
+	// "huawei_vrp"; empty is the generic table.
+	CLIPlatform string `json:"cli_platform,omitempty"`
 	// ViaSSH and Clipboard are a remote desktop host's (VNC or RDP): reached
 	// through an SSH connection to the same machine, and sharing the clipboard
 	// with the remote desktop. Console is an RDP host's: connect to the server's
@@ -158,7 +166,7 @@ func (host Host) transport() savedTransport {
 	}
 	switch host.Protocol {
 	case protocolTelnet:
-		transport.Protocol = "telnet"
+		transport.Protocol, transport.ExecMode, transport.CLIPlatform = "telnet", host.ExecMode, host.savedCLIPlatform()
 		return transport
 	case protocolVNC:
 		transport.Protocol, transport.ViaSSH, transport.Clipboard, transport.Chromeless = "vnc", host.ViaSSH, host.Clipboard, host.Chromeless
@@ -170,6 +178,7 @@ func (host Host) transport() savedTransport {
 		return transport
 	case protocolSerial:
 		transport.Proxy, transport.Protocol, transport.Line = nil, "serial", host.Line.String()
+		transport.ExecMode, transport.CLIPlatform = host.ExecMode, host.savedCLIPlatform()
 		switch host.Line.Flow {
 		case serial.FlowHardware:
 			transport.Flow = "rtscts"
@@ -185,7 +194,17 @@ func (host Host) transport() savedTransport {
 	transport.ForwardX11, transport.AgentForward, transport.NoHistory, transport.Transfer = host.ForwardX11, host.AgentForward, host.NoHistory, host.savedTransfer()
 	transport.InteractiveOnly = host.InteractiveOnly
 	transport.LoginCommand = host.LoginCommand
+	transport.ExecMode, transport.CLIPlatform = host.ExecMode, host.savedCLIPlatform()
 	return transport
+}
+
+// savedCLIPlatform is the state-file form of the platform: the generic table is
+// stored as empty, so one setting has one spelling on disk.
+func (host Host) savedCLIPlatform() string {
+	if host.CLIPlatform == netcli.GenericID {
+		return ""
+	}
+	return host.CLIPlatform
 }
 
 // applyTransport reads a saved transport into the host. It reports false for a
@@ -224,7 +243,8 @@ func (host *Host) applyTransport(transport savedTransport) bool {
 		host.InteractiveOnly = transport.InteractiveOnly
 		host.NoHistory = transport.NoHistory
 		host.LoginCommand = restoredLoginCommand(transport.LoginCommand)
-		return host.applyTransfer(transport.Transfer) && host.applyAlgo(transport.Algorithms, transport.AlgorithmList)
+		return host.applyTransfer(transport.Transfer) && host.applyAlgo(transport.Algorithms, transport.AlgorithmList) &&
+			host.applyExec(transport.ExecMode, transport.CLIPlatform)
 	case "telnet":
 		host.Protocol, host.Credential = protocolTelnet, ""
 	case "vnc":
@@ -249,6 +269,35 @@ func (host *Host) applyTransport(transport savedTransport) bool {
 		host.Protocol, host.Line = protocolSerial, line
 	default:
 		return false
+	}
+	return host.applyExec(transport.ExecMode, transport.CLIPlatform)
+}
+
+// applyExec reads the saved execution setting. It reports false for a mode or
+// platform it does not know, so a damaged entry is dropped rather than guessed
+// at. A host without a terminal stream (VNC, RDP) has no such setting and
+// ignores it.
+func (host *Host) applyExec(mode, platform string) bool {
+	if host.Protocol == protocolVNC || host.Protocol == protocolRDP {
+		host.ExecMode, host.CLIPlatform = "", ""
+		return true
+	}
+	switch mode {
+	case "":
+		host.ExecMode = ""
+	case "shell", "network_cli":
+		host.ExecMode = mode
+	default:
+		return false
+	}
+	switch {
+	case platform == "", platform == netcli.GenericID:
+		host.CLIPlatform = ""
+	default:
+		if _, ok := netcli.Lookup(platform); !ok {
+			return false
+		}
+		host.CLIPlatform = platform
 	}
 	return true
 }

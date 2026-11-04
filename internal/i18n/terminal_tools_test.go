@@ -14,7 +14,7 @@ var sameInEveryLanguage = map[string]bool{
 	"AlgoCustomPlaceholder": true, "RemoteColPID": true, "RemoteColCPU": true, "RemoteColID": true, "RemoteTabCompose": true,
 	"CatMCP": true, "SyncConfigure": true, "SyncConfigureS3": true, "SyncConfigureGist": true, "SyncConfigureGitee": true,
 	"GiteeDialogTitle":  true,
-	"FilesEditorVSCode": true, "FilesEditorZed": true,
+	"FilesEditorVSCode": true, "FilesEditorZed": true, "ExecModeShell": true,
 }
 
 // The terminal tools' texts sit in a nested struct that the catalog-wide test
