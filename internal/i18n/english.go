@@ -1301,6 +1301,8 @@ var englishAISettings = AISettingsMessages{
 	ContextLines:     "Terminal context",
 	ContextLinesDesc: "Lines of the visible terminal sent with a question in Ask mode.",
 	ContextOff:       "Off",
+	CLITimeout:       "Net CLI timeout",
+	CLITimeoutDesc:   "Minimum seconds the AI waits for a command on a network device CLI; it ends early once the prompt returns.",
 	Redact:           "Hide secrets",
 	RedactDesc:       "Mask passwords, keys and tokens before text is sent to the model.",
 	History:          "Keep history",

@@ -80,6 +80,10 @@ var (
 	hitAISetContext30         = tree.ID(aiSettingsHits, "ai-set-context30")
 	hitAISetContext60         = tree.ID(aiSettingsHits, "ai-set-context60")
 	hitAISetContext120        = tree.ID(aiSettingsHits, "ai-set-context120")
+	hitAISetCLITo30           = tree.ID(aiSettingsHits, "ai-set-cli-to-30")
+	hitAISetCLITo60           = tree.ID(aiSettingsHits, "ai-set-cli-to-60")
+	hitAISetCLITo120          = tree.ID(aiSettingsHits, "ai-set-cli-to-120")
+	hitAISetCLITo300          = tree.ID(aiSettingsHits, "ai-set-cli-to-300")
 	hitAISetRedact            = tree.ID(aiSettingsHits, "ai-set-redact")
 	hitAISetHistory           = tree.ID(aiSettingsHits, "ai-set-history")
 	hitAISetClearHistory      = tree.ID(aiSettingsHits, "ai-set-clear-history")
@@ -349,6 +353,14 @@ func (state *State) aiSettingsClick(id ui.ID) bool {
 		state.aiPut("ai.context_lines", "60")
 	case id == hitAISetContext120:
 		state.aiPut("ai.context_lines", "120")
+	case id == hitAISetCLITo30:
+		state.aiPut("ai.netcli_timeout", "30")
+	case id == hitAISetCLITo60:
+		state.aiPut("ai.netcli_timeout", "60")
+	case id == hitAISetCLITo120:
+		state.aiPut("ai.netcli_timeout", "120")
+	case id == hitAISetCLITo300:
+		state.aiPut("ai.netcli_timeout", "300")
 	case id == hitAISetRedact:
 		state.aiPut("ai.redact", onOff(!state.ai.settings.redact))
 	case id == hitAISetHistory:
@@ -652,6 +664,9 @@ func (state *State) aiSettingsKey(event ui.KeyEvent) (ui.EventResult, bool) {
 	case hitAISetContext0, hitAISetContext30, hitAISetContext60, hitAISetContext120:
 		lines = state.aiContextOptions()
 		options = lines[:]
+	case hitAISetCLITo30, hitAISetCLITo60, hitAISetCLITo120, hitAISetCLITo300:
+		timeouts := state.aiCLITimeoutOptions()
+		options = timeouts[:]
 	case hitAISetMCPObserve, hitAISetMCPAsk, hitAISetMCPAllowAll:
 		modes = state.aiMCPModeOptions()
 		options = modes[:]
@@ -740,6 +755,12 @@ func (state *State) aiContextOptions() [4]components.SegmentOption {
 	return [...]components.SegmentOption{
 		{ID: hitAISetContext0, Label: state.messages.AISettings.ContextOff},
 		{ID: hitAISetContext30, Label: "30"}, {ID: hitAISetContext60, Label: "60"}, {ID: hitAISetContext120, Label: "120"},
+	}
+}
+
+func (state *State) aiCLITimeoutOptions() [4]components.SegmentOption {
+	return [...]components.SegmentOption{
+		{ID: hitAISetCLITo30, Label: "30"}, {ID: hitAISetCLITo60, Label: "60"}, {ID: hitAISetCLITo120, Label: "120"}, {ID: hitAISetCLITo300, Label: "300"},
 	}
 }
 
