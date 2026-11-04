@@ -20,7 +20,7 @@ import (
 )
 
 // Current is the version of this build. A test keeps it equal to viva.toml's.
-const Current = "0.3.0"
+const Current = "0.3.1"
 
 // Feed is the GitHub release the project publishes its builds to.
 const Feed = "https://api.github.com/repos/t8y2/motty/releases/latest"
@@ -125,18 +125,12 @@ func cutUTF8(text string, limit int) string {
 	return text[:limit]
 }
 
-// Check asks the mirror for the newest release and, when the mirror cannot
-// answer, GitHub. The package is chosen for goos and goarch; a GitHub answer has
-// none, because it carries no checksums to hold a download to.
+// Check asks the fork's newest release for a build of this platform. This fork
+// ships the network CLI work upstream does not have yet, so an upstream release
+// is never a newer version of what is installed here: there is no fallback to
+// it. See fork.go.
 func Check(ctx context.Context, client *http.Client, goos, goarch string) (Release, error) {
-	release, err := LatestMirror(ctx, client, MirrorFeed, goos, goarch)
-	if err == nil {
-		return release, nil
-	}
-	if fallback, fallbackErr := Latest(ctx, client, Feed); fallbackErr == nil || errors.Is(fallbackErr, ErrNoRelease) {
-		return fallback, fallbackErr
-	}
-	return Release{}, err
+	return LatestFork(ctx, client, ForkFeed, ForkRepo, goos, goarch)
 }
 
 // StableName is the name the mirror gives the package of a platform, or "" for
