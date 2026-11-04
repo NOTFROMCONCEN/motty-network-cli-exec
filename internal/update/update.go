@@ -130,10 +130,13 @@ func cutUTF8(text string, limit int) string {
 	return text[:limit]
 }
 
-// Check asks the fork's newest release for a build of this platform. This fork
-// ships the network CLI work upstream does not have yet, so an upstream release
-// is never a newer version of what is installed here: there is no fallback to
-// it. See fork.go.
+// Check asks for the newest release the fork published and the package it
+// carries for this platform. GitHub's feed and its manifest come first; when
+// either cannot be reached, the same manifest is read from CDNs that serve the
+// feed branch; and a release only the feed described still answers, with its
+// page and no package. None of this is trusted on its own: a download is held
+// to the manifest's size and checksum, and to the release signature. See
+// fork.go.
 func Check(ctx context.Context, client *http.Client, goos, goarch string) (Release, error) {
 	return CheckPackage(ctx, client, goos, goarch, PackageArchive)
 }
@@ -153,7 +156,8 @@ const (
 // CheckPackage selects the package matching the installation on this machine.
 // This fork has one package per platform, so every choice reads the fork feed.
 func CheckPackage(ctx context.Context, client *http.Client, goos, goarch string, pkg Package) (Release, error) {
-	return LatestFork(ctx, client, ForkFeed, ForkRepo, goos, goarch)
+	return checkFork(ctx, client, goos, goarch)
+
 }
 
 // StableName is the name the mirror gives the package of a platform, or "" for
