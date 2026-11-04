@@ -321,12 +321,14 @@ func (state *State) eachSettingsEntry(add func(settingsEntry)) {
 	group(settingsAbout, about.UpdateTitle, about.UpdateTitle, "")
 	row(settingsAbout, tools.GeneralUpdateStartup, tools.GeneralUpdateStartupDescription)
 	row(settingsAbout, tools.GeneralUpdate, tools.GeneralUpdateDescription)
+	group(settingsAbout, about.InfoTitle, about.ForkNotice, "")
 	row(settingsAbout, about.QQ, about.QQDescription)
 	row(settingsAbout, about.WeChat, about.WeChatDescription)
 	row(settingsAbout, about.Discord, about.DiscordDescription)
 	row(settingsAbout, about.Issues, about.IssuesDescription)
 	row(settingsAbout, about.Repo, about.RepoDescription)
 	row(settingsAbout, about.Docs, about.DocsDescription)
+	row(settingsAbout, about.Fork, about.ForkDescription)
 	row(settingsAbout, about.Viva, about.VivaDescription)
 }
 
