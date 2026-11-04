@@ -1458,6 +1458,8 @@ var chineseAISettings = AISettingsMessages{
 	AttachmentTextLimit:     "文本附件上限",
 	AttachmentTextLimitDesc: "单个文本或 Office 文档提取文字的上限；随消息发送给模型，不影响 SSH 文件上传。模型仍可能拒绝过长内容。",
 	ContextOff:              "关闭",
+	CLITimeout:              "Net CLI 超时",
+	CLITimeoutDesc:          "AI 在网络设备上执行命令时至少等待的秒数；设备回到提示符即提前结束。",
 	Redact:                  "隐藏敏感信息",
 	RedactDesc:              "发送给模型前，遮盖密码、密钥和令牌。",
 	History:                 "保存历史",
