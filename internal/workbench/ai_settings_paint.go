@@ -461,6 +461,15 @@ func (state *State) paintAIBehaviour(page *settingsPage) {
 	case 120:
 		selectedContext = hitAISetContext120
 	}
+	selectedCLI := hitAISetCLITo60
+	switch settings.cliTimeoutSeconds {
+	case 30:
+		selectedCLI = hitAISetCLITo30
+	case 120:
+		selectedCLI = hitAISetCLITo120
+	case 300:
+		selectedCLI = hitAISetCLITo300
+	}
 	description, color := m.ClearHistoryDesc, pal.muted
 	switch {
 	case state.ai.run != nil:
@@ -469,10 +478,12 @@ func (state *State) paintAIBehaviour(page *settingsPage) {
 		description, color = m.ClearHistoryDone, pal.success
 	}
 	riskOptions, stepOptions, contextOptions := state.aiRiskOptions(), state.aiStepsOptions(), state.aiContextOptions()
+	cliOptions := state.aiCLITimeoutOptions()
 	page.group(m.BehaviourTitle, func() {
 		page.aiFrame(settingsRowHeight, m.AutoRun, m.AutoRunDesc, pal.muted, func() { page.segmentSlot(choice, riskOptions[:], selectedRisk) })
 		page.aiFrame(settingsRowHeight, m.MaxSteps, m.MaxStepsDesc, pal.muted, func() { page.segmentSlot(choice, stepOptions[:], selectedSteps) })
 		page.aiFrame(settingsRowHeight, m.ContextLines, m.ContextLinesDesc, pal.muted, func() { page.segmentSlot(choice, contextOptions[:], selectedContext) })
+		page.aiFrame(settingsRowHeight, m.CLITimeout, m.CLITimeoutDesc, pal.muted, func() { page.segmentSlot(choice, cliOptions[:], selectedCLI) })
 		page.aiFrameFor(hitAISetRedact, settingsRowHeight, m.Redact, m.RedactDesc, pal.muted, func() { page.switchSlot(hitAISetRedact, settings.redact, false, m.Redact) })
 		page.aiFrameFor(hitAISetHistory, settingsRowHeight, m.History, m.HistoryDesc, pal.muted, func() { page.switchSlot(hitAISetHistory, settings.keepHistory, false, m.History) })
 		page.aiFrame(settingsRowHeight, m.ClearHistory, description, color, func() {

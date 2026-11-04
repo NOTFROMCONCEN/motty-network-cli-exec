@@ -188,6 +188,8 @@ type AISettingsMessages struct {
 	ContextLines     string
 	ContextLinesDesc string
 	ContextOff       string
+	CLITimeout       string
+	CLITimeoutDesc   string
 	Redact           string
 	RedactDesc       string
 	History          string
