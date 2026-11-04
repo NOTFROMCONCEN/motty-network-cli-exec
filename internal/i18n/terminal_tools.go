@@ -823,6 +823,11 @@ type ToolsMessages struct {
 	AdvancedOptions                 string
 	TransferField                   string
 	TransferAuto                    string
+	ExecModeField                   string
+	ExecModeAuto                    string
+	ExecModeShell                   string
+	ExecModeNetworkCLI              string
+	CLIPlatformField                string
 	AlgoDefault                     string
 	AlgoCompatible                  string
 	AlgoCustom                      string

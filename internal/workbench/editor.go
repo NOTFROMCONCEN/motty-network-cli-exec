@@ -8,6 +8,7 @@ import (
 
 	"github.com/vivaui/viva/text"
 	"motty/internal/i18n"
+	"motty/internal/netcli"
 	"motty/internal/otp"
 	"motty/internal/serial"
 	"motty/internal/sshconn"
@@ -89,6 +90,14 @@ type hostEditor struct {
 	// console is RDP's own: it asks the server for its console (administrative)
 	// session.
 	viaSSH, clipboard, console, chromeless bool
+	// execChoice is the "Command execution" choice: follow the transport's
+	// default, or pin the shell capture or the network CLI. cliPlatform indexes
+	// the platform list and matters only for the network CLI.
+	execChoice execChoice
+	// cliPlatform is the chosen network CLI platform and cliPlatformOpen its
+	// list being open.
+	cliPlatform     int
+	cliPlatformOpen bool
 	// ports are the serial ports found when the picker was last opened.
 	ports     []serial.Port
 	portsOpen bool
@@ -249,6 +258,9 @@ func (editor *hostEditor) load(host Host) {
 	editor.noHistory = host.NoHistory
 	editor.proxy, editor.proxyPassword = cloneOutboundProxy(host.Proxy), ""
 	editor.transfer = host.Transfer
+	editor.execChoice = execChoiceFor(host.ExecMode)
+	editor.cliPlatform = platformIndexFor(host.CLIPlatform)
+	editor.cliPlatformOpen = false
 	editor.advancedOpen = host.isSSH() && (host.Algo != nil || host.ForwardX11 || host.AgentForward || host.NoHistory || host.LoginCommand != "")
 	if host.Algo != nil {
 		editor.algorithms.Insert(host.Algo.list)
@@ -315,6 +327,14 @@ func (editor *hostEditor) host(id uint32) Host {
 	if editor.protocol != protocolSerial {
 		host.Proxy = cloneOutboundProxy(editor.proxy)
 	}
+	if execPaintable(editor.protocol) {
+		host.ExecMode = savedExecMode(editor.execChoice)
+		ids := netcliIDs()
+		platform := ids[min(editor.cliPlatform, len(ids)-1)]
+		if platform != netcli.GenericID {
+			host.CLIPlatform = platform
+		}
+	}
 	host.normalizeEndpoint()
 	setHostTags(&host, tags)
 	host.finish()
@@ -343,6 +363,7 @@ func (editor *hostEditor) reset() {
 	editor.authOpen, editor.identityOpen = false, false
 	editor.forwardX11, editor.agentForward, editor.noHistory, editor.transfer = false, false, false, transferAuto
 	editor.agentAccess = false
+	editor.execChoice, editor.cliPlatform, editor.cliPlatformOpen = execChoiceAuto, 0, false
 	editor.proxy, editor.proxyPassword = nil, ""
 	editor.advancedOpen = false
 	editor.port.Insert(strconv.Itoa(defaultPort))

@@ -364,7 +364,11 @@ func (b *agentBackend) Sessions(context.Context) ([]gate.SessionInfo, error) {
 	for index, host := range b.hosts {
 		sessions[index] = gate.SessionInfo{
 			ID: host.CatalogID, Title: host.Label, Ready: true,
-			Address: b.catalog.login(host) + "@" + host.Address + ":" + strconv.Itoa(int(host.Port)),
+			// Commands run on saved hosts over their own SSH exec channels:
+			// shell semantics, whatever the host's interactive execution mode
+			// is. There is no terminal and no device CLI here.
+			Address:  b.catalog.login(host) + "@" + host.Address + ":" + strconv.Itoa(int(host.Port)),
+			ExecMode: gate.ExecModeShell,
 		}
 	}
 	return sessions, nil
@@ -386,9 +390,9 @@ func (b *agentBackend) Exec(ctx context.Context, args tools.TerminalExecArgs) (g
 	output := strings.ToValidUTF8(string(result.Output), "�")
 	switch {
 	case err == nil:
-		return gate.ExecResult{Output: output, ExitCode: result.ExitCode, Truncated: result.Truncated}, nil
+		return gate.ExecResult{Output: output, ExitCode: result.ExitCode, Truncated: result.Truncated, ExitKnown: true}, nil
 	case ctx.Err() == nil && errors.Is(err, context.DeadlineExceeded):
-		return gate.ExecResult{Output: output, Truncated: result.Truncated, TimedOut: true}, nil
+		return gate.ExecResult{Output: output, Truncated: result.Truncated, TimedOut: true, ExitKnown: true}, nil
 	}
 	return gate.ExecResult{}, err
 }
