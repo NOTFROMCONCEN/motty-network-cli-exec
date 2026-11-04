@@ -24,6 +24,9 @@ const (
 	aboutRepoURL    = "https://github.com/t8y2/motty"
 	aboutDocsURL    = "https://motty.page"
 	aboutVivaURL    = "https://vivaui.dev"
+	// aboutForkURL is this fork's own repository: where this build, which is
+	// not the official Motty, is developed and published.
+	aboutForkURL = "https://github.com/NOTFROMCONCEN/motty-network-cli-exec"
 )
 
 // linkMark is how a place to go is drawn: the glyph and its size, the chip it
@@ -81,6 +84,7 @@ var (
 	hitAboutIssues   = tree.ID(settingsHits, "settings-about-issues")
 	hitAboutRepo     = tree.ID(settingsHits, "settings-about-repo")
 	hitAboutDocs     = tree.ID(settingsHits, "settings-about-docs")
+	hitAboutFork     = tree.ID(settingsHits, "settings-about-fork")
 	hitAboutViva     = tree.ID(settingsHits, "settings-about-viva")
 )
 
@@ -108,7 +112,10 @@ func readAboutFacts(info *debug.BuildInfo) aboutBuildInfo {
 		platform: aboutPlatform(runtime.GOOS, runtime.GOARCH),
 		runtime:  runtime.Version(),
 	}
-	facts.versionText = "v" + facts.version
+	// The page names this build the way the fork publishes it —
+	// v0.3.0-netcli-build.1-arknights — so a user can tell this copy from the
+	// official one at a glance. The numbers underneath stay plain.
+	facts.versionText = update.TagFor(facts.version, update.ForkBase, update.ForkCodename)
 	if info != nil {
 		var revision, when string
 		for _, setting := range info.Settings {
@@ -129,7 +136,7 @@ func readAboutFacts(info *debug.BuildInfo) aboutBuildInfo {
 			}
 		}
 	}
-	facts.copyText = "Motty " + facts.version + "\nplatform: " + facts.platform + "\nruntime: " + facts.runtime + "\n"
+	facts.copyText = "Motty " + facts.version + " (" + facts.versionText + ")\nfork: " + update.ForkRepo + "\nplatform: " + facts.platform + "\nruntime: " + facts.runtime + "\n"
 	if facts.build != "" {
 		facts.copyText += "build: " + facts.build + "\n"
 	}
@@ -271,9 +278,10 @@ func (state *State) paintAboutSettings(page *settingsPage) {
 			// once it is laid out, as the sidebar header does.
 			row := ui.Row(c).Height(96).PadX(18).Gap(16).Items(ui.Center)
 			row.Children(func() {
-				ui.Column(c).Grow(1).Children(func() {
-					page.add(settingsControl{kind: controlLogo, slot: ui.Slot(c).Size(lockupWidth, lockupHeight).Shrink(0)})
-					ui.Paragraph(c, m.About.Tagline, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 0, 0, 0)
+				page.f.Column().Grow(1).Children(func() {
+					page.add(settingsControl{kind: controlLogo, slot: page.f.Slot().Size(lockupWidth, lockupHeight).Shrink(0)})
+					page.f.Paragraph(m.About.Tagline, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 0, 0, 0)
+					page.f.Paragraph(m.About.ForkNotice, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 4, 0, 0)
 				})
 				page.button(hitAboutCopyInfo, copyAction, aiButtonOutline, false).Shrink(0)
 			})
@@ -320,7 +328,9 @@ func (state *State) paintAboutSettings(page *settingsPage) {
 				})
 				page.pair(func() {
 					page.linkCard(hitAboutViva, aboutVivaMark, m.About.Viva, m.About.VivaDescription)
-				}, func() {})
+				}, func() {
+					page.linkCard(hitAboutFork, aboutRepoMark, m.About.Fork, m.About.ForkDescription)
+				})
 			})
 		})
 	})
@@ -342,6 +352,8 @@ func (state *State) clickAboutSettings(id gfx.ID) bool {
 		state.openExternal(aboutIssuesURL)
 	case hitAboutRepo:
 		state.openExternal(aboutRepoURL)
+	case hitAboutFork:
+		state.openExternal(aboutForkURL)
 	case hitAboutDocs:
 		state.openExternal(aboutDocsURL)
 	case hitAboutViva:

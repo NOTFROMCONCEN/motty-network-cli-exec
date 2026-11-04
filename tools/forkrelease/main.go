@@ -99,14 +99,17 @@ func keygen(args []string) error {
 
 // manifest describes and signs one package for the update feed. The signature
 // covers the package's bytes, the version and the file name, so a feed cannot
-// pass one build off as another.
+// pass one build off as another. The version is the machine-facing one —
+// 0.3.1, 0.3.2 — and the published tag names the upstream base and the era's
+// codename on top of it: v0.3.0-netcli-build.1-arknights.
 func manifest(args []string) error {
 	flags := flag.NewFlagSet("manifest", flag.ExitOnError)
-	version := flags.String("version", "", "version without the leading v")
+	version := flags.String("version", "", "machine-facing version without the leading v, e.g. 0.3.1")
 	pkg := flags.String("pkg", "", "the package to sign")
 	keyPath := flags.String("key", "", "the minisign private key")
 	password := flags.String("password", "", "password of an encrypted private key, or $MOTTY_FORK_KEY_PASSWORD")
-	tag := flags.String("tag", "", "release tag (default v<version>)")
+	base := flags.String("base", update.ForkBase, "the upstream version this build sits on")
+	codename := flags.String("codename", update.ForkCodename, "this era of the fork")
 	repo := flags.String("repo", update.ForkRepo, "owner/repository the release is published to")
 	notesPath := flags.String("notes", "", "file holding the release notes")
 	out := flags.String("out", "latest.json", "where to write the manifest")
@@ -116,11 +119,9 @@ func manifest(args []string) error {
 	if *version == "" || *pkg == "" || *keyPath == "" {
 		return errors.New("manifest needs -version, -pkg and -key")
 	}
-	if *tag == "" {
-		*tag = "v" + *version
-	}
-	if *tag != "v"+*version {
-		return fmt.Errorf("tag %q does not name version %q", *tag, *version)
+	tag := update.TagFor(*version, *base, *codename)
+	if tag == "v"+*version {
+		return fmt.Errorf("version %s is not a build on top of %s; the tag would carry no build number", *version, *base)
 	}
 	name := filepath.Base(*pkg)
 	size, sum, err := fileDigest(*pkg)
@@ -155,8 +156,8 @@ func manifest(args []string) error {
 	}
 	feed := manifestFile{
 		Version: *version,
-		Tag:     *tag,
-		Source:  "https://github.com/" + *repo + "/releases/tag/" + *tag,
+		Tag:     tag,
+		Source:  "https://github.com/" + *repo + "/releases/tag/" + tag,
 		Notes:   notes,
 		Files: []manifestEntry{{
 			Name: name, Size: size, SHA256: sum, Signature: signature,
