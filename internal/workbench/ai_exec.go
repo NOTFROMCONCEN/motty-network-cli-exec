@@ -23,6 +23,9 @@ type aiExec struct {
 	cli  *netcli.Tap          // the network CLI collector; nil on the shell path
 	done chan gate.ExecResult // buffered; receives exactly once
 	job  *aiJob               // set for a background command nobody is waiting on
+	// cliWait is a network CLI command's smallest wait (see effectiveWait);
+	// zero on the shell path, which keeps the call's own timeout.
+	cliWait time.Duration
 	// confirm is the quiet-window timer behind a candidate prompt (see
 	// netcli.Tap.Pending); nil while the shell path runs or output keeps
 	// arriving.
@@ -170,7 +173,7 @@ func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 	var exec *aiExec
 	var send []byte
 	if session.sessionExecMode() == cliMode {
-		if exec, send, err = beginCLIExec(session, t, args); err != nil {
+		if exec, send, err = beginCLIExec(session, t, args, cliWaitFloor(state.ai.settings.cliTimeoutSeconds)); err != nil {
 			return nil, err
 		}
 	} else {
