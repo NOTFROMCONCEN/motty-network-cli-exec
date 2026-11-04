@@ -68,19 +68,19 @@ func TestAboutShowsTheBuildAndOpensTheCommunityLinks(t *testing.T) {
 		t.Fatalf("the category is named %q", state.settingsCategoryName(settingsAbout))
 	}
 	facts := aboutFacts()
-	for _, want := range []string{about.Tagline, about.InfoTitle, about.Version, about.CommunityTitle, about.ProjectTitle, about.QQ, about.WeChat, about.Discord, about.Viva, facts.platform, facts.runtime} {
+	for _, want := range []string{about.Tagline, about.ForkNotice, about.InfoTitle, about.Version, about.CommunityTitle, about.ProjectTitle, about.QQ, about.WeChat, about.Discord, about.Viva, about.Fork, facts.platform, facts.runtime} {
 		if !contains(texts, want) {
 			t.Errorf("the About page does not paint %q", want)
 		}
 	}
-	for _, id := range []gfx.ID{hitAboutCopyInfo, hitAboutQQ, hitAboutWeChat, hitAboutDiscord, hitAboutIssues, hitAboutRepo, hitAboutDocs, hitAboutViva} {
+	for _, id := range []gfx.ID{hitAboutCopyInfo, hitAboutQQ, hitAboutWeChat, hitAboutDiscord, hitAboutIssues, hitAboutRepo, hitAboutDocs, hitAboutFork, hitAboutViva} {
 		if _, ok := hitByID(&canvas, id); !ok {
 			t.Errorf("the About page does not paint %d", id)
 		}
 	}
 
 	state.Click(hitAboutCopyInfo)
-	for _, want := range []string{"Motty " + facts.version, "platform: " + facts.platform, "runtime: " + facts.runtime} {
+	for _, want := range []string{"Motty " + facts.version, "fork: NOTFROMCONCEN/motty-network-cli-exec", "platform: " + facts.platform, "runtime: " + facts.runtime} {
 		if !strings.Contains(copied, want) {
 			t.Errorf("the copied version info %q does not name %q", copied, want)
 		}
@@ -112,6 +112,7 @@ func TestAboutShowsTheBuildAndOpensTheCommunityLinks(t *testing.T) {
 		{hitAboutIssues, aboutIssuesURL},
 		{hitAboutRepo, aboutRepoURL},
 		{hitAboutDocs, aboutDocsURL},
+		{hitAboutFork, aboutForkURL},
 		{hitAboutViva, aboutVivaURL},
 	} {
 		opened = nil
