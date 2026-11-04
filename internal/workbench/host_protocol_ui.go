@@ -277,6 +277,7 @@ func (state *State) clickHostProtocol(id ui.ID) bool {
 	case state.clickHostAuthentication(id):
 	case state.clickHostCredential(id):
 	case state.clickTransferChoice(id):
+	case state.clickExecChoice(id):
 	case state.clickHostColor(id):
 	case id == hitDialogOTPRemove:
 		editor.otpRemove = !editor.otpRemove
@@ -364,6 +365,12 @@ func (state *State) hostFormHeight() float32 {
 	height := float32(2+44+(3+state.hostEndpointRows())*hostFormRowHeight) + state.hostDialogExtra()
 	if state.editor.protocol != protocolSerial {
 		height += hostFormRowHeight
+	}
+	if execPaintable(state.editor.protocol) {
+		height += hostFormRowHeight
+		if state.editor.execChoice == execChoiceCLI {
+			height += hostFormRowHeight // the platform list
+		}
 	}
 	if state.dialogError != "" {
 		height += 32

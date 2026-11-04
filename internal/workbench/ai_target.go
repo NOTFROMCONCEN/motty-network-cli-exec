@@ -42,7 +42,8 @@ const maxAITargets = 1 + maxMentions
 
 func aiSessionInfo(session *Session) gate.SessionInfo {
 	return gate.SessionInfo{ID: sessionHandle(session.ID), Title: session.Title, Address: session.Address,
-		Ready: session.term != nil && session.term.shell != nil && session.term.live && !session.term.ended}
+		Ready:    session.term != nil && session.term.shell != nil && session.term.live && !session.term.ended,
+		ExecMode: session.execModeName(), Platform: session.cliPlatformName()}
 }
 
 // Until the first send/explicit choice only the visible terminal is a default.
