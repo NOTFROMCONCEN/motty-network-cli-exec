@@ -51,7 +51,7 @@ func (b *fakeBackend) Exec(ctx context.Context, a tools.TerminalExecArgs) (gate.
 		case <-b.execRelease:
 		}
 	}
-	return gate.ExecResult{Output: "out", ExitCode: 3}, nil
+	return gate.ExecResult{Output: "out", ExitCode: 3, ExitKnown: true}, nil
 }
 func (b *fakeBackend) JobStart(context.Context, tools.TerminalStartArgs) (gate.JobStatus, error) {
 	return gate.JobStatus{}, errors.New("not used")
