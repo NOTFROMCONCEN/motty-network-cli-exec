@@ -108,7 +108,7 @@ func readAboutFacts(info *debug.BuildInfo) aboutBuildInfo {
 		runtime:  runtime.Version(),
 	}
 	// The page names this build the way the fork publishes it —
-	// v0.3.0-netcli-build.1-arknights — so a user can tell this copy from the
+	// v0.3.1-netcli-build.4-arknights — so a user can tell this copy from the
 	// official one at a glance. The numbers underneath stay plain.
 	facts.versionText = update.TagFor(facts.version, update.ForkBase, update.ForkCodename)
 	if info != nil {

@@ -3,7 +3,7 @@
 // updates, signed so a download can be held to the release key.
 //
 //	forkrelease keygen   -private <path> [-public <path>]
-//	forkrelease manifest -version 0.3.1 -pkg <setup.exe> -key <private key> [-out latest.json]
+//	forkrelease manifest -version 0.3.1.4 -pkg <setup.exe> -key <private key> [-out latest.json]
 package main
 
 import (
@@ -99,12 +99,13 @@ func keygen(args []string) error {
 
 // manifest describes and signs one package for the update feed. The signature
 // covers the package's bytes, the version and the file name, so a feed cannot
-// pass one build off as another. The version is the machine-facing one —
-// 0.3.1, 0.3.2 — and the published tag names the upstream base and the era's
-// codename on top of it: v0.3.0-netcli-build.1-arknights.
+// pass one build off as another. The version is the machine-facing one — the
+// upstream base plus a build counter, 0.3.1.4, 0.3.1.5 — and the published tag
+// names the upstream base and the era's codename on top of it:
+// v0.3.1-netcli-build.4-arknights.
 func manifest(args []string) error {
 	flags := flag.NewFlagSet("manifest", flag.ExitOnError)
-	version := flags.String("version", "", "machine-facing version without the leading v, e.g. 0.3.1")
+	version := flags.String("version", "", "machine-facing version without the leading v, e.g. 0.3.1.4")
 	pkg := flags.String("pkg", "", "the package to sign")
 	keyPath := flags.String("key", "", "the minisign private key")
 	password := flags.String("password", "", "password of an encrypted private key, or $MOTTY_FORK_KEY_PASSWORD")
