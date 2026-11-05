@@ -19,7 +19,11 @@ func TestNewer(t *testing.T) {
 	}{
 		{"0.1.0", "0.1.1", true}, {"0.1.0", "0.2", true}, {"0.9.0", "0.10.0", true}, {"1.0", "1.0.0", false},
 		{"0.2.0", "0.1.9", false}, {"v0.1.0", "v0.1.0", false}, {"0.1.0", "next", false}, {"dev", "1.0.0", false},
-		{"1.0.0", "1.0.0.1", false},
+		// A fourth number is the fork's build counter: shorter versions are
+		// the same version padded with zeros, so the counter outranks none of
+		// them.
+		{"1.0.0", "1.0.0.1", true}, {"1.0.0.1", "1.0.0", false}, {"1.0.0.1", "1.0.0.2", true},
+		{"1.0.2", "1.0.1.9", false}, {"1.0", "1.0.0.1", true},
 	} {
 		if got := Newer(test.current, test.latest); got != test.want {
 			t.Errorf("Newer(%q, %q) = %v", test.current, test.latest, got)
