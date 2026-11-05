@@ -67,8 +67,20 @@ func TestANoRuleSetMarksNothing(t *testing.T) {
 	}
 }
 
+// wordPack is the word-and-address pack the fast-path tests exercise, the
+// rules WordRule and IPv4Rule build (the logcolor package ships their
+// counterparts for real).
+func wordPack() []Rule {
+	return []Rule{
+		WordRule(Red, "error", "errors", "err", "fail", "fails", "failed", "failure", "fatal", "panic", "denied", "refused", "critical", "exception", "traceback", "segfault", "segmentation fault"),
+		WordRule(Yellow, "warn", "warning", "warnings", "deprecated", "timeout", "timed out", "retrying"),
+		WordRule(Green, "ok", "success", "successful", "successfully", "passed", "done", "connected", "active (running)"),
+		IPv4Rule(),
+	}
+}
+
 func TestBuiltinRulesFindFailuresWarningsSuccessesAndAddresses(t *testing.T) {
-	set := Compile(Builtin())
+	set := Compile(wordPack())
 	for line, want := range map[string]string{
 		"Permission denied":         "...........RRRRRR",
 		"WARNING: disk almost full": "YYYYYYY..................",
@@ -83,7 +95,7 @@ func TestBuiltinRulesFindFailuresWarningsSuccessesAndAddresses(t *testing.T) {
 }
 
 func BenchmarkMarkABuiltinLine(b *testing.B) {
-	set := Compile(Builtin())
+	set := Compile(wordPack())
 	line := []byte("2026-10-17T10:11:12 host sshd[123]: Failed password for root from 192.168.1.20 port 22 ssh2")
 	marks := make([]Slot, len(line))
 	b.ReportAllocs()
@@ -104,7 +116,7 @@ func regexOnly(rules []Rule) []Rule {
 }
 
 func TestBuiltinFastPathMatchesTheExpressions(t *testing.T) {
-	fast, expressions := Compile(Builtin()), Compile(regexOnly(Builtin()))
+	fast, expressions := Compile(wordPack()), Compile(regexOnly(wordPack()))
 	lines := []string{
 		"",
 		"Failed password",
@@ -169,7 +181,7 @@ func markedBy(set *Set, line string) string {
 // A plain ASCII line must take the fast path: the expressions allocate a match
 // slice, the literal matcher does not.
 func TestBuiltinMarkDoesNotAllocateOnASCIILines(t *testing.T) {
-	set := Compile(Builtin())
+	set := Compile(wordPack())
 	line := []byte("2026-10-17T10:11:12 host sshd[123]: Failed password for root from 192.168.1.20 port 22")
 	marks := make([]Slot, len(line))
 	if allocs := testing.AllocsPerRun(100, func() {
@@ -181,7 +193,7 @@ func TestBuiltinMarkDoesNotAllocateOnASCIILines(t *testing.T) {
 }
 
 func BenchmarkMarkABuiltinPlainLine(b *testing.B) {
-	set := Compile(Builtin())
+	set := Compile(wordPack())
 	line := []byte("2026-10-17T10:11:12 host app[42]: GET /api/v1/users 200 12ms")
 	marks := make([]Slot, len(line))
 	b.ReportAllocs()
@@ -198,7 +210,7 @@ func TestBuiltinPatternsKeepTheirExpressions(t *testing.T) {
 		`\b(ok|success|successful|successfully|passed|done|connected|active \(running\))\b`,
 		`\b\d{1,3}(\.\d{1,3}){3}\b`,
 	}
-	rules := Builtin()
+	rules := wordPack()
 	if len(rules) != len(want) {
 		t.Fatalf("%d builtin rules, want %d", len(rules), len(want))
 	}
@@ -213,8 +225,8 @@ func TestBuiltinPatternsKeepTheirExpressions(t *testing.T) {
 }
 
 func TestBuiltinFastPathKeepsUserRulePriority(t *testing.T) {
-	fast := Compile(append([]Rule{{Pattern: `failed`, Slot: Blue}}, Builtin()...))
-	expressions := Compile(append([]Rule{{Pattern: `failed`, Slot: Blue}}, regexOnly(Builtin())...))
+	fast := Compile(append([]Rule{{Pattern: `failed`, Slot: Blue}}, wordPack()...))
+	expressions := Compile(append([]Rule{{Pattern: `failed`, Slot: Blue}}, regexOnly(wordPack())...))
 	for _, line := range []string{"failed error", "10.0.0.12 failed", "failed failed failed"} {
 		if got, want := markedBy(fast, line), markedBy(expressions, line); got != want {
 			t.Errorf("%q: fast %s, expressions %s", line, got, want)
@@ -227,14 +239,14 @@ func TestBuiltinFastPathHandlesLongLines(t *testing.T) {
 	if len(line) <= fastLineLimit {
 		t.Fatalf("test line is only %d bytes", len(line))
 	}
-	fast, expressions := Compile(Builtin()), Compile(regexOnly(Builtin()))
+	fast, expressions := Compile(wordPack()), Compile(regexOnly(wordPack()))
 	if got, want := markedBy(fast, line), markedBy(expressions, line); got != want {
 		t.Errorf("long line: fast %s, expressions %s", got, want)
 	}
 }
 
 func TestBuiltinFastPathMatchesTheQuadExpression(t *testing.T) {
-	fast, expressions := Compile(Builtin()), Compile(regexOnly(Builtin()))
+	fast, expressions := Compile(wordPack()), Compile(regexOnly(wordPack()))
 	random := rand.New(rand.NewSource(11))
 	alphabet := []byte("0123456789.a_ ")
 	line := make([]byte, 64)
@@ -258,7 +270,7 @@ func FuzzBuiltinFastPathMatchesTheExpressions(f *testing.F) {
 	} {
 		f.Add(seed)
 	}
-	fast, expressions := Compile(Builtin()), Compile(regexOnly(Builtin()))
+	fast, expressions := Compile(wordPack()), Compile(regexOnly(wordPack()))
 	f.Fuzz(func(t *testing.T, line string) {
 		if len(line) > 2000 {
 			line = line[:2000]
