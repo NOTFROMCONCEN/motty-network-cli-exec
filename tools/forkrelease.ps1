@@ -28,7 +28,7 @@ param(
     # number, so the two move together. Both stay until upstream publishes its
     # next version, when the base moves and a new codename may take over.
     [string]$Base = "0.3.2",
-    [string]$Codename = "Arknights",
+    [string]$Codename = "Genshin",
     [string]$NotesPath = "",
     [string]$KeyPath = "",
     [string]$Branch = "feature/network-cli-exec",
