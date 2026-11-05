@@ -1,6 +1,7 @@
 package workbench
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/vivaui/viva/text"
 	"github.com/vivaui/viva/ui"
 	"motty/internal/highlight"
+	"motty/internal/logcolor"
 )
 
 // Keyword highlighting. The highlight package finds the words; this file keeps
@@ -30,17 +32,19 @@ type highlightRule struct {
 	Slot          highlight.Slot
 }
 
-// maxCustomHighlightRules leaves room for the built-in rules under the package's
-// own limit.
-const maxCustomHighlightRules = highlight.MaxRules - 8
+// maxCustomHighlightRules leaves room for the built-in rules of the logcolor
+// library under the package's own limit.
+const maxCustomHighlightRules = highlight.MaxRules - logcolor.RuleCount
 
 // highlightUiHits is the place of the controls this file paints.
 var highlightUiHits = tree.Feature("highlight-ui")
 
 var (
 	hitSettingsHighlightToggle = tree.ID(highlightUiHits, "settings-highlight")
+	hitSettingsHighlightMaster = tree.ID(highlightUiHits, "settings-highlight-master")
 	hitSettingsHighlightAdd    = tree.ID(highlightUiHits, "settings-highlight-add")
 	hitSettingsHighlightImport = tree.ID(highlightUiHits, "settings-highlight-import")
+	hitSettingsHighlightExport = tree.ID(highlightUiHits, "settings-highlight-export")
 	hitHighlightPattern        = tree.ID(highlightUiHits, "highlight-pattern")
 	hitHighlightRegex          = tree.ID(highlightUiHits, "highlight-regex")
 	hitHighlightCase           = tree.ID(highlightUiHits, "highlight-case")
@@ -56,6 +60,7 @@ var (
 
 // highlightUI is the state of the rules and of the dialog that adds one.
 type highlightUI struct {
+	on         bool // zero value: coloring is off; the window-bar switch turns it on
 	builtinOff bool // zero value: the built-in rules are on
 	rules      []highlightRule
 
@@ -71,17 +76,33 @@ type highlightUI struct {
 }
 
 // recompileHighlights rebuilds the compiled rules after any change to them, and
-// with them the terminal's look, so every line is painted again.
+// with them the terminal's look, so every line is painted again. While the
+// master switch is off the compiled set stays empty, so no line is colored.
 func (state *State) recompileHighlights() {
-	rules := make([]highlight.Rule, 0, len(state.highlighting.rules)+8)
-	for _, rule := range state.highlighting.rules {
-		rules = append(rules, highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Slot: rule.Slot})
-	}
-	if !state.highlighting.builtinOff {
-		rules = append(rules, highlight.Builtin()...)
+	var rules []highlight.Rule
+	if state.highlighting.on {
+		rules = make([]highlight.Rule, 0, len(state.highlighting.rules)+logcolor.RuleCount)
+		for _, rule := range state.highlighting.rules {
+			rules = append(rules, highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Slot: rule.Slot})
+		}
+		if !state.highlighting.builtinOff {
+			rules = append(rules, logcolor.Rules()...)
+		}
 	}
 	state.highlights = highlight.Compile(rules)
 	state.rebuildTerminalLook()
+}
+
+// setHighlighting turns the coloring of terminal output on or off. The off
+// state keeps the output exactly as the device sent it, so the switch is off
+// until the user asks for color.
+func (state *State) setHighlighting(on bool) bool {
+	if state.highlighting.on == on {
+		return false
+	}
+	state.highlighting.on = on
+	state.recompileHighlights()
+	return true
 }
 
 func (state *State) setBuiltinHighlight(on bool) bool {
@@ -162,17 +183,21 @@ func (state *State) deleteHighlightRule(index int) {
 	state.save()
 }
 
-// importHighlightRules reads the rules of a text file the user picked, in the
-// format highlight.ParseRules documents, and appends the ones that parse to
-// the user's rules. What the file holds beyond the room left under the cap is
+// importHighlightRules reads the rules of a file the user picked, in the JSON
+// format highlight.ParseJSONRules documents or the text format
+// highlight.ParseRules documents, and appends the ones that parse to the
+// user's rules. What the file holds beyond the room left under the cap is
 // skipped, and the result is reported in a notice, as the warnings are; the
 // file itself is never kept.
 func (state *State) importHighlightRules() {
 	m := state.messages.Tools
 	title := m.HighlightImportPickerTitle
 	paths, err := state.options.OpenFiles(app.OpenFileOptions{
-		Title:   title,
-		Filters: []app.FileFilter{{Name: "Highlight rules", Pattern: "*.txt"}},
+		Title: title,
+		Filters: []app.FileFilter{
+			{Name: "Highlight rules", Pattern: "*.json"},
+			{Name: "Highlight rules", Pattern: "*.txt"},
+		},
 	})
 	if errors.Is(err, app.ErrCanceled) || err == nil && len(paths) == 0 {
 		return
@@ -190,7 +215,17 @@ func (state *State) importHighlightRules() {
 		state.showActionWarning(title, m.HighlightImportTooLarge)
 		return
 	}
-	parsed, skipped := highlight.ParseRules(string(data))
+	var parsed []highlight.Rule
+	skipped := 0
+	trimmed := bytes.TrimLeft(bytes.TrimPrefix(data, []byte("\ufeff")), " \t\r\n")
+	if len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[') {
+		if parsed, skipped, err = highlight.ParseJSONRules(data); err != nil {
+			state.showActionWarning(title, m.HighlightImportInvalidJSON)
+			return
+		}
+	} else {
+		parsed, skipped = highlight.ParseRules(string(data))
+	}
 	if len(parsed) == 0 {
 		if skipped == 0 {
 			state.showActionWarning(title, m.HighlightImportNothing)
@@ -221,6 +256,37 @@ func (state *State) importHighlightRules() {
 	}
 }
 
+// exportHighlightRules saves the user's rules as the JSON document
+// highlight.JSONRules writes, for a backup or to carry them to another
+// machine. The built-in library is the app's own, so it is not part of the
+// file; importing it back adds nothing to what the user wrote.
+func (state *State) exportHighlightRules() {
+	m := state.messages.Tools
+	title := m.HighlightExportPickerTitle
+	path, err := state.options.SaveFile(app.SaveFileOptions{
+		Title:            title,
+		SuggestedName:    "motty-coloring-rules.json",
+		DefaultExtension: "json",
+		Filters:          []app.FileFilter{{Name: "Highlight rules", Pattern: "*.json"}},
+	})
+	if errors.Is(err, app.ErrCanceled) || err == nil && path == "" {
+		return
+	}
+	if err != nil {
+		state.showActionFailure(title, err, state.messages.ActionFeedback.FilePickerFailed)
+		return
+	}
+	rules := make([]highlight.Rule, 0, len(state.highlighting.rules))
+	for _, rule := range state.highlighting.rules {
+		rules = append(rules, highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Slot: rule.Slot})
+	}
+	if err = writePrivateAtomic(path, highlight.JSONRules(rules)); err != nil {
+		state.showFileSaveFailure(title, err)
+		return
+	}
+	state.showActionInfo(title, fmt.Sprintf(m.HighlightExportedFmt, len(rules), path))
+}
+
 // maxHighlightImportBytes bounds what an import reads: the file is picked by
 // hand and only its first rules matter, so a mis-picked log is refused rather
 // than read whole on the interface thread.
@@ -241,6 +307,15 @@ func readHighlightRules(path string) (data []byte, tooLarge bool, err error) {
 		return nil, true, nil
 	}
 	return data, false, nil
+}
+
+// highlightHint is the window-bar tool's tip: it names the state a press of
+// the switch leads to, the way the theme button does.
+func (state *State) highlightHint() string {
+	if state.highlighting.on {
+		return state.messages.LabelHighlightingOff
+	}
+	return state.messages.LabelHighlightingOn
 }
 
 // slotName is a color's word in the current language.
@@ -393,6 +468,7 @@ func (state *State) paintHighlightSettings(page *settingsPage) {
 	m := state.messages.Tools
 	rules := state.highlighting.rules
 	page.group(m.HighlightGroup, func() {
+		page.toggleRow(m.HighlightMaster, m.HighlightMasterDescription, state.highlighting.on, hitSettingsHighlightMaster)
 		page.toggleRow(m.HighlightBuiltin, m.HighlightBuiltinDescription, !state.highlighting.builtinOff, hitSettingsHighlightToggle)
 		for index, rule := range rules {
 			kind := m.HighlightKindText
@@ -411,6 +487,8 @@ func (state *State) paintHighlightSettings(page *settingsPage) {
 			components.ButtonAction{ID: hitSettingsHighlightAdd, Label: m.HighlightAdd, Variant: components.ButtonOutline})
 		page.actionRow(m.HighlightImport, m.HighlightImportDescription, len(rules) >= maxCustomHighlightRules,
 			components.ButtonAction{ID: hitSettingsHighlightImport, Label: m.HighlightImport, Variant: components.ButtonOutline})
+		page.actionRow(m.HighlightExport, m.HighlightExportDescription, len(rules) == 0,
+			components.ButtonAction{ID: hitSettingsHighlightExport, Label: m.HighlightExport, Variant: components.ButtonOutline})
 	})
 }
 
@@ -418,6 +496,7 @@ func (state *State) paintHighlightSettings(page *settingsPage) {
 // An entry that cannot be used (a pattern that no longer compiles, an unknown
 // color, a snippet with no name) is dropped rather than carried along.
 func (state *State) restoreTerminalTools(saved savedState) {
+	state.highlighting.on = saved.HighlightEnabled
 	state.highlighting.builtinOff = saved.HighlightBuiltin == "off"
 	clear(state.highlighting.rules)
 	state.highlighting.rules = state.highlighting.rules[:0]
