@@ -32,7 +32,7 @@ const (
 	// the counter moves on top of it until upstream publishes its next
 	// version, when the base moves and a new codename may take over.
 	ForkBase     = "0.3.2"
-	ForkCodename = "Arknights"
+	ForkCodename = "Genshin"
 )
 
 // forkFeedURL is the newest release of the fork, on GitHub's API. It is a
