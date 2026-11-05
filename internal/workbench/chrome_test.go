@@ -37,7 +37,7 @@ func TestChromeHasOnlyTheControlsThatDoSomething(t *testing.T) {
 		hitHosts: true, hitWorkspaces: true, hitKeychain: true, hitProxies: true, hitPortForwarding: true,
 		hitKnownHosts: true, hitSnippets: true, hitNotes: true, hitSettings: true, hitWindowSettings: true, hitWindowLocalTerminal: true, hitSearch: true, hitConnect: true,
 		hitAddHost: true, hitHostFilterAll: true, hitImportMenu: true, hitTheme: true, hitHome: true, hitNewTab: true,
-		hitGitHub: true,
+		hitGitHub: true, hitLogColoring: true,
 	}
 	// A development build also declares the component gallery.
 	for _, id := range devOnlyShellHits() {
@@ -78,6 +78,37 @@ func TestWindowBarGitHubButtonOpensTheRepository(t *testing.T) {
 	state.Click(hitGitHub)
 	if len(opened) != 1 || opened[0] != aboutRepoURL {
 		t.Fatalf("the button opened %v, want %q", opened, aboutRepoURL)
+	}
+}
+
+// The window bar has the log-coloring switch beside the theme button: it names
+// the state a press leads to, colors nothing while it is off, and the choice
+// survives a restart.
+func TestWindowBarLogColoringSwitchFlipsAndStays(t *testing.T) {
+	_, options := newWorld(t)
+	state := newTestState(t, options)
+	if !state.highlights.Empty() {
+		t.Fatal("coloring is compiled although it ships off")
+	}
+	canvas, _ := paintedTexts(state)
+	hit, ok := hitByID(canvas, hitLogColoring)
+	if !ok {
+		t.Fatal("the window bar does not paint a log-coloring button")
+	}
+	if hit.Label != state.messages.LabelHighlightingOn {
+		t.Fatalf("the button reads %q", hit.Label)
+	}
+	state.Click(hitLogColoring)
+	if state.highlights.Empty() {
+		t.Fatal("the press left nothing compiled")
+	}
+	canvas, _ = paintedTexts(state)
+	hit, _ = hitByID(canvas, hitLogColoring)
+	if hit.Label != state.messages.LabelHighlightingOff {
+		t.Fatalf("after the press the button reads %q", hit.Label)
+	}
+	if restarted := newTestState(t, options); restarted.highlights.Empty() {
+		t.Fatal("the choice was not kept")
 	}
 }
 
