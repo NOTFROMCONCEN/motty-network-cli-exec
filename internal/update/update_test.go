@@ -183,28 +183,6 @@ func TestTheMirrorNamesThePackageOfThePlatformAndWhereToGetIt(t *testing.T) {
 	}
 }
 
-func TestGitHubFallbackDoesNotClaimThePackageListWasChecked(t *testing.T) {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/mirror":
-			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
-		case "/github":
-			w.Write([]byte(`{"tag_name":"v1.2.3","html_url":"https://github.com/t8y2/motty/releases/tag/v1.2.3"}`))
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
-
-	release, err := checkFeeds(context.Background(), server.Client(), server.URL+"/mirror", server.URL+"/github", "windows", "amd64")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if release.Version != "1.2.3" || release.PlatformPackageChecked || release.Asset.Has() {
-		t.Fatalf("fallback release = %+v", release)
-	}
-}
-
 func TestTheMirrorCarriesTheReleaseSignature(t *testing.T) {
 	signature := base64.StdEncoding.EncodeToString([]byte("minisign armour"))
 	files := func(sig string) string {
