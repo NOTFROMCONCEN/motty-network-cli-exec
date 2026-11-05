@@ -115,6 +115,8 @@ func (state *State) clickTerminalTools(id gfx.ID) bool {
 		if state.setBuiltinHighlight(state.highlighting.builtinOff) {
 			state.save()
 		}
+	case id == hitSettingsHighlightExport:
+		state.exportHighlightRules()
 	case id == hitSettingsCursorToggle:
 		state.terminalCursorSteady = !state.terminalCursorSteady
 		state.save()
