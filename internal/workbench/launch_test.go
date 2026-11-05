@@ -254,6 +254,10 @@ func TestASkippedVersionStaysQuietAtStartupButNotWhenAsked(t *testing.T) {
 		return update.Release{Version: version, URL: "https://example.com/r"}, nil
 	}
 	state := New(options)
+	// The automatic check only runs once the user has turned it on, and the
+	// worlds below rely on one running at startup, so this user turns it on
+	// first; the choice is saved and every later world inherits it.
+	state.Click(hitSettingsUpdateStartToggle)
 	state.Click(hitSettingsUpdateCheck)
 	waitUpdate(t, state, func() bool { return state.modal == modalUpdate })
 	state.Click(hitUpdateSkip)
