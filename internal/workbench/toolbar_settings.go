@@ -30,6 +30,7 @@ var toolbarCatalog = [3][]toolbarSpec{
 	toolbarWindow: {
 		{"transfers", hitTransferCenter, iconTransfer}, {"assistant", hitAIToggle, iconBot},
 		{"local-terminal", hitWindowLocalTerminal, iconTerminal}, {"commands", hitCommandPalette, iconSearch},
+		{"log-coloring", hitLogColoring, iconEye},
 		{"theme", hitTheme, iconMoon}, {"github", hitGitHub, iconGitHub}, {"settings", hitWindowSettings, iconSettings},
 	},
 	toolbarTerminal: {
@@ -201,6 +202,8 @@ func (state *State) toolbarLabel(id gfx.ID) string {
 		return m.CommandPaletteTitle
 	case hitTheme:
 		return m.SettingsAppearance
+	case hitLogColoring:
+		return m.Tools.HighlightMaster
 	case hitGitHub:
 		return m.LabelGitHub
 	case hitWindowSettings:

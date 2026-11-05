@@ -156,6 +156,15 @@ func (state *State) windowDockTool(spec toolbarSpec) barTool {
 		if state.aiPanelVisible() {
 			tool.style = iconButtonActive
 		}
+	case hitLogColoring:
+		// The eye tells whether the words are colored; the hint names the
+		// state a press leads to.
+		if state.highlighting.on {
+			tool.style = iconButtonActive
+		} else {
+			tool.icon = iconEyeOff
+		}
+		tool.hint = state.highlightHint()
 	}
 	return tool
 }
