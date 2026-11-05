@@ -221,6 +221,7 @@ func proxyRecordKey(fields map[string]json.RawMessage) string {
 var syncedSettings = map[string]bool{
 	"host_order":                   true,
 	"hidden_host_tags":             true,
+	"highlight_enabled":            true,
 	"highlight_builtin":            true,
 	"terminalOption":               true,
 	"terminal_scrollback":          true,

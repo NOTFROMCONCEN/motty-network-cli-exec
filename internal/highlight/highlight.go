@@ -82,15 +82,16 @@ type Rule struct {
 	CaseSensitive bool
 	Slot          Slot
 
-	// fast, when set by Builtin, holds the literal matcher the package can run
-	// instead of the expression. User rules never set it, so their behavior is
-	// always the compiled expression.
+	// fast, when set by WordRule or IPv4Rule, holds the literal matcher the
+	// package can run instead of the expression. User rules never set it, so
+	// their behavior is always the compiled expression.
 	fast *fastMatcher
 }
 
-// fastMatcher is the whole-word form Builtin's first three rules take: every
+// fastMatcher is the whole-word form the rules of WordRule take: every
 // alternative is literal text between ASCII word boundaries. quad is the IPv4
-// rule. It lets Mark skip the regular expression engine on plain ASCII lines.
+// rule of IPv4Rule. It lets Mark skip the regular expression engine on plain
+// ASCII lines.
 type fastMatcher struct {
 	words []string
 	quad  bool
@@ -240,7 +241,7 @@ func isWord(value byte) bool {
 }
 
 // markExpression is the regular expression path, which serves every user rule
-// and the builtin rules on text the fast matcher does not take.
+// and every built-in rule on text the fast matcher does not take.
 func markExpression(expression *regexp.Regexp, line []byte, marks []Slot, slot Slot) bool {
 	any := false
 	for _, span := range expression.FindAllIndex(line, -1) {
@@ -332,22 +333,12 @@ func markQuad(line []byte, marks []Slot, slot Slot) bool {
 	return any
 }
 
-// Builtin are the rules a terminal starts with: failures in red, warnings in
-// yellow, successes in green and addresses in cyan. They are what an operator
-// scanning a log is looking for.
-func Builtin() []Rule {
-	return []Rule{
-		wordRule(Red, "error", "errors", "err", "fail", "fails", "failed", "failure", "fatal", "panic", "denied", "refused", "critical", "exception", "traceback", "segfault", "segmentation fault"),
-		wordRule(Yellow, "warn", "warning", "warnings", "deprecated", "timeout", "timed out", "retrying"),
-		wordRule(Green, "ok", "success", "successful", "successfully", "passed", "done", "connected", "active (running)"),
-		{Slot: Cyan, Regex: true, Pattern: `\b\d{1,3}(\.\d{1,3}){3}\b`, fast: &fastMatcher{quad: true}},
-	}
-}
-
-// wordRule builds a whole-word literal rule. Pattern is the same expression it
-// always had, so Validate and the non-ASCII fallback keep their exact meaning;
-// fast is the matcher Mark uses on plain ASCII lines.
-func wordRule(slot Slot, words ...string) Rule {
+// WordRule builds a whole-word literal rule: every word colors wherever it
+// stands between word boundaries, the way "fail" colors in a log but not in
+// LOGIN_FAIL. Pattern is the same expression such a rule has always compiled
+// to, so Validate and the non-ASCII fallback keep their exact meaning; fast is
+// the matcher Mark uses on plain ASCII lines.
+func WordRule(slot Slot, words ...string) Rule {
 	quoted := make([]string, len(words))
 	for index, word := range words {
 		quoted[index] = regexp.QuoteMeta(word)
@@ -357,4 +348,10 @@ func wordRule(slot Slot, words ...string) Rule {
 		Pattern: `\b(` + strings.Join(quoted, "|") + `)\b`,
 		fast:    &fastMatcher{words: words},
 	}
+}
+
+// IPv4Rule is the address rule: it colors dotted-quad IPv4 addresses, which is
+// what an operator scanning a log copies or looks up.
+func IPv4Rule() Rule {
+	return Rule{Slot: Cyan, Regex: true, Pattern: `\b\d{1,3}(\.\d{1,3}){3}\b`, fast: &fastMatcher{quad: true}}
 }
