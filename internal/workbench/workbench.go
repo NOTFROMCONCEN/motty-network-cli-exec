@@ -72,6 +72,7 @@ var (
 	hitHostImportDone          = tree.ID(shellHits, "host-import-done")
 	hitGitHub                  = tree.ID(shellHits, "github")
 	hitTheme                   = tree.ID(shellHits, "theme")
+	hitLogColoring             = tree.ID(shellHits, "log-coloring")
 	hitDialogClose             = tree.ID(shellHits, "dialog-close")
 	hitDialogCancel            = tree.ID(shellHits, "dialog-cancel")
 	hitDialogSubmit            = tree.ID(shellHits, "dialog-submit")
@@ -1775,6 +1776,10 @@ func (state *State) click(id gfx.ID, feedback bool) {
 			state.chooseAppearanceMode(appearancePinnedDark)
 		}
 		state.save()
+	case id == hitLogColoring:
+		if state.setHighlighting(!state.highlighting.on) {
+			state.save()
+		}
 	case id == hitCommandPalette:
 		state.openCommandPalette()
 	case id == hitHistoryOpen:
