@@ -194,7 +194,12 @@ func releaseFromManifest(version, tag string, manifest *manifestFile, repo, goos
 	if !strings.HasPrefix(manifest.Source, "https://") {
 		return Release{}, errors.New("update: the release page is not an https address")
 	}
-	release := Release{Version: version, URL: manifest.Source, Notes: cutUTF8(manifest.Notes, maxNotesBytes)}
+	// The manifest lists every package it publishes, so the answer has checked
+	// what this platform can get — even when the list names nothing for it.
+	// A file that names the platform but carries nothing a download could be
+	// held to is the one unknown: claiming the release package-less would be
+	// as wrong as a page-only answer claiming it.
+	release := Release{Version: version, URL: manifest.Source, Notes: cutUTF8(manifest.Notes, maxNotesBytes), PlatformPackageChecked: true}
 	stable := StableName(goos, goarch)
 	if stable == "" {
 		return release, nil
@@ -205,6 +210,7 @@ func releaseFromManifest(version, tag string, manifest *manifestFile, repo, goos
 			continue
 		}
 		if !sha256Pattern.MatchString(file.SHA256) || file.Size <= 0 || file.Size > maxAssetBytes {
+			release.PlatformPackageChecked = false
 			break
 		}
 		pinned := "https://github.com/" + repo + "/releases/download/" + tag + "/" + name
