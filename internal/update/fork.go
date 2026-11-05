@@ -26,10 +26,12 @@ const (
 	// ForkManifest is the asset carrying sizes, checksums and signatures.
 	ForkManifest = "latest.json"
 	// ForkBase is the upstream release this fork's version line sits on, and
-	// ForkCodename names this era of the fork, until upstream publishes its
-	// next version. The fork's major and minor never exceed the base's, so a
-	// build of this fork never outranks upstream's own line.
-	ForkBase     = "0.3.0"
+	// ForkCodename names this era of the fork. A build's machine-facing
+	// version is the base plus a build counter — 0.3.1.4 on base 0.3.1 — so
+	// the numbers themselves say which upstream release a build carries, and
+	// the counter moves on top of it until upstream publishes its next
+	// version, when the base moves and a new codename may take over.
+	ForkBase     = "0.3.1"
 	ForkCodename = "Arknights"
 )
 
@@ -50,31 +52,31 @@ var feedMirrors = []string{
 
 // forkTagPattern is the tag a fork release carries: the upstream base it was
 // built on, a netcli marker, a build counter and the era's codename, as in
-// v0.3.0-netcli-build.1-arknights.
+// v0.3.1-netcli-build.4-arknights.
 var forkTagPattern = regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)-netcli-build\.(\d+)-([a-z0-9]+)$`)
 
 // TagFor names a build the way the fork publishes it: the upstream base, the
-// marker, a build counter and the codename — v0.3.0-netcli-build.1-arknights
-// for 0.3.1. The counter is the version's own patch number, so the name and
+// marker, a build counter and the codename — v0.3.1-netcli-build.4-arknights
+// for 0.3.1.4. The counter is the version's own last number, so the name and
 // the machine-readable version move together. NSIS and the update comparison
 // only take plain dotted versions, which is why the name is a layer above
 // them, not a replacement. A version from another line keeps a plain tag.
 func TagFor(version, base, codename string) string {
 	v, okV := parse(version)
 	b, okB := parse(base)
-	if !okV || !okB || v[0] != b[0] || v[1] != b[1] || v[2] <= 0 {
+	if !okV || !okB || v[0] != b[0] || v[1] != b[1] || v[2] != b[2] || v[3] <= 0 {
 		return "v" + version
 	}
-	return fmt.Sprintf("v%s-netcli-build.%d-%s", base, v[2], strings.ToLower(codename))
+	return fmt.Sprintf("v%s-netcli-build.%d-%s", base, v[3], strings.ToLower(codename))
 }
 
 // VersionFromTag reads a tag the fork publishes back into the dotted version
-// the update machinery compares: v0.3.0-netcli-build.2-arknights is 0.3.2. A
+// the update machinery compares: v0.3.1-netcli-build.4-arknights is 0.3.1.4. A
 // plain numbered tag keeps working, so releases published before this naming
 // stay readable.
 func VersionFromTag(tag string) (string, bool) {
 	if match := forkTagPattern.FindStringSubmatch(tag); match != nil {
-		version := match[1] + "." + match[2] + "." + match[4]
+		version := match[1] + "." + match[2] + "." + match[3] + "." + match[4]
 		if _, ok := parse(version); ok {
 			return version, true
 		}
