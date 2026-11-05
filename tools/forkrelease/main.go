@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"aead.dev/minisign"
@@ -49,8 +50,19 @@ func main() {
 func usage() {
 	fmt.Fprint(os.Stderr, `usage:
   forkrelease keygen   -private <path> [-public <path>]
-  forkrelease manifest -version <version> -pkg <file> -key <private key> [-out latest.json]
+  forkrelease manifest -version <version> -pkg <file> [-pkg <file> ...] -key <private key> [-out latest.json]
 `)
+}
+
+// pkgList is a -pkg the command line may repeat: one flag value per platform
+// the release carries.
+type pkgList []string
+
+func (list *pkgList) String() string { return strings.Join(*list, ", ") }
+
+func (list *pkgList) Set(value string) error {
+	*list = append(*list, value)
+	return nil
 }
 
 // keygen makes the key pair the fork signs its releases with. The private half
@@ -106,7 +118,8 @@ func keygen(args []string) error {
 func manifest(args []string) error {
 	flags := flag.NewFlagSet("manifest", flag.ExitOnError)
 	version := flags.String("version", "", "machine-facing version without the leading v, e.g. 0.3.1.4")
-	pkg := flags.String("pkg", "", "the package to sign")
+	var pkg pkgList
+	flags.Var(&pkg, "pkg", "a package to sign; repeat the flag once per platform, windows and linux")
 	keyPath := flags.String("key", "", "the minisign private key")
 	password := flags.String("password", "", "password of an encrypted private key, or $MOTTY_FORK_KEY_PASSWORD")
 	base := flags.String("base", update.ForkBase, "the upstream version this build sits on")
@@ -117,35 +130,43 @@ func manifest(args []string) error {
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if *version == "" || *pkg == "" || *keyPath == "" {
-		return errors.New("manifest needs -version, -pkg and -key")
+	if *version == "" || len(pkg) == 0 || *keyPath == "" {
+		return errors.New("manifest needs -version, -pkg (one per platform) and -key")
 	}
 	tag := update.TagFor(*version, *base, *codename)
 	if tag == "v"+*version {
 		return fmt.Errorf("version %s is not a build on top of %s; the tag would carry no build number", *version, *base)
 	}
-	name := filepath.Base(*pkg)
-	size, sum, err := fileDigest(*pkg)
-	if err != nil {
-		return err
-	}
 	privateKey, err := loadPrivateKey(*keyPath, *password)
 	if err != nil {
 		return fmt.Errorf("reading the signing key: %w", err)
 	}
-	packageFile, err := os.Open(*pkg)
-	if err != nil {
-		return err
-	}
-	defer packageFile.Close()
-	signature, err := updatesign.Sign(privateKey, packageFile, *version, name, time.Now())
-	if err != nil {
-		return err
-	}
-	// A package signed with a key this build does not trust installs nowhere.
-	// Checking here turns a wrong -key into an error before anything is published.
-	if err := updatesign.VerifyFile(updatesign.ReleaseKey(), *pkg, signature, *version, name); err != nil {
-		return fmt.Errorf("this key is not the one embedded in the build: %w", err)
+	// Every platform's package is held to its own size, checksum and
+	// signature; the app picks its platform's entry by file name.
+	entries := make([]manifestEntry, 0, len(pkg))
+	for _, path := range pkg {
+		name := filepath.Base(path)
+		size, sum, err := fileDigest(path)
+		if err != nil {
+			return err
+		}
+		packageFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		signature, err := updatesign.Sign(privateKey, packageFile, *version, name, time.Now())
+		packageFile.Close()
+		if err != nil {
+			return err
+		}
+		// A package signed with a key this build does not trust installs
+		// nowhere. Checking here turns a wrong -key into an error before
+		// anything is published.
+		if err := updatesign.VerifyFile(updatesign.ReleaseKey(), path, signature, *version, name); err != nil {
+			return fmt.Errorf("this key is not the one embedded in the build: %w", err)
+		}
+		entries = append(entries, manifestEntry{Name: name, Size: size, SHA256: sum, Signature: signature})
+		fmt.Printf("%s: %s (%d bytes)\n", name, sum, size)
 	}
 	notes := ""
 	if *notesPath != "" {
@@ -160,9 +181,7 @@ func manifest(args []string) error {
 		Tag:     tag,
 		Source:  "https://github.com/" + *repo + "/releases/tag/" + tag,
 		Notes:   notes,
-		Files: []manifestEntry{{
-			Name: name, Size: size, SHA256: sum, Signature: signature,
-		}},
+		Files:   entries,
 	}
 	data, err := json.MarshalIndent(feed, "", "  ")
 	if err != nil {
@@ -171,7 +190,6 @@ func manifest(args []string) error {
 	if err := os.WriteFile(*out, append(data, '\n'), 0o644); err != nil {
 		return err
 	}
-	fmt.Printf("%s: %s (%d bytes)\n", name, sum, size)
 	return nil
 }
 
