@@ -298,9 +298,12 @@ func Newer(current, latest string) bool {
 	return false
 }
 
-func parse(version string) (parts [3]int, ok bool) {
+// parse reads one to four dot-separated numbers into a fixed-width version:
+// a version with fewer parts than four is padded with zeros, so 0.3.2 and
+// 0.3.2.0 are the same version and 0.3.1.4 is newer than both.
+func parse(version string) (parts [4]int, ok bool) {
 	fields := strings.Split(version, ".")
-	if len(fields) == 0 || len(fields) > 3 {
+	if len(fields) == 0 || len(fields) > 4 {
 		return parts, false
 	}
 	for index, field := range fields {
