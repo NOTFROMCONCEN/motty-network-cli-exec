@@ -111,7 +111,7 @@ func TestLatestForkReadsATaggedBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if release.Version != "0.3.2" {
+	if release.Version != "0.3.2" || !release.PlatformPackageChecked {
 		t.Fatalf("release %+v", release)
 	}
 	// The download comes from the tagged directory, under the machine-facing
