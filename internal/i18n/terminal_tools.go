@@ -12,6 +12,8 @@ type ToolsMessages struct {
 
 	// Keyword highlighting.
 	HighlightGroup               string
+	HighlightMaster              string
+	HighlightMasterDescription   string
 	HighlightBuiltin             string
 	HighlightBuiltinDescription  string
 	HighlightCustom              string
@@ -19,7 +21,12 @@ type ToolsMessages struct {
 	HighlightAdd                 string
 	HighlightImport              string
 	HighlightImportDescription   string
+	HighlightExport              string
+	HighlightExportDescription   string
+	HighlightExportPickerTitle   string
+	HighlightExportedFmt         string
 	HighlightImportPickerTitle   string
+	HighlightImportInvalidJSON   string
 	HighlightImportNothing       string
 	HighlightImportAllSkippedFmt string
 	HighlightImportTooLarge      string

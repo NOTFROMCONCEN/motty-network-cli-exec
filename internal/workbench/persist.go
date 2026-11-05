@@ -105,6 +105,7 @@ type savedState struct {
 	SFTPBookmarks              []savedBookmark     `json:"sftp_bookmarks,omitempty"`
 	SFTPLocalBookmarks         []string            `json:"sftp_local_bookmarks,omitempty"`
 	OutboundProxy              *savedOutboundProxy `json:"outbound_proxy,omitempty"`
+	HighlightEnabled           bool                `json:"highlight_enabled,omitempty"`
 	HighlightBuiltin           string              `json:"highlight_builtin,omitempty"`
 	Highlights                 []savedHighlight    `json:"highlights,omitempty"`
 	Snippets                   []savedSnippet      `json:"snippets,omitempty"`
@@ -486,6 +487,7 @@ func (state *State) snapshot() savedState {
 		saved.WindowWidth = int(math.Round(float64(frame.Width)))
 		saved.WindowHeight = int(math.Round(float64(frame.Height)))
 	}
+	saved.HighlightEnabled = state.highlighting.on
 	if state.highlighting.builtinOff {
 		saved.HighlightBuiltin = "off"
 	}

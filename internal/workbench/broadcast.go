@@ -107,10 +107,16 @@ func (state *State) clickTerminalTools(id ui.ID) bool {
 		if state.setTerminalScheme(schemeID) {
 			state.save()
 		}
+	case id == hitSettingsHighlightMaster:
+		if state.setHighlighting(!state.highlighting.on) {
+			state.save()
+		}
 	case id == hitSettingsHighlightToggle:
 		if state.setBuiltinHighlight(state.highlighting.builtinOff) {
 			state.save()
 		}
+	case id == hitSettingsHighlightExport:
+		state.exportHighlightRules()
 	case id == hitSettingsCursorToggle:
 		state.terminalCursorSteady = !state.terminalCursorSteady
 		state.save()
