@@ -155,9 +155,9 @@ type Rule struct {
 	CaseSensitive bool
 	Color         Color
 
-	// fast, when set by Builtin, holds the literal matcher the package can run
-	// instead of the expression. User rules never set it, so their behavior is
-	// always the compiled expression.
+	// fast, when set by WordRule or IPv4Rule, holds the literal matcher the
+	// package can run instead of the expression. User rules never set it, so
+	// their behavior is always the compiled expression.
 	fast *fastMatcher
 }
 
@@ -408,19 +408,19 @@ func markQuad(line []byte, marks []Color, color Color) bool {
 // IPv4 addresses. Colors come from the terminal's scheme.
 func Builtin() []Rule {
 	return []Rule{
-		wordRule(Red, "error", "errors", "err", "fail", "fails", "failed", "failure", "fatal", "panic", "denied", "refused", "critical", "exception", "traceback", "segfault", "segmentation fault"),
-		wordRule(Yellow, "warn", "warning", "warnings", "deprecated", "timeout", "timed out", "retrying"),
-		wordRule(Green, "info", "ok", "success", "successful", "successfully", "passed", "done", "connected", "active (running)"),
-		wordRule(Blue, "debug"),
-		wordRule(Magenta, "trace"),
-		{Color: Cyan, Regex: true, Pattern: `\b\d{1,3}(\.\d{1,3}){3}\b`, fast: &fastMatcher{quad: true}},
+		WordRule(Red, "error", "errors", "err", "fail", "fails", "failed", "failure", "fatal", "panic", "denied", "refused", "critical", "exception", "traceback", "segfault", "segmentation fault"),
+		WordRule(Yellow, "warn", "warning", "warnings", "deprecated", "timeout", "timed out", "retrying"),
+		WordRule(Green, "info", "ok", "success", "successful", "successfully", "passed", "done", "connected", "active (running)"),
+		WordRule(Blue, "debug"),
+		WordRule(Magenta, "trace"),
+		IPv4Rule(),
 	}
 }
 
-// wordRule builds a whole-word literal rule. Pattern is the same expression it
+// WordRule builds a whole-word literal rule. Pattern is the same expression it
 // always had, so Validate and the non-ASCII fallback keep their exact meaning;
 // fast is the matcher Mark uses on plain ASCII lines.
-func wordRule(color Color, words ...string) Rule {
+func WordRule(color Color, words ...string) Rule {
 	quoted := make([]string, len(words))
 	for index, word := range words {
 		quoted[index] = regexp.QuoteMeta(word)
@@ -430,4 +430,10 @@ func wordRule(color Color, words ...string) Rule {
 		Pattern: `\b(` + strings.Join(quoted, "|") + `)\b`,
 		fast:    &fastMatcher{words: words},
 	}
+}
+
+// IPv4Rule is the address rule: it colors dotted-quad IPv4 addresses, which is
+// what an operator scanning a log copies or looks up.
+func IPv4Rule() Rule {
+	return Rule{Color: Cyan, Regex: true, Pattern: `\b\d{1,3}(\.\d{1,3}){3}\b`, fast: &fastMatcher{quad: true}}
 }

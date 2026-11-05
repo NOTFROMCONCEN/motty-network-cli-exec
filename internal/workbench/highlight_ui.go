@@ -16,6 +16,7 @@ import (
 	"github.com/vivaui/viva/text"
 	"github.com/vivaui/viva/ui"
 	"motty/internal/highlight"
+	"motty/internal/logcolor"
 	"motty/internal/workbench/icons"
 )
 
@@ -31,15 +32,22 @@ type highlightRule struct {
 	Color         highlight.Color
 }
 
-// maxCustomHighlightRules leaves room for the built-in rules under the package's
-// own limit.
-const maxCustomHighlightRules = highlight.MaxRules - 8
+// maxCustomHighlightRules leaves room for the built-in rules of the logcolor
+// library under the package's own limit. New rules and imports stop here.
+const maxCustomHighlightRules = highlight.MaxRules - logcolor.RuleCount
+
+// maxRestoredHighlightRules is what an earlier version could save. A state
+// from before the logcolor library kept this many; on restore they are all
+// kept — deleting a user's saved rules is worse than the built-in pack losing
+// a few rules to the compile cap, which takes the user's rules first.
+const maxRestoredHighlightRules = highlight.MaxRules - 8
 
 // highlightUiHits is the place of the controls this file paints.
 var highlightUiHits = tree.Feature("highlight-ui")
 
 var (
 	hitSettingsHighlightToggle = tree.ID(highlightUiHits, "settings-highlight")
+	hitSettingsHighlightMaster = tree.ID(highlightUiHits, "settings-highlight-master")
 	hitSettingsHighlightAdd    = tree.ID(highlightUiHits, "settings-highlight-add")
 	hitSettingsHighlightImport = tree.ID(highlightUiHits, "settings-highlight-import")
 	hitHighlightPattern        = tree.ID(highlightUiHits, "highlight-pattern")
@@ -58,6 +66,7 @@ var (
 
 // highlightUI is the state of the rules and of the dialog that adds one.
 type highlightUI struct {
+	on         bool // zero value: coloring is off; the window-bar switch turns it on
 	builtinOff bool // zero value: the built-in rules are on
 	rules      []highlightRule
 
@@ -78,14 +87,18 @@ type highlightUI struct {
 }
 
 // recompileHighlights rebuilds the compiled rules after any change to them, and
-// with them the terminal's look, so every line is painted again.
+// with them the terminal's look, so every line is painted again. While the
+// master switch is off the compiled set stays empty, so no line is colored.
 func (state *State) recompileHighlights() {
-	rules := make([]highlight.Rule, 0, len(state.highlighting.rules)+8)
-	for _, rule := range state.highlighting.rules {
-		rules = append(rules, highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Color: rule.Color})
-	}
-	if !state.highlighting.builtinOff {
-		rules = append(rules, highlight.Builtin()...)
+	var rules []highlight.Rule
+	if state.highlighting.on {
+		rules = make([]highlight.Rule, 0, len(state.highlighting.rules)+logcolor.RuleCount)
+		for _, rule := range state.highlighting.rules {
+			rules = append(rules, highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Color: rule.Color})
+		}
+		if !state.highlighting.builtinOff {
+			rules = append(rules, logcolor.Rules()...)
+		}
 	}
 	state.highlights = highlight.Compile(rules)
 	state.rebuildTerminalLook()
@@ -98,6 +111,27 @@ func (state *State) setBuiltinHighlight(on bool) bool {
 	state.highlighting.builtinOff = !on
 	state.recompileHighlights()
 	return true
+}
+
+// setHighlighting turns the coloring of terminal output on or off. The off
+// state keeps the output exactly as the device sent it, so the switch is off
+// until the user asks for color.
+func (state *State) setHighlighting(on bool) bool {
+	if state.highlighting.on == on {
+		return false
+	}
+	state.highlighting.on = on
+	state.recompileHighlights()
+	return true
+}
+
+// highlightHint is the window-bar tool's tip: it names the state a press of the
+// switch leads to, the way the theme button does.
+func (state *State) highlightHint() string {
+	if state.highlighting.on {
+		return state.messages.LabelHighlightingOff
+	}
+	return state.messages.LabelHighlightingOn
 }
 
 func (state *State) openHighlightDialog() {
@@ -426,6 +460,7 @@ func (state *State) paintHighlightSettings(page *settingsPage) {
 	m := state.messages.Tools
 	rules := state.highlighting.rules
 	page.group(m.HighlightGroup, func() {
+		page.toggleRow(m.HighlightMaster, m.HighlightMasterDescription, state.highlighting.on, hitSettingsHighlightMaster)
 		page.toggleRow(m.HighlightBuiltin, m.HighlightBuiltinDescription, !state.highlighting.builtinOff, hitSettingsHighlightToggle)
 		page.actionRow(m.HighlightCustom, fmt.Sprintf(state.messages.RuleManagement.CountFmt, len(rules)), false,
 			components.ButtonAction{ID: hitSettingsHighlightManage, Label: state.messages.RuleManagement.Manage, Variant: components.ButtonOutline})
@@ -440,12 +475,13 @@ func (state *State) paintHighlightSettings(page *settingsPage) {
 // An entry that cannot be used (a pattern that no longer compiles, an unknown
 // color, a snippet with no name) is dropped rather than carried along.
 func (state *State) restoreTerminalTools(saved savedState) {
+	state.highlighting.on = saved.HighlightEnabled
 	state.highlighting.builtinOff = saved.HighlightBuiltin == "off"
 	clear(state.highlighting.rules)
 	state.highlighting.rules = state.highlighting.rules[:0]
 	for _, entry := range saved.Highlights {
 		rule := highlightRule{Pattern: entry.Pattern, Regex: entry.Regex, CaseSensitive: entry.CaseSensitive, Color: highlight.ColorFromName(entry.Color)}
-		if len(state.highlighting.rules) == maxCustomHighlightRules ||
+		if len(state.highlighting.rules) == maxRestoredHighlightRules ||
 			highlight.Validate(highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Color: rule.Color}) != nil {
 			continue
 		}

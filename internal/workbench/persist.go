@@ -169,6 +169,7 @@ type savedState struct {
 	SFTPLocalBookmarks      []string            `json:"sftp_local_bookmarks,omitempty"`
 	OutboundProxy           *savedOutboundProxy `json:"outbound_proxy,omitempty"`
 	SSHBrowser              string              `json:"ssh_browser,omitempty"` // which Chromium-family browser the SSH tab opens
+	HighlightEnabled        bool                `json:"highlight_enabled,omitempty"`
 	HighlightBuiltin        string              `json:"highlight_builtin,omitempty"`
 	Highlights              []savedHighlight    `json:"highlights,omitempty"`
 	Snippets                []savedSnippet      `json:"snippets,omitempty"`
@@ -698,6 +699,7 @@ func (state *State) snapshot() savedState {
 		saved.WindowHeight = int(math.Round(float64(frame.Height)))
 	}
 	saved.WindowMaximized = state.savedWindowMaximized()
+	saved.HighlightEnabled = state.highlighting.on
 	if state.highlighting.builtinOff {
 		saved.HighlightBuiltin = "off"
 	}
