@@ -13,19 +13,20 @@
     and update.Newer compares only numbers.
 
 .EXAMPLE
-    ./tools/forkrelease.ps1 0.3.1
+    ./tools/forkrelease.ps1 0.3.1.4
 
 .EXAMPLE
-    ./tools/forkrelease.ps1 0.3.1 -NotesPath ./release-notes.md -Publish
+    ./tools/forkrelease.ps1 0.3.1.4 -NotesPath ./release-notes.md -Publish
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Version,
-    # The published name carries the upstream base and the era's codename on
-    # top of the numeric version: 0.3.2 becomes v0.3.0-netcli-build.2-arknights.
-    # The counter is the version's own patch number, so the two move together.
-    # Both stay until upstream publishes its next version, when the base moves
-    # and a new codename may take over.
-    [string]$Base = "0.3.0",
+    # The machine-facing version is the upstream base plus a build counter —
+    # 0.3.1.4 sits on base 0.3.1 — and the published name carries the base and
+    # the era's codename on top of it: 0.3.1.4 becomes
+    # v0.3.1-netcli-build.4-arknights. The counter is the version's own last
+    # number, so the two move together. Both stay until upstream publishes its
+    # next version, when the base moves and a new codename may take over.
+    [string]$Base = "0.3.1",
     [string]$Codename = "Arknights",
     [string]$NotesPath = "",
     [string]$KeyPath = "",
@@ -37,14 +38,17 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
 $forkRepo = "NOTFROMCONCEN/motty-network-cli-exec"
-if ($Version -notmatch '^\d+\.\d+\.\d+$') {
-    throw "version '$Version' must be three dot-separated numbers, for example 0.3.1"
+if ($Version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+    throw "version '$Version' must be four dot-separated numbers — the upstream base plus the build counter — for example 0.3.1.4"
 }
 if ($Base -notmatch '^\d+\.\d+\.\d+$') {
     throw "base '$Base' must be three dot-separated numbers"
 }
-$patch = [int]($Version -split '\.')[2]
-if ($patch -lt 1) { throw "the build counter (the version's patch number) must be at least 1" }
+if (-not $Version.StartsWith("$Base.")) {
+    throw "version '$Version' must sit on base '$Base': the first three numbers must agree"
+}
+$patch = [int]($Version -split '\.')[3]
+if ($patch -lt 1) { throw "the build counter (the version's last number) must be at least 1" }
 $tag = "v$Base-netcli-build.$patch-$($Codename.ToLowerInvariant())"
 if ($KeyPath -eq "") {
     $KeyPath = Join-Path (Split-Path $repo -Parent) ".tools/motty-fork-signing.key"
