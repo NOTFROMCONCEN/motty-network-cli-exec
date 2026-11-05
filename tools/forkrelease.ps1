@@ -5,9 +5,10 @@
 
 .DESCRIPTION
     Bumps the version in viva.toml and internal/update/update.go (the update
-    checker reports this build's version), packages the NSIS installer, writes
-    the signed latest.json the update feed reads, and — with -Publish — commits
-    the bump, pushes it and creates the GitHub release with both assets.
+    checker reports this build's version), packages the Windows installer and
+    the Linux archive, writes the signed latest.json the update feed reads,
+    and — with -Publish — commits the bump, pushes it and creates the GitHub
+    release with all three assets.
 
     The versions must be plain dot-separated numbers: NSIS refuses a suffix,
     and update.Newer compares only numbers.
@@ -103,14 +104,20 @@ try {
 
     Write-Host "==> packaging Motty $Version" -ForegroundColor Cyan
     & $GoBinary run ../viva/cmd/viva package -C . --target windows --arch amd64 --format nsis
-    if ($LASTEXITCODE -ne 0) { throw "viva package failed" }
+    if ($LASTEXITCODE -ne 0) { throw "the windows package failed" }
+    & $GoBinary run ../viva/cmd/viva package -C . --target linux --arch amd64 --format tar.gz
+    if ($LASTEXITCODE -ne 0) { throw "the linux package failed" }
 
+    # The names are the machine-facing ones internal/update.StableName builds:
+    # the app picks its platform's file out of the manifest by these.
     $setup = Join-Path $repo "build/dist/motty-$Version-windows-amd64-setup.exe"
     if (-not (Test-Path $setup)) { throw "the installer was not written to $setup" }
+    $tarball = Join-Path $repo "build/dist/motty-$Version-linux-amd64.tar.gz"
+    if (-not (Test-Path $tarball)) { throw "the linux archive was not written to $tarball" }
 
     Write-Host "==> signing the manifest" -ForegroundColor Cyan
     $out = Join-Path $repo "build/dist/latest.json"
-    $signArgs = @("run", "./tools/forkrelease", "manifest", "-version", $Version, "-base", $Base, "-codename", $Codename, "-pkg", $setup, "-key", $KeyPath, "-out", $out, "-repo", $forkRepo)
+    $signArgs = @("run", "./tools/forkrelease", "manifest", "-version", $Version, "-base", $Base, "-codename", $Codename, "-pkg", $setup, "-pkg", $tarball, "-key", $KeyPath, "-out", $out, "-repo", $forkRepo)
     if ($NotesPath -ne "") { $signArgs += @("-notes", $NotesPath) }
     & $GoBinary @signArgs
     if ($LASTEXITCODE -ne 0) { throw "signing the manifest failed" }
@@ -118,6 +125,7 @@ try {
     Write-Host ""
     Write-Host "built:" -ForegroundColor Green
     Write-Host "  $setup"
+    Write-Host "  $tarball"
     Write-Host "  $out"
 
     if (-not $Publish) {
@@ -126,7 +134,7 @@ try {
         Write-Host "  git add viva.toml internal/update/update.go"
         Write-Host "  git commit -m `"chore(release): $tag`""
         Write-Host "  git push fork $Branch"
-        Write-Host "  gh release create $tag --repo $forkRepo --target $Branch --title `"Motty NetCLI $tag`" --notes-file <notes> `"$setup`" `"$out`""
+        Write-Host "  gh release create $tag --repo $forkRepo --target $Branch --title `"Motty NetCLI $tag`" --notes-file <notes> `"$setup`" `"$tarball`" `"$out`""
         return
     }
 
@@ -149,7 +157,7 @@ try {
     Write-Host "==> creating the release" -ForegroundColor Cyan
     $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty NetCLI $tag")
     $releaseArgs += if ($NotesPath -ne "") { @("--notes-file", $NotesPath) } else { @("--generate-notes") }
-    $releaseArgs += @($setup, $out)
+    $releaseArgs += @($setup, $tarball, $out)
     Invoke-WithRetry "gh release create $tag" { gh @releaseArgs }
 
     # The manifest is mirrored on the feed branch — one branch, one file — so
