@@ -590,6 +590,8 @@ type Messages struct {
 	LabelGitHub          string
 	LabelThemeToLight    string
 	LabelThemeToDark     string
+	LabelHighlightingOn  string
+	LabelHighlightingOff string
 	LabelNewTab          string
 	NewTabConnectTo      string
 	MenuCloseOtherTabs   string

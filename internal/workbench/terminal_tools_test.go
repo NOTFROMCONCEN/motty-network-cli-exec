@@ -7,6 +7,7 @@ import (
 	"github.com/vivaui/viva/app"
 	"github.com/vivaui/viva/ui"
 	"motty/internal/highlight"
+	"motty/internal/logcolor"
 	"motty/internal/sshconn"
 	"motty/internal/term"
 )
@@ -24,7 +25,7 @@ func buildWith(t testing.TB, input string, rules []highlight.Rule) *rowEntry {
 }
 
 func TestHighlightColorsTheMatchedWordsAndKeepsEveryOtherCell(t *testing.T) {
-	entry := buildWith(t, "ok: Permission denied now", highlight.Builtin())
+	entry := buildWith(t, "ok: Permission denied now", logcolor.Rules())
 	if entry.text != "ok: Permission denied now" {
 		t.Fatalf("text = %q", entry.text)
 	}
@@ -52,7 +53,7 @@ func TestHighlightColorsTheMatchedWordsAndKeepsEveryOtherCell(t *testing.T) {
 }
 
 func TestHighlightLeavesTextAProgramAlreadyColoredAlone(t *testing.T) {
-	entry := buildWith(t, "\x1b[34merror\x1b[0m error", highlight.Builtin())
+	entry := buildWith(t, "\x1b[34merror\x1b[0m error", logcolor.Rules())
 	red := ui.RGB(255, 150, 150)
 	first, last := entry.runs[0], entry.runs[len(entry.runs)-1]
 	if first.Color == red {
@@ -64,7 +65,7 @@ func TestHighlightLeavesTextAProgramAlreadyColoredAlone(t *testing.T) {
 }
 
 func TestHighlightFollowsWideCharactersToTheirCells(t *testing.T) {
-	entry := buildWith(t, "你好 error", highlight.Builtin())
+	entry := buildWith(t, "你好 error", logcolor.Rules())
 	red := ui.RGB(255, 150, 150)
 	for _, run := range entry.runs {
 		if run.Column >= 5 && run.Color != red {
@@ -81,7 +82,7 @@ func TestHighlightingNothingCostsNoExtraWork(t *testing.T) {
 	screen := term.New(40, 3, 10)
 	screen.Write([]byte("nothing to see"))
 	look := darkPalette
-	look.highlight = highlight.Compile(highlight.Builtin())
+	look.highlight = highlight.Compile(logcolor.Rules())
 	cache.begin()
 	cache.row(screen.Row(0), 40, -1, cellSpan{}, &look, false)
 	if cells := cache.markCells(screen.Row(0), 40, look.highlight); cells != nil {
@@ -263,6 +264,12 @@ func TestAddingAHighlightRuleThroughTheDialogCompilesKeepsAndRestoresIt(t *testi
 	if rule.Pattern != "5\\d\\d" || !rule.Regex || rule.Slot != highlight.Green {
 		t.Fatalf("rule = %+v", rule)
 	}
+	// Coloring ships off: the rule is kept, but nothing is compiled until the
+	// switch in the window bar turns it on.
+	if !state.highlights.Empty() {
+		t.Fatal("rules are compiled although coloring is off")
+	}
+	state.Click(hitLogColoring)
 	if !state.highlights.Mark([]byte("HTTP 503"), make([]highlight.Slot, 8)) {
 		t.Fatal("the new rule is not in the compiled set")
 	}
@@ -305,20 +312,28 @@ func TestAHighlightRuleThatCannotWorkIsRefusedWithAReason(t *testing.T) {
 func TestTheBuiltInHighlightsCanBeTurnedOffAndStayOff(t *testing.T) {
 	_, options := newWorld(t)
 	state := newTestState(t, options)
+	if !state.highlights.Empty() {
+		t.Fatal("coloring is on although it ships off")
+	}
+	// The window-bar switch turns the whole engine, built-in rules included, on.
+	state.Click(hitLogColoring)
 	if state.highlights.Empty() {
-		t.Fatal("the built-in rules are not on by default")
+		t.Fatal("turning the switch on found no rules")
 	}
 	state.Click(hitSettings)
 	state.Click(hitSettingsHighlightToggle)
 	if !state.highlights.Empty() {
-		t.Fatal("turning them off left rules compiled")
+		t.Fatal("turning the built-in rules off left rules compiled")
 	}
 	if restarted := newTestState(t, options); !restarted.highlights.Empty() {
 		t.Fatal("the choice was not kept")
 	}
 	state.Click(hitSettingsHighlightToggle)
 	if state.highlights.Empty() {
-		t.Fatal("turning them on found no rules")
+		t.Fatal("turning the built-in rules on found no rules")
+	}
+	if restarted := newTestState(t, options); restarted.highlights.Empty() {
+		t.Fatal("the switch being on was not kept")
 	}
 }
 
@@ -550,7 +565,7 @@ func TestBroadcastStaysInItsTabAndNeverCarriesProtocolReplies(t *testing.T) {
 // A screen of log lines is prepared again whenever it scrolls, so what the
 // highlight rules add to preparing one line is what a busy terminal pays.
 func BenchmarkPrepareALogLine(b *testing.B) {
-	for name, rules := range map[string][]highlight.Rule{"no rules": nil, "builtin rules": highlight.Builtin()} {
+	for name, rules := range map[string][]highlight.Rule{"no rules": nil, "builtin rules": logcolor.Rules()} {
 		b.Run(name, func(b *testing.B) {
 			screen := term.New(120, 3, 10)
 			screen.Write([]byte("2026-10-17T10:11:12 host sshd[123]: Failed password for root from 192.168.1.20 port 22 ssh2"))
