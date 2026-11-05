@@ -142,7 +142,9 @@ try {
     }
 
     Write-Host "==> pushing to fork" -ForegroundColor Cyan
-    Invoke-WithRetry "git push fork $Branch" { git push fork $Branch }
+    # The branch is rebased onto upstream regularly, so its history rewrites
+    # and only a lease-checked force push reaches the fork.
+    Invoke-WithRetry "git push fork $Branch" { git push --force-with-lease fork $Branch }
 
     Write-Host "==> creating the release" -ForegroundColor Cyan
     $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty NetCLI $tag")
