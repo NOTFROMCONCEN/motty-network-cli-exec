@@ -57,22 +57,33 @@ func execChoiceFor(saved string) execChoice {
 	return execChoiceAuto
 }
 
+// netcliIDs is the base platform list the dialog offers: automatic detection,
+// generic, then every loaded table.
+func netcliIDs() []string { return append([]string{""}, netcli.IDs()...) }
+
+// platformIDs is the base list plus the edited host's own id when its table is
+// not loaded. Keeping it in the list means editing a host whose platform file
+// is missing cannot silently turn the saved platform into automatic detection.
+func (editor *hostEditor) platformIDs() []string {
+	ids := netcliIDs()
+	if saved := editor.cliPlatformSaved; saved != "" && !slices.Contains(ids, saved) {
+		ids = append(ids, saved)
+	}
+	return ids
+}
+
 // platformIndexFor is the dialog's list position of a saved platform id. The
-// empty id is the first entry, automatic detection; unknown ids fall back to
-// it, so a host whose platform file is gone can still be edited.
-func platformIndexFor(saved string) int {
+// empty id is the first entry, automatic detection; a foreign id is only
+// reachable when platformIDs appended it.
+func platformIndexFor(ids []string, saved string) int {
 	if saved == "" {
 		return 0
 	}
-	if index := slices.Index(netcliIDs(), saved); index >= 0 {
+	if index := slices.Index(ids, saved); index >= 0 {
 		return index
 	}
 	return 0
 }
-
-// netcliIDs is the platform list the dialog offers: automatic detection,
-// generic, then every loaded table.
-func netcliIDs() []string { return append([]string{""}, netcli.IDs()...) }
 
 // clipPlatformName is the label of a platform id in the dialog. netcli cannot
 // name the empty id, which is the automatic choice.
@@ -104,7 +115,7 @@ func (state *State) paintExecModeChoice(canvas *ui.Canvas, bounds ui.Rect) {
 func (state *State) paintCLIPlatformChoice(canvas *ui.Canvas, bounds ui.Rect) {
 	editor, theme := &state.editor, state.Theme()
 	m := state.messages.Tools
-	ids := netcliIDs()
+	ids := editor.platformIDs()
 	content := components.BeginField(canvas, theme, bounds).Paint(m.CLIPlatformField, "", "")
 	state.rememberHostControl(hitDialogCLIPlatform, content)
 	portal := state.beginHostFormPopup(canvas, editor.cliPlatformOpen)
@@ -146,7 +157,7 @@ func (state *State) clickExecChoice(id ui.ID) bool {
 		editor.cliPlatformOpen = false
 	case id.Scope() == hitDialogCLIPlatformItems:
 		index := item(id)
-		if index >= len(netcliIDs()) {
+		if index >= len(editor.platformIDs()) {
 			return false
 		}
 		editor.cliPlatform = index
