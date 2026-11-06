@@ -54,6 +54,7 @@ func TestHeadlessSchemasMatchTheirExtendedArguments(t *testing.T) {
 		NameSFTPList: FileListArgs{}, NameSFTPRead: FileReadArgs{}, NameSFTPWrite: SFTPWriteArgs{}, NameSFTPRemove: SFTPRemoveArgs{},
 		NameSFTPStat: SFTPListArgs{}, NameSFTPChecksum: FileChecksumArgs{}, NameSFTPUpload: TransferArgs{}, NameSFTPDownload: TransferArgs{},
 		NameTransferStatus: TransferQuery{}, NameTransferCancel: TransferQuery{},
+		NameConfigDiff: ConfigDiffArgs{},
 	}
 	for _, spec := range Headless(HeadlessOptions{Commands: true, WriteFiles: true, LocalFiles: true}) {
 		var schema struct {
