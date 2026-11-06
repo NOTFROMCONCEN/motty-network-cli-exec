@@ -1054,6 +1054,12 @@ type ToolsMessages struct {
 	ExecModeShell                   string
 	ExecModeNetworkCLI              string
 	CLIPlatformField                string
+	CLIPlatformAuto                 string
+	CLIPlatformDetectedFmt          string
+	CLIPlatformFileTitle            string
+	CLIPlatformFileFailed           string
+	CLIPlatformReloadedFmt          string
+	CLIPlatformReload               string
 	AlgoDefault                     string
 	AlgoCompatible                  string
 	AlgoCustom                      string
