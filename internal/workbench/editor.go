@@ -106,9 +106,12 @@ type hostEditor struct {
 	// the platform list and matters only for the network CLI.
 	execChoice execChoice
 	// cliPlatform is the chosen network CLI platform and cliPlatformOpen its
-	// list being open.
-	cliPlatform     int
-	cliPlatformOpen bool
+	// list being open. cliPlatformSaved is the id the edited host carries: when
+	// its table is not loaded it is appended to the choice list, so an edit
+	// cannot silently turn the saved platform into automatic detection.
+	cliPlatform      int
+	cliPlatformOpen  bool
+	cliPlatformSaved string
 	// ports are the serial ports found when the picker was last opened.
 	ports     []serial.Port
 	portsOpen bool
@@ -271,7 +274,8 @@ func (editor *hostEditor) load(host Host) {
 	editor.proxy, editor.proxyPassword = cloneOutboundProxy(host.Proxy), ""
 	editor.transfer = host.Transfer
 	editor.execChoice = execChoiceFor(host.ExecMode)
-	editor.cliPlatform = platformIndexFor(host.CLIPlatform)
+	editor.cliPlatformSaved = host.CLIPlatform
+	editor.cliPlatform = platformIndexFor(editor.platformIDs(), host.CLIPlatform)
 	editor.cliPlatformOpen = false
 	editor.advancedOpen = host.isSSH() && (host.Algo != nil || host.ForwardX11 || host.AgentForward || host.NoHistory || host.LoginCommand != "")
 	if host.Algo != nil {
@@ -346,9 +350,10 @@ func (editor *hostEditor) host(id uint32) Host {
 	}
 	if execPaintable(editor.protocol) {
 		host.ExecMode = savedExecMode(editor.execChoice)
-		ids := netcliIDs()
+		ids := editor.platformIDs()
 		// The empty id means automatic detection; "generic" is a real choice
-		// now, so it is saved as itself instead of disappearing into empty.
+		// now, so it is saved as itself instead of disappearing into empty. A
+		// saved id whose table is not loaded keeps its spelling.
 		host.CLIPlatform = ids[min(editor.cliPlatform, len(ids)-1)]
 		host.platformDetected = false
 	}
@@ -380,7 +385,7 @@ func (editor *hostEditor) reset() {
 	editor.authOpen, editor.identityOpen, editor.credentialOpen = false, false, false
 	editor.forwardX11, editor.agentForward, editor.noHistory, editor.transfer = false, false, false, transferAuto
 	editor.agentAccess = false
-	editor.execChoice, editor.cliPlatform, editor.cliPlatformOpen = execChoiceAuto, 0, false
+	editor.execChoice, editor.cliPlatform, editor.cliPlatformOpen, editor.cliPlatformSaved = execChoiceAuto, 0, false, ""
 	editor.proxy, editor.proxyPassword = nil, ""
 	editor.advancedOpen = false
 	editor.port.Insert(strconv.Itoa(defaultPort))
