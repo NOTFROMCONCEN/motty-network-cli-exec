@@ -138,6 +138,15 @@ type AIPanelMessages struct {
 	ToolSFTPRemove       string
 	ToolNotesQuery       string
 	ToolNotesEdit        string
+	ToolDeviceFacts      string
+	ToolInterfaceStatus  string
+	ToolConfigDiff       string
+	ToolGroupRun         string
+	OpsTargetsFmt        string
+	OpsDiffDetail        string
+	OpsExample1          string
+	OpsExample2          string
+	OpsExample3          string
 
 	StatusRunning string
 	StatusWaiting string

@@ -106,6 +106,8 @@ type Messages struct {
 	History HistoryMessages
 	// SessionLogs holds the local session-log page's texts; see session_logs.go.
 	SessionLogs SessionLogsMessages
+	// HTTPFile holds the HTTP file-server page's texts; see http_file.go.
+	HTTPFile HTTPFileMessages
 	// Completion holds the command completion's texts; see completion.go.
 	Completion CompletionMessages
 	// SSHSync holds the texts of the sync with the OpenSSH config; see ssh_sync.go.
@@ -115,12 +117,16 @@ type Messages struct {
 	WSL     WSLMessages
 	// About holds the About page's texts; see about.go.
 	About AboutMessages
+	// Fork holds this fork's own additions' texts; see fork.go. New fork
+	// strings belong there, so upstream files stay free of them.
+	Fork ForkMessages
 
 	// Window and sections.
 
 	// Navigation.
 	NavHosts                  string
 	NavWorkspaces             string
+	NavHTTPFile               string
 	NavKeychain               string
 	NavProxies                string
 	NavSnippets               string
@@ -297,6 +303,13 @@ type Messages struct {
 	SettingsInterfaceFontUnsupportedFmt    string
 	SettingsOutputAlerts                   string
 	SettingsOutputAlertsDescription        string
+	SettingsIntranetMode                   string
+	SettingsIntranetModeDescription        string
+	SettingsJumpMode                       string
+	SettingsJumpModeDescription            string
+	SettingsJumpHostRow                    string
+	SettingsJumpHostDescription            string
+	SettingsJumpHostNone                   string
 	SettingsTabOrientation                 string
 	SettingsTabOrientationDescription      string
 	SettingsTabDoubleClick                 string
@@ -520,6 +533,17 @@ type Messages struct {
 	ColumnName       string
 	HostsEmpty       string
 	HostsEmptySub    string
+
+	// Adding many hosts at once by pasting a list.
+	BatchAddMenu         string // the import menu's item and the group menu's
+	BatchAddTitle        string
+	BatchAddDescription  string
+	BatchAddListField    string
+	BatchAddPlaceholder  string // the form a list line may take
+	BatchAddSubmit       string
+	BatchAddSummaryFmt   string // hosts, duplicates
+	BatchAddLineErrorFmt string // line number, the line
+	BatchAddEmpty        string
 
 	// OpenSSH config import.
 	SSHConfigImport             string

@@ -46,7 +46,7 @@ type AboutMessages struct {
 	Docs               string
 	DocsDescription    string
 	// Fork is this fork's own repository: where this build's source and
-	// releases live, beside the framework's card on the About page.
+	// releases live, next to the upstream card above it.
 	Fork            string
 	ForkDescription string
 	// Viva is the desktop framework Motty is built on, listed with the project

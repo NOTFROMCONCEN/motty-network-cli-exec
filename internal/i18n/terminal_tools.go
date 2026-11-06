@@ -423,16 +423,23 @@ type ToolsMessages struct {
 	TabbyImportSavedFmt       string
 	TabbyImportKeysSkippedFmt string
 
-	TabbyVaultTitle        string
-	TabbyVaultDescription  string
-	TabbyVaultOptional     string
-	TabbyVaultSkip         string
-	TabbyVaultPassword     string
-	TabbyVaultUnlock       string
-	TabbyVaultReadFailed   string
-	TabbyVaultUnlockFailed string
-	TabbyVaultPreviewFmt   string
-	TabbyVaultSave         string
+	TabbyVaultTitle         string
+	TabbyVaultDescription   string
+	TabbyVaultOptional      string
+	TabbyVaultSkip          string
+	TabbyVaultPassword      string
+	TabbyVaultUnlock        string
+	TabbyVaultReadFailed    string
+	TabbyVaultUnlockFailed  string
+	TabbyVaultPreviewFmt    string
+	TabbyVaultSave          string
+	ImportXshellDirectory   string // the chooser button under the clients
+	ImportXshellDirPicker   string
+	ImportXshellDirTitle    string
+	ImportXshellDirDescFmt  string // path, sessions
+	ImportXshellDirPrefix   string
+	ImportXshellDirSubmit   string
+	ImportXshellDirEmptyFmt string // the folder that held no sessions
 
 	// Broadcast input.
 	BroadcastStart            string
@@ -1224,6 +1231,13 @@ type ToolsMessages struct {
 	ExecModeShell                     string
 	ExecModeNetworkCLI                string
 	CLIPlatformField                  string
+	CLIPlatformAuto                   string
+	CLIPlatformDetectedFmt            string
+	CLIPlatformFileTitle              string
+	CLIPlatformFileFailed             string
+	CLIPlatformReloadedFmt            string
+	CLIPlatformReload                 string
+	UpdateBlockedByIntranet           string
 
 	// The file list's configurable columns and default download destination.
 	FilesColumns                         string
