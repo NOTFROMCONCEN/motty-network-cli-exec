@@ -442,6 +442,7 @@ func (state *State) Paint(canvas *gfx.Canvas, size gfx.Size) {
 	state.requestReconnectFrames(canvas)
 	state.requestAutofillFrames(canvas)
 	state.requestLoginCommandFrames(canvas)
+	state.requestPlatformDetectFrames(canvas)
 	state.paintLocalProxyFocus(canvas)
 	// Last, so a tooltip is never covered by what it describes.
 	if _, formatting := canvas.Hovered().In(hitNoteFormats); !formatting {

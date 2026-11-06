@@ -170,6 +170,9 @@ type terminal struct {
 	// promptWait is closed when the shell next shows a prompt, for a stop that
 	// reports whether the terminal came back.
 	promptWait chan struct{}
+	// platformProbe notices a device banner and prompt after the output goes
+	// quiet; see platform_detect.go. Runtime only.
+	platformProbe platformProbe
 	// aiRows holds the screen line IDs whose command was started by the
 	// assistant. The line ID survives scrolling and resizing, so its gutter mark
 	// stays with the command in scrollback.
@@ -832,9 +835,19 @@ func (state *State) pumpFor(session *Session, budget time.Duration) {
 		if !sliced || time.Since(started) >= budget {
 			break
 		}
+
+		state.notePasswordPrompt(session)
+		t.login.output(state.now())
+		state.goLive(session)
+		if state.platformDetectEligible(session) && platformPromptCandidate(session) {
+			t.platformProbe.output(state.now())
+		}
 	}
 	if state.autofillRules.armed {
 		state.scanAutofill(session)
+	}
+	if !finished {
+		state.scanPlatform(session)
 	}
 	switch {
 	case consumed < len(data):
