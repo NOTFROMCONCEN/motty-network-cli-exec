@@ -198,12 +198,9 @@ func (host Host) transport() savedTransport {
 	return transport
 }
 
-// savedCLIPlatform is the state-file form of the platform: the generic table is
-// stored as empty, so one setting has one spelling on disk.
+// savedCLIPlatform is the state-file form of the platform. Empty means
+// automatic detection, "generic" means the user pinned the generic table.
 func (host Host) savedCLIPlatform() string {
-	if host.CLIPlatform == netcli.GenericID {
-		return ""
-	}
 	return host.CLIPlatform
 }
 
@@ -291,10 +288,15 @@ func (host *Host) applyExec(mode, platform string) bool {
 		return false
 	}
 	switch {
-	case platform == "", platform == netcli.GenericID:
+	case platform == "":
 		host.CLIPlatform = ""
+	case platform == netcli.GenericID:
+		host.CLIPlatform = netcli.GenericID
 	default:
-		if _, ok := netcli.Lookup(platform); !ok {
+		// A user platform file may be missing today and return tomorrow. Keep
+		// the id so the host is not dropped, and let Table fall back to generic
+		// until the table is loaded.
+		if !netcli.ValidID(platform) {
 			return false
 		}
 		host.CLIPlatform = platform

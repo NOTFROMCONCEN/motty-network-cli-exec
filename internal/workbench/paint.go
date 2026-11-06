@@ -373,6 +373,7 @@ func (state *State) Paint(canvas *gfx.Canvas, size gfx.Size) {
 	state.requestReconnectFrames(canvas)
 	state.requestAutofillFrames(canvas)
 	state.requestLoginCommandFrames(canvas)
+	state.requestPlatformDetectFrames(canvas)
 	state.paintLocalProxyFocus(canvas)
 	state.paintTransferProgressCard(canvas)
 	// Last, so a tooltip is never covered by what it describes.

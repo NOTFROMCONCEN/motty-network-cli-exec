@@ -78,10 +78,15 @@ type Host struct {
 	// shell). It is independent of Protocol: SSH can carry a device CLI and
 	// Telnet can carry a login shell.
 	ExecMode string
-	// CLIPlatform is the network CLI platform of the host, a netcli id such as
-	// "huawei_vrp"; empty is the generic table. Only read when ExecMode
-	// resolves to the network CLI.
+	// CLIPlatform is the network CLI platform of the host: empty asks for
+	// automatic detection, "generic" pins the generic table, and a netcli id
+	// names a built-in or user-loaded table. Only read when ExecMode resolves
+	// to the network CLI.
 	CLIPlatform string
+	// platformDetected marks a CLIPlatform automatic detection chose, so a
+	// later detection may replace it. A value the user picked is never
+	// replaced. It is runtime only and not saved.
+	platformDetected bool
 	// Proxy overrides the global outbound proxy for this host. Nil inherits the
 	// global proxy; an explicit ProxyNone forces a direct connection.
 	Proxy *outboundProxy

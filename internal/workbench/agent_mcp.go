@@ -23,6 +23,7 @@ import (
 	"motty/internal/buildinfo"
 	"motty/internal/configstore"
 	"motty/internal/i18n"
+	"motty/internal/netcli"
 	"motty/internal/sftpclient"
 	"motty/internal/sshconn"
 	"motty/internal/vault"
@@ -107,6 +108,9 @@ func (options AgentOptions) withDefaults() AgentOptions {
 // agent is not served unrecorded.
 func ServeAgentMCP(ctx context.Context, in io.Reader, out io.Writer, options AgentOptions) error {
 	options = options.withDefaults()
+	if _, err := netcli.LoadFile(netcliPlatformPath(options.StatePath)); err != nil {
+		fmt.Fprintf(options.Log, "motty mcp-serve: network platform tables: %v\n", err)
+	}
 	catalog, err := readAgentCatalog(options.StatePath)
 	if err != nil {
 		return err
