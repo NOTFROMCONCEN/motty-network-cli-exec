@@ -279,17 +279,22 @@ func TestExecModeResolutionAndPersistence(t *testing.T) {
 		t.Fatalf("restored host %+v", back)
 	}
 
-	// A generic platform is saved as empty; a bogus value drops the entry.
+	// "generic" is a real choice now and keeps its spelling; an unknown but
+	// well-formed id is kept so a missing user platform file cannot drop a
+	// host, while a malformed id is still refused.
 	host.CLIPlatform = "generic"
-	if saved := host.transport(); saved.CLIPlatform != "" {
+	if saved := host.transport(); saved.CLIPlatform != "generic" {
 		t.Fatalf("generic saved as %q", saved.CLIPlatform)
 	}
 	var bad Host
 	if bad.applyTransport(savedTransport{ExecMode: "bogus"}) {
 		t.Fatal("an unknown mode was accepted")
 	}
-	if bad.applyTransport(savedTransport{ExecMode: "shell", CLIPlatform: "nope"}) {
-		t.Fatal("an unknown platform was accepted")
+	if !bad.applyTransport(savedTransport{ExecMode: "shell", CLIPlatform: "nope"}) || bad.CLIPlatform != "nope" {
+		t.Fatal("a well-formed unknown platform must be kept until its table returns")
+	}
+	if bad.applyTransport(savedTransport{ExecMode: "shell", CLIPlatform: "Not A Platform"}) {
+		t.Fatal("a malformed platform id was accepted")
 	}
 
 	// The desktops have no terminal to configure.
@@ -303,7 +308,8 @@ func TestExecSettingSurvivesAFullSaveAndLoad(t *testing.T) {
 	options := freshOptions(t)
 	options.StatePath = filepath.Join(filepath.Dir(options.KnownHostsPath), "state.json")
 	// An old entry without the setting keeps its shell behavior; the new
-	// setting is saved, read back, and a damaged one drops the entry.
+	// setting is saved and read back. A well-formed platform whose table is not
+	// loaded is kept too: deleting a user platform file must not drop hosts.
 	err := saveState(options.StatePath, savedState{Hosts: []savedHost{
 		{Label: "Old", Address: "old.example.com", User: "me"},
 		{Label: "Sw", Address: "sw.example.com", User: "me", savedTransport: savedTransport{
@@ -324,8 +330,8 @@ func TestExecSettingSurvivesAFullSaveAndLoad(t *testing.T) {
 	for _, host := range state.hosts {
 		byLabel[host.Label] = host
 	}
-	if len(state.hosts) != 3 {
-		t.Fatalf("hosts = %+v; the damaged entry should be the only one dropped", state.hosts)
+	if len(state.hosts) != 4 {
+		t.Fatalf("hosts = %+v; a well-formed unknown platform must not drop a host", state.hosts)
 	}
 	if host := byLabel["Old"]; host.ExecMode != "" || host.CLIPlatform != "" {
 		t.Fatalf("an old entry gained a setting: %+v", host)
@@ -336,8 +342,11 @@ func TestExecSettingSurvivesAFullSaveAndLoad(t *testing.T) {
 	if host := byLabel["Linux"]; host.ExecMode != "shell" || host.CLIPlatform != "" {
 		t.Fatalf("the shell entry lost its setting: %+v", host)
 	}
+	if host := byLabel["Broken"]; host.CLIPlatform != "not_a_platform" {
+		t.Fatalf("the unknown platform lost its id: %+v", host)
+	}
 
-	// Saving again keeps one spelling on disk, and the generic table is empty.
+	// Saving again keeps the generic spelling on disk.
 	state.hosts = append(state.hosts, Host{
 		Label: "Gen", Address: "gen.example.com", User: "me",
 		Protocol: protocolTelnet, ExecMode: "network_cli", CLIPlatform: netcli.GenericID,
@@ -349,7 +358,7 @@ func TestExecSettingSurvivesAFullSaveAndLoad(t *testing.T) {
 	}
 	loaded := newTestState(t, options)
 	for _, host := range loaded.hosts {
-		if host.Label == "Gen" && (host.ExecMode != "network_cli" || host.CLIPlatform != "") {
+		if host.Label == "Gen" && (host.ExecMode != "network_cli" || host.CLIPlatform != netcli.GenericID) {
 			t.Fatalf("the generic platform was saved as %q", host.CLIPlatform)
 		}
 	}

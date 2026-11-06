@@ -25,6 +25,10 @@ func Classify(platformID, command string) risk.Assessment {
 			"a network CLI takes one command line; send each line as its own call"}}
 	}
 	word := firstWord(line)
+	if _, ok := longestPrefix(line, p.criticalPrefix); ok {
+		return risk.Assessment{Level: risk.Critical, Reasons: []string{
+			"may destroy the device, its data or the access to it"}}
+	}
 	for _, w := range p.critical {
 		if word == w {
 			return risk.Assessment{Level: risk.Critical, Reasons: []string{
@@ -41,6 +45,10 @@ func Classify(platformID, command string) risk.Assessment {
 		if hasPrefixFold(line, prefix) {
 			return risk.Assessment{Level: risk.Low}
 		}
+	}
+	if _, ok := longestPrefix(line, p.riskyPrefix); ok {
+		return risk.Assessment{Level: risk.High, Reasons: []string{
+			"may change the device's state or enter another mode"}}
 	}
 	for _, w := range p.risky {
 		if word == w {
@@ -61,4 +69,17 @@ func firstWord(line string) string {
 // hasPrefixFold reports whether line starts with prefix, ignoring case.
 func hasPrefixFold(line, prefix string) bool {
 	return len(line) >= len(prefix) && strings.EqualFold(line[:len(prefix)], prefix)
+}
+
+// longestPrefix returns the longest case-insensitive prefix match, so a table
+// can list "reload" and "reload in" without the shorter one winning.
+func longestPrefix(line string, prefixes []string) (string, bool) {
+	best := ""
+	for _, prefix := range prefixes {
+		if len(prefix) <= len(best) || !hasPrefixFold(line, prefix) {
+			continue
+		}
+		best = prefix
+	}
+	return best, best != ""
 }
