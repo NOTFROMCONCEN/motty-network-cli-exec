@@ -5,6 +5,7 @@ import (
 
 	"github.com/vivaui/viva/components"
 	"github.com/vivaui/viva/ui"
+	"motty/internal/i18n"
 	"motty/internal/netcli"
 )
 
@@ -56,16 +57,31 @@ func execChoiceFor(saved string) execChoice {
 	return execChoiceAuto
 }
 
-// platformIndexFor is the dialog's list position of a saved platform id.
+// platformIndexFor is the dialog's list position of a saved platform id. The
+// empty id is the first entry, automatic detection; unknown ids fall back to
+// it, so a host whose platform file is gone can still be edited.
 func platformIndexFor(saved string) int {
+	if saved == "" {
+		return 0
+	}
 	if index := slices.Index(netcliIDs(), saved); index >= 0 {
 		return index
 	}
-	return 0 // generic, the default
+	return 0
 }
 
-// netcliIDs is the platform list the dialog offers, generic first.
-func netcliIDs() []string { return netcli.IDs() }
+// netcliIDs is the platform list the dialog offers: automatic detection,
+// generic, then every loaded table.
+func netcliIDs() []string { return append([]string{""}, netcli.IDs()...) }
+
+// clipPlatformName is the label of a platform id in the dialog. netcli cannot
+// name the empty id, which is the automatic choice.
+func clipPlatformName(id string, m i18n.ToolsMessages) string {
+	if id == "" {
+		return m.CLIPlatformAuto
+	}
+	return netcli.Name(id)
+}
 
 // execPaintable reports whether the host being edited has a terminal whose
 // execution mode can be set: everything except the remote desktops.
@@ -93,11 +109,14 @@ func (state *State) paintCLIPlatformChoice(canvas *ui.Canvas, bounds ui.Rect) {
 	state.rememberHostControl(hitDialogCLIPlatform, content)
 	portal := state.beginHostFormPopup(canvas, editor.cliPlatformOpen)
 	defer state.endHostFormPopup(canvas, portal)
-	list := state.hostAuthListBounds(content, len(ids))
+	// A user file can add many vendors. Keep the popup a comfortable height and
+	// let the select scroll rather than run off the window.
+	list := state.hostAuthListBounds(content, min(len(ids), 12))
 	selectControl := components.BeginSelect(canvas, theme, content, components.SelectOptions{
-		TriggerID: hitDialogCLIPlatform, Label: m.CLIPlatformField, Value: netcli.Name(ids[editor.cliPlatform]),
+		TriggerID: hitDialogCLIPlatform, Label: m.CLIPlatformField, Value: clipPlatformName(ids[editor.cliPlatform], m),
 		Open: editor.cliPlatformOpen, Content: list,
 		Layer: dialogLayer + 1, Scope: dialogScope, DismissID: hitDialogCLIPlatformDism, Viewport: state.windowRect(),
+		Scroll: state.menuScrollFor(hitDialogCLIPlatformDism),
 	})
 	defer selectControl.End()
 	if editor.cliPlatformOpen {
@@ -105,7 +124,7 @@ func (state *State) paintCLIPlatformChoice(canvas *ui.Canvas, bounds ui.Rect) {
 	}
 	for index, id := range ids {
 		selectControl.AddItem(components.SelectItem{
-			ID: hitDialogCLIPlatformItems.At(index), Label: netcli.Name(id), Selected: index == editor.cliPlatform,
+			ID: hitDialogCLIPlatformItems.At(index), Label: clipPlatformName(id, m), Selected: index == editor.cliPlatform,
 		})
 	}
 }
