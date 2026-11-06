@@ -693,6 +693,7 @@ func (state *State) finishStartingConnection(session *Session, automatic bool) {
 		t.noShellTold = false
 		t.resetFolderSync()
 		t.rx = t.rx[:0]
+		t.platformProbe.reset()
 		t.skippedEndpoint, t.skippedRole, t.skipsTold = sshconn.Endpoint{}, sshconn.EndpointTarget, 0
 		t.preedit = app.TextState{}
 		t.write([]byte("\r\n"))
