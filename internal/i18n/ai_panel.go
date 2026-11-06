@@ -135,6 +135,14 @@ type AIPanelMessages struct {
 	ToolSFTPRead         string
 	ToolSFTPWrite        string
 	ToolSFTPRemove       string
+	ToolDeviceFacts      string
+	ToolInterfaceStatus  string
+	ToolConfigDiff       string
+	ToolGroupRun         string
+	OpsTargetsFmt        string
+	OpsExample1          string
+	OpsExample2          string
+	OpsExample3          string
 
 	StatusRunning string
 	StatusWaiting string

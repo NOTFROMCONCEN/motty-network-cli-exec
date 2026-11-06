@@ -9,7 +9,6 @@ import (
 	"github.com/vivaui/viva/gfx"
 	"github.com/vivaui/viva/text"
 	"motty/internal/i18n"
-	"motty/internal/netcli"
 	"motty/internal/otp"
 	"motty/internal/serial"
 	"motty/internal/sshconn"
@@ -357,10 +356,10 @@ func (editor *hostEditor) host(id uint32) Host {
 	if execPaintable(editor.protocol) {
 		host.ExecMode = savedExecMode(editor.execChoice)
 		ids := netcliIDs()
-		platform := ids[min(editor.cliPlatform, len(ids)-1)]
-		if platform != netcli.GenericID {
-			host.CLIPlatform = platform
-		}
+		// The empty id means automatic detection; "generic" is a real choice
+		// now, so it is saved as itself instead of disappearing into empty.
+		host.CLIPlatform = ids[min(editor.cliPlatform, len(ids)-1)]
+		host.platformDetected = false
 	}
 	host.normalizeEndpoint()
 	setHostTags(&host, tags)
