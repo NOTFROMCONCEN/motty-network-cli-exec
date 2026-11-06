@@ -172,15 +172,19 @@ func (state *State) aiWrap(canvas *gfx.Canvas, view *aiRowView, value string, si
 }
 
 // aiToolDetail is what a tool card shows under its name: the command, the
-// path, or the raw arguments.
-func aiToolDetail(item *aiItem) string {
+// path, the batch label, or the raw arguments.
+func aiToolDetail(item *aiItem, m i18n.AIPanelMessages) string {
 	arguments := item.call.Arguments
 	if arguments == "" || arguments == "{}" {
 		return ""
 	}
 	var parsed struct {
-		Command string `json:"command"`
-		Path    string `json:"path"`
+		Command string            `json:"command"`
+		Path    string            `json:"path"`
+		Label   string            `json:"label"`
+		Targets []json.RawMessage `json:"targets"`
+		Before  *string           `json:"before"`
+		After   *string           `json:"after"`
 	}
 	if json.Unmarshal([]byte(arguments), &parsed) == nil {
 		switch {
@@ -188,6 +192,12 @@ func aiToolDetail(item *aiItem) string {
 			return parsed.Command
 		case parsed.Path != "":
 			return parsed.Path
+		case parsed.Label != "":
+			return parsed.Label
+		case len(parsed.Targets) > 0:
+			return fmt.Sprintf(m.OpsTargetsFmt, len(parsed.Targets))
+		case parsed.Before != nil && parsed.After != nil:
+			return "before → after"
 		}
 	}
 	if len(arguments) > 300 {
@@ -236,16 +246,27 @@ func aiToolTitle(m i18n.AIPanelMessages, name string) string {
 		return m.ToolSFTPRemove
 	case tools.NameUploadSelected:
 		return m.Upload
+	case tools.NameDeviceFacts:
+		return m.ToolDeviceFacts
+	case tools.NameInterfaceStatus:
+		return m.ToolInterfaceStatus
+	case tools.NameConfigDiff:
+		return m.ToolConfigDiff
+	case tools.NameGroupRun:
+		return m.ToolGroupRun
 	}
 	return name
 }
 
 func aiToolIcon(name string) uint8 {
 	switch name {
-	case tools.NameTerminalExec, tools.NameTerminalExecMany, tools.NameTerminalRead:
+	case tools.NameTerminalExec, tools.NameTerminalExecMany, tools.NameTerminalRead,
+		tools.NameDeviceFacts, tools.NameInterfaceStatus:
 		return iconTerminal
 	case tools.NameListSessions:
 		return iconHosts
+	case tools.NameGroupRun:
+		return iconProcess
 	}
 	return iconFile
 }
@@ -372,7 +393,7 @@ func aiBlockHeight(count int, cellHeight, pad float32) float32 {
 
 // aiLayoutTool measures a tool card: header, the command, and the output.
 func (state *State) aiLayoutTool(view *aiRowView, item *aiItem, width, cell, cellHeight float32) {
-	view.detail = aiToolDetail(item)
+	view.detail = aiToolDetail(item, state.messages.AIPanel)
 	view.excerpt = aiExcerpt(item.result)
 	command, output := &view.plain[aiTextPrimary], &view.plain[aiTextOutput]
 	command.reset("")
@@ -830,8 +851,12 @@ func (state *State) declareAIExample(c ui.C, index int, example string) {
 // is one to look at, and about getting one when there is not.
 func (state *State) aiEmptyTexts() (title, hint string, examples [aiExamples]string) {
 	m := state.messages.AIPanel
-	if _, err := state.aiTargetSession(); err != nil {
+	session, err := state.aiTargetSession()
+	if err != nil {
 		return m.IdleTitle, m.IdleHint, [aiExamples]string{m.IdleExample1, m.IdleExample2, m.IdleExample3}
+	}
+	if ops, ok := state.aiOpsExamples(session); ok {
+		return m.EmptyTitle, m.EmptyHint, ops
 	}
 	return m.EmptyTitle, m.EmptyHint, [aiExamples]string{m.Example1, m.Example2, m.Example3}
 }
