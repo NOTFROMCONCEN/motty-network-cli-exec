@@ -192,6 +192,9 @@ func (g Gate) Run(ctx context.Context, name string, raw []byte) Result {
 	if g.Mode == ModeObserve && spec.Kind != tools.Read {
 		return Result{Text: "this connection is read-only: " + name + " is not allowed", IsError: true, Denied: true}
 	}
+	if result, handled := g.runOps(ctx, name, raw); handled {
+		return result
+	}
 	if result, handled := g.runHostTool(ctx, name, raw); handled {
 		return result
 	}
