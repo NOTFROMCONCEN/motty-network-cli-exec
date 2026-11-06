@@ -906,7 +906,7 @@ func (state *State) aiSend() bool {
 	config := agent.Config{
 		Provider:          state.aiProvider(provider),
 		Model:             model,
-		System:            agent.DefaultSystem(state.aiSessionSummary(references...)) + state.aiNoSessionNote(references...),
+		System:            agent.DefaultSystem(state.aiSessionSummary(references...)) + state.aiNoSessionNote(references...) + state.aiNetworkOpsNote(target, references),
 		Mode:              ai.mode,
 		UserInHistory:     retry,
 		UserImages:        images,
@@ -1042,13 +1042,8 @@ func (state *State) aiEvent(run *aiRun, event agent.Event) {
 		}
 		run.open = -1
 		item := aiItem{kind: aiTool, call: event.Call, status: aiToolRunning}
-		if event.Call.Name == "terminal_exec" || event.Call.Name == "terminal_exec_many" {
-			var args struct {
-				Command string `json:"command"`
-			}
-			if json.Unmarshal([]byte(event.Call.Arguments), &args) == nil {
-				item.risk = risk.Classify(args.Command).Level
-			}
+		if level, ok := state.aiToolRisk(event.Call); ok {
+			item.risk = level
 		}
 		ai.items = append(ai.items, item)
 	case agent.EventToolDone:

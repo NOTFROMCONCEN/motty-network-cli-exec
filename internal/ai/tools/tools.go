@@ -111,6 +111,11 @@ const (
 	NameRZSZUpload   = "rzsz_upload"
 	NameRZSZDownload = "rzsz_download"
 	NameRZSZStatus   = "rzsz_status"
+	// The network operations tools read a device through its platform table.
+	NameDeviceFacts     = "device_facts"
+	NameInterfaceStatus = "interface_status"
+	NameConfigDiff      = "config_diff"
+	NameGroupRun        = "group_run"
 
 	// NameRequestAgentMode is the one tool Ask mode offers. It runs nothing:
 	// the application asks the user to switch to Agent and retry.
@@ -125,6 +130,10 @@ const (
 	MaxBatchSessions      = 8
 	MaxContentBytes       = 262144
 	MaxReadBytes          = 262144
+	MaxDiffTextBytes      = 262144
+	MaxDiffContext        = 10
+	MaxGroupTargets       = 8
+	MaxGroupCommands      = 8
 	DefaultReadLines      = 60
 	MaxReadLines          = 500
 	DefaultTimeoutSeconds = 60
@@ -162,7 +171,7 @@ var specs = []Spec{
 	},
 	{
 		Name:        NameTerminalExec,
-		Description: "Run one command in the user's visible terminal and return its output and how it ended. The command must suit the session's execution mode (see list_sessions): a shell session takes one non-interactive command line and reports the exit status; a network CLI session (Telnet and serial consoles included) takes one raw device command, never shell wrapping, and reports completion. It must finish within the timeout.",
+		Description: "Run one command in the user's visible terminal and return its output and how it ended. The command must suit the session's execution mode (see list_sessions): a shell takes one command line and reports the exit status; a network CLI session (Telnet/serial included) takes one raw device command, never shell wrapping, and reports completion.",
 		Schema: json.RawMessage(`{"type":"object","properties":{` +
 			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Defaults to the active session."},` +
 			`"command":{"type":"string","minLength":1,"maxLength":8192,"description":"One command line: a shell command on a shell session, one raw device CLI command on a network CLI session."},` +
@@ -215,6 +224,49 @@ var specs = []Spec{
 			`"command":{"type":"string","minLength":1,"maxLength":8192,"description":"One command line for every listed session: a shell command on shell sessions, one raw device CLI command on network CLI sessions."},` +
 			`"timeout_seconds":{"type":"integer","minimum":1,"maximum":600,"default":60,"description":"Give up waiting after this many seconds."}` +
 			`},"required":["sessions","command"],"additionalProperties":false}`),
+		Kind: Exec,
+	},
+	{
+		Name:        NameDeviceFacts,
+		Description: "Read a network CLI session's version, model and uptime with its platform's version command. The command is read-only; the usual approval policy applies.",
+		Schema: json.RawMessage(`{"type":"object","properties":{` +
+			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Defaults to the active session."},` +
+			`"timeout_seconds":{"type":"integer","minimum":1,"maximum":600,"default":60,"description":"Give up waiting after this many seconds."}` +
+			`},"additionalProperties":false}`),
+		Kind: Exec,
+	},
+	{
+		Name:        NameInterfaceStatus,
+		Description: "List interface link and protocol state from a network CLI session, with up/down counts. Optionally filter one interface. The command is read-only.",
+		Schema: json.RawMessage(`{"type":"object","properties":{` +
+			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Defaults to the active session."},` +
+			`"interface":{"type":"string","maxLength":128,"description":"Only rows whose interface name contains this text."},` +
+			`"include_down":{"type":"boolean","default":true,"description":"Include interfaces that are down or administratively down."},` +
+			`"timeout_seconds":{"type":"integer","minimum":1,"maximum":600,"default":60,"description":"Give up waiting after this many seconds."}` +
+			`},"additionalProperties":false}`),
+		Kind: Exec,
+	},
+	{
+		Name:        NameConfigDiff,
+		Description: "Compare two configuration or output texts and return a bounded unified diff with added/removed counts and SHA-256 hashes. It runs nothing.",
+		Schema: json.RawMessage(`{"type":"object","properties":{` +
+			`"before":{"type":"string","maxLength":262144,"description":"The earlier text."},` +
+			`"after":{"type":"string","maxLength":262144,"description":"The later text."},` +
+			`"context_lines":{"type":"integer","minimum":0,"maximum":10,"default":3,"description":"Unchanged lines kept around each change."}` +
+			`},"required":["before","after"],"additionalProperties":false}`),
+		Kind: Read,
+	},
+	{
+		Name:        NameGroupRun,
+		Description: "Run read-only commands on up to eight network CLI sessions and collect every result. Any command that is not a recognized read-only check refuses the whole batch; use a change plan for changes. The user approves the batch once.",
+		Schema: json.RawMessage(`{"type":"object","properties":{` +
+			`"targets":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"object","properties":{` +
+			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Defaults to the active session."},` +
+			`"commands":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"string","minLength":1,"maxLength":8192}}` +
+			`},"required":["session","commands"],"additionalProperties":false}},` +
+			`"label":{"type":"string","maxLength":128,"description":"Optional short name for the batch."},` +
+			`"timeout_seconds":{"type":"integer","minimum":1,"maximum":600,"default":60,"description":"Give up waiting after this many seconds per command."}` +
+			`},"required":["targets"],"additionalProperties":false}`),
 		Kind: Exec,
 	},
 	{
@@ -307,7 +359,12 @@ func Headless(commands, writeFiles, localFiles bool) []Spec {
 	out := make([]Spec, 0, len(specs))
 	for _, spec := range specs {
 		switch {
-		case spec.Name == NameTerminalRead, spec.Name == NameToolOutputRead, isJobTool(spec.Name), isRZSZ(spec.Name), spec.Kind == Write && !writeFiles, spec.Kind == Exec && !commands:
+		case spec.Name == NameTerminalRead, spec.Name == NameToolOutputRead, isJobTool(spec.Name), isRZSZ(spec.Name),
+			// The headless backend has no device CLI, so the network operations
+			// tools would only refuse.
+			spec.Name == NameDeviceFacts, spec.Name == NameInterfaceStatus, spec.Name == NameGroupRun,
+			spec.Kind == Write && !writeFiles,
+			spec.Kind == Exec && !commands:
 			continue
 		}
 		schema := strings.ReplaceAll(string(spec.Schema), sessionHint, hostHint)
@@ -492,6 +549,35 @@ type TerminalExecManyArgs struct {
 	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
 }
 
+type DeviceFactsArgs struct {
+	Session        string `json:"session,omitempty"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty"`
+}
+
+type InterfaceStatusArgs struct {
+	Session        string `json:"session,omitempty"`
+	Interface      string `json:"interface,omitempty"`
+	IncludeDown    bool   `json:"include_down,omitempty"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty"`
+}
+
+type ConfigDiffArgs struct {
+	Before       string `json:"before"`
+	After        string `json:"after"`
+	ContextLines int    `json:"context_lines,omitempty"`
+}
+
+type GroupRunTarget struct {
+	Session  string   `json:"session"`
+	Commands []string `json:"commands"`
+}
+
+type GroupRunArgs struct {
+	Targets        []GroupRunTarget `json:"targets"`
+	Label          string           `json:"label,omitempty"`
+	TimeoutSeconds int              `json:"timeout_seconds,omitempty"`
+}
+
 type SFTPListArgs struct {
 	Session string `json:"session,omitempty"`
 	Path    string `json:"path"`
@@ -610,6 +696,169 @@ func DecodeTerminalExecMany(raw []byte) (TerminalExecManyArgs, error) {
 }
 
 // commandAndTimeout validates what terminal_exec and terminal_exec_many share.
+func DecodeDeviceFacts(raw []byte) (DeviceFactsArgs, error) {
+	var w struct {
+		Session        *string `json:"session"`
+		TimeoutSeconds *int    `json:"timeout_seconds"`
+	}
+	if err := decode(raw, &w); err != nil {
+		return DeviceFactsArgs{}, err
+	}
+	a := DeviceFactsArgs{TimeoutSeconds: DefaultTimeoutSeconds}
+	var err error
+	if a.Session, err = session(w.Session); err != nil {
+		return a, err
+	}
+	return a, timeoutOnly(w.TimeoutSeconds, &a.TimeoutSeconds)
+}
+
+func DecodeInterfaceStatus(raw []byte) (InterfaceStatusArgs, error) {
+	var w struct {
+		Session        *string `json:"session"`
+		Interface      *string `json:"interface"`
+		IncludeDown    *bool   `json:"include_down"`
+		TimeoutSeconds *int    `json:"timeout_seconds"`
+	}
+	if err := decode(raw, &w); err != nil {
+		return InterfaceStatusArgs{}, err
+	}
+	a := InterfaceStatusArgs{IncludeDown: true, TimeoutSeconds: DefaultTimeoutSeconds}
+	var err error
+	if a.Session, err = session(w.Session); err != nil {
+		return a, err
+	}
+	if w.Interface != nil {
+		name := strings.TrimSpace(*w.Interface)
+		if len(name) > 128 {
+			return a, errors.New("interface is longer than 128 bytes")
+		}
+		if err := text("interface", name, false); err != nil {
+			return a, err
+		}
+		a.Interface = name
+	}
+	if w.IncludeDown != nil {
+		a.IncludeDown = *w.IncludeDown
+	}
+	return a, timeoutOnly(w.TimeoutSeconds, &a.TimeoutSeconds)
+}
+
+func DecodeConfigDiff(raw []byte) (ConfigDiffArgs, error) {
+	var w struct {
+		Before       *string `json:"before"`
+		After        *string `json:"after"`
+		ContextLines *int    `json:"context_lines"`
+	}
+	if err := decode(raw, &w); err != nil {
+		return ConfigDiffArgs{}, err
+	}
+	a := ConfigDiffArgs{ContextLines: 3}
+	if w.Before == nil {
+		return a, errors.New("before is required")
+	}
+	if len(*w.Before) > MaxDiffTextBytes {
+		return a, fmt.Errorf("before is longer than %d bytes", MaxDiffTextBytes)
+	}
+	if err := text("before", *w.Before, true); err != nil {
+		return a, err
+	}
+	if w.After == nil {
+		return a, errors.New("after is required")
+	}
+	if len(*w.After) > MaxDiffTextBytes {
+		return a, fmt.Errorf("after is longer than %d bytes", MaxDiffTextBytes)
+	}
+	if err := text("after", *w.After, true); err != nil {
+		return a, err
+	}
+	a.Before, a.After = *w.Before, *w.After
+	if w.ContextLines != nil {
+		if *w.ContextLines < 0 || *w.ContextLines > MaxDiffContext {
+			return a, fmt.Errorf("context_lines must be between 0 and %d", MaxDiffContext)
+		}
+		a.ContextLines = *w.ContextLines
+	}
+	return a, nil
+}
+
+func DecodeGroupRun(raw []byte) (GroupRunArgs, error) {
+	var w struct {
+		Targets        []GroupRunTarget `json:"targets"`
+		Label          *string          `json:"label"`
+		TimeoutSeconds *int             `json:"timeout_seconds"`
+	}
+	if err := decode(raw, &w); err != nil {
+		return GroupRunArgs{}, err
+	}
+	a := GroupRunArgs{TimeoutSeconds: DefaultTimeoutSeconds}
+	if len(w.Targets) < 1 || len(w.Targets) > MaxGroupTargets {
+		return a, fmt.Errorf("targets must name between 1 and %d sessions", MaxGroupTargets)
+	}
+	seen := make(map[string]bool, len(w.Targets))
+	for index, rawTarget := range w.Targets {
+		target := GroupRunTarget{Session: strings.TrimSpace(rawTarget.Session)}
+		if target.Session == "" {
+			return a, fmt.Errorf("target %d has an empty session id", index+1)
+		}
+		if _, err := session(&target.Session); err != nil {
+			return a, fmt.Errorf("target %d: %w", index+1, err)
+		}
+		if seen[target.Session] {
+			return a, fmt.Errorf("session %q is listed twice", target.Session)
+		}
+		seen[target.Session] = true
+		if len(rawTarget.Commands) < 1 || len(rawTarget.Commands) > MaxGroupCommands {
+			return a, fmt.Errorf("target %q must name between 1 and %d commands", target.Session, MaxGroupCommands)
+		}
+		target.Commands = make([]string, 0, len(rawTarget.Commands))
+		for _, value := range rawTarget.Commands {
+			command, err := oneLineCommand(value)
+			if err != nil {
+				return a, err
+			}
+			target.Commands = append(target.Commands, command)
+		}
+		a.Targets = append(a.Targets, target)
+	}
+	if w.Label != nil {
+		label := strings.TrimSpace(*w.Label)
+		if len(label) > 128 {
+			return a, errors.New("label is longer than 128 bytes")
+		}
+		if err := text("label", label, false); err != nil {
+			return a, err
+		}
+		a.Label = label
+	}
+	return a, timeoutOnly(w.TimeoutSeconds, &a.TimeoutSeconds)
+}
+
+// oneLineCommand validates one raw device command line.
+func oneLineCommand(value string) (string, error) {
+	command := strings.TrimSpace(value)
+	if command == "" {
+		return "", errors.New("a command is empty")
+	}
+	if len(command) > MaxCommandBytes {
+		return "", fmt.Errorf("command is longer than %d bytes", MaxCommandBytes)
+	}
+	if err := text("command", command, false); err != nil {
+		return "", err
+	}
+	return command, nil
+}
+
+func timeoutOnly(value *int, dst *int) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 1 || *value > MaxTimeoutSeconds {
+		return fmt.Errorf("timeout_seconds must be between 1 and %d", MaxTimeoutSeconds)
+	}
+	*dst = *value
+	return nil
+}
+
 func commandAndTimeout(command *string, timeoutSeconds *int) (string, int, error) {
 	timeout := DefaultTimeoutSeconds
 	if command == nil || strings.TrimSpace(*command) == "" {

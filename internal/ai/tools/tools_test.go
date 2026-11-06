@@ -9,7 +9,9 @@ import (
 )
 
 func TestOrderAndLookup(t *testing.T) {
-	want := []string{NameListSessions, NameListHosts, NameTerminalRead, NameTerminalExec, NameTerminalStart, NameTerminalPoll, NameTerminalStop, NameToolOutputRead, NameTerminalExecMany, NameSFTPList, NameSFTPRead, NameSFTPWrite, NameSFTPRemove, NameRZSZUpload, NameRZSZDownload, NameRZSZStatus}
+	want := []string{NameListSessions, NameListHosts, NameTerminalRead, NameTerminalExec, NameTerminalStart, NameTerminalPoll, NameTerminalStop, NameToolOutputRead, NameTerminalExecMany,
+		NameDeviceFacts, NameInterfaceStatus, NameConfigDiff, NameGroupRun,
+		NameSFTPList, NameSFTPRead, NameSFTPWrite, NameSFTPRemove, NameRZSZUpload, NameRZSZDownload, NameRZSZStatus}
 	var got []string
 	for _, s := range All() {
 		got = append(got, s.Name)
@@ -54,11 +56,14 @@ func jsonNames(t *testing.T, v any) []string {
 func TestSchemasMatchArgs(t *testing.T) {
 	args := map[string]any{
 		NameListSessions: ListSessionsArgs{}, NameListHosts: ListHostsArgs{}, NameTerminalRead: TerminalReadArgs{}, NameTerminalExec: TerminalExecArgs{}, NameTerminalStart: TerminalStartArgs{}, NameTerminalPoll: TerminalPollArgs{}, NameTerminalStop: TerminalStopArgs{}, NameToolOutputRead: ToolOutputReadArgs{}, NameTerminalExecMany: TerminalExecManyArgs{},
+		NameDeviceFacts: DeviceFactsArgs{}, NameInterfaceStatus: InterfaceStatusArgs{}, NameConfigDiff: ConfigDiffArgs{}, NameGroupRun: GroupRunArgs{},
 		NameSFTPList: SFTPListArgs{}, NameSFTPRead: SFTPReadArgs{}, NameSFTPWrite: SFTPWriteArgs{}, NameSFTPRemove: SFTPRemoveArgs{},
 		NameRZSZUpload: RZSZUploadArgs{}, NameRZSZDownload: RZSZDownloadArgs{}, NameRZSZStatus: RZSZStatusArgs{},
 	}
 	required := map[string][]string{
-		NameTerminalExec: {"command"}, NameTerminalStart: {"command"}, NameTerminalPoll: {"job_id"}, NameTerminalStop: {"job_id"}, NameToolOutputRead: {"offset", "output_id"}, NameTerminalExecMany: {"command", "sessions"}, NameSFTPList: {"path"}, NameSFTPRead: {"path"},
+		NameTerminalExec: {"command"}, NameTerminalStart: {"command"}, NameTerminalPoll: {"job_id"}, NameTerminalStop: {"job_id"}, NameToolOutputRead: {"offset", "output_id"}, NameTerminalExecMany: {"command", "sessions"}, NameConfigDiff: {"after", "before"},
+		NameGroupRun: {"targets"}, NameSFTPList: {"path"}, NameSFTPRead: {"path"},
+
 		NameSFTPWrite: {"content", "path"}, NameSFTPRemove: {"path"},
 		NameRZSZUpload: {"local_path"}, NameRZSZDownload: {"local_dir", "remote_path"},
 	}
@@ -114,6 +119,10 @@ func TestDecoders(t *testing.T) {
 	sr := func(b []byte) (any, error) { return DecodeSFTPRead(b) }
 	sw := func(b []byte) (any, error) { return DecodeSFTPWrite(b) }
 	rm := func(b []byte) (any, error) { return DecodeSFTPRemove(b) }
+	df := func(b []byte) (any, error) { return DecodeDeviceFacts(b) }
+	is := func(b []byte) (any, error) { return DecodeInterfaceStatus(b) }
+	cd := func(b []byte) (any, error) { return DecodeConfigDiff(b) }
+	gr := func(b []byte) (any, error) { return DecodeGroupRun(b) }
 	tests := []tc{
 		{"ls empty", ``, ls, ListSessionsArgs{}, false},
 		{"ls null", `null`, ls, ListSessionsArgs{}, false},
@@ -171,6 +180,36 @@ func TestDecoders(t *testing.T) {
 		{"rm ok", `{"path":"/f","session":"s"}`, rm, SFTPRemoveArgs{"s", "/f"}, false},
 		{"rm missing", `{"session":"s"}`, rm, nil, true},
 		{"rm unknown", `{"path":"/f","recursive":true}`, rm, nil, true},
+
+		{"df defaults", `{}`, df, DeviceFactsArgs{TimeoutSeconds: DefaultTimeoutSeconds}, false},
+		{"df full", `{"session":"s1","timeout_seconds":5}`, df, DeviceFactsArgs{Session: "s1", TimeoutSeconds: 5}, false},
+		{"df bad timeout", `{"timeout_seconds":0}`, df, nil, true},
+		{"df unknown", `{"lines":5}`, df, nil, true},
+
+		{"is defaults", `{}`, is, InterfaceStatusArgs{IncludeDown: true, TimeoutSeconds: DefaultTimeoutSeconds}, false},
+		{"is full", `{"session":"s","interface":"Gi","include_down":false,"timeout_seconds":5}`, is,
+			InterfaceStatusArgs{Session: "s", Interface: "Gi", IncludeDown: false, TimeoutSeconds: 5}, false},
+		{"is empty filter", `{"interface":"  "}`, is, InterfaceStatusArgs{IncludeDown: true, TimeoutSeconds: DefaultTimeoutSeconds}, false},
+		{"is long filter", `{"interface":` + q(big(129)) + `}`, is, nil, true},
+
+		{"cd defaults", `{"before":"a","after":"b"}`, cd, ConfigDiffArgs{Before: "a", After: "b", ContextLines: 3}, false},
+		{"cd multiline", `{"before":"a\nb","after":"a\nc","context_lines":0}`, cd,
+			ConfigDiffArgs{Before: "a\nb", After: "a\nc", ContextLines: 0}, false},
+		{"cd missing before", `{"after":"b"}`, cd, nil, true},
+		{"cd missing after", `{"before":"a"}`, cd, nil, true},
+		{"cd bad context", `{"before":"a","after":"b","context_lines":11}`, cd, nil, true},
+		{"cd too large", `{"before":` + q(big(MaxDiffTextBytes+1)) + `,"after":"b"}`, cd, nil, true},
+
+		{"gr one target", `{"targets":[{"session":"s1","commands":["show version"]}]}`, gr,
+			GroupRunArgs{Targets: []GroupRunTarget{{Session: "s1", Commands: []string{"show version"}}}, TimeoutSeconds: DefaultTimeoutSeconds}, false},
+		{"gr label", `{"targets":[{"session":"s1","commands":["show clock","show arp"]}],"label":" check ","timeout_seconds":5}`, gr,
+			GroupRunArgs{Targets: []GroupRunTarget{{Session: "s1", Commands: []string{"show clock", "show arp"}}}, Label: "check", TimeoutSeconds: 5}, false},
+		{"gr no targets", `{"targets":[]}`, gr, nil, true},
+		{"gr duplicate", `{"targets":[{"session":"s1","commands":["x"]},{"session":"s1","commands":["y"]}]}`, gr, nil, true},
+		{"gr no commands", `{"targets":[{"session":"s1","commands":[]}]}`, gr, nil, true},
+		{"gr empty command", `{"targets":[{"session":"s1","commands":["  "]}]}`, gr, nil, true},
+		{"gr multiline command", `{"targets":[{"session":"s1","commands":["a\nb"]}]}`, gr, nil, true},
+		{"gr unknown", `{"targets":[{"session":"s1","commands":["x"]}],"all":true}`, gr, nil, true},
 	}
 	for _, c := range tests {
 		t.Run(c.name, func(t *testing.T) {
@@ -269,10 +308,11 @@ func TestHeadlessCatalogDropsTheScreenAndStopsPromisingATerminal(t *testing.T) {
 		}
 		return names
 	}
-	if got, want := names(false), []string{NameListSessions, NameListHosts, NameSFTPList, NameSFTPRead, NameSFTPStat, NameSFTPChecksum, NameTransferStatus}; !slices.Equal(got, want) {
+	if got, want := names(false), []string{NameListSessions, NameListHosts, NameConfigDiff, NameSFTPList, NameSFTPRead, NameSFTPStat, NameSFTPChecksum, NameTransferStatus}; !slices.Equal(got, want) {
 		t.Errorf("read-only headless tools %v, want %v", got, want)
 	}
-	if got, want := names(true), []string{NameListSessions, NameListHosts, NameTerminalExec, NameTerminalExecMany, NameSFTPList, NameSFTPRead, NameSFTPStat, NameSFTPChecksum, NameTransferStatus}; !slices.Equal(got, want) {
+	if got, want := names(true), []string{NameListSessions, NameListHosts, NameTerminalExec, NameTerminalExecMany, NameConfigDiff, NameSFTPList, NameSFTPRead, NameSFTPStat, NameSFTPChecksum, NameTransferStatus}; !slices.Equal(got, want) {
+
 		t.Errorf("headless tools with commands %v, want %v", got, want)
 	}
 	if _, ok := Lookup(NameTerminalRead); !ok {
@@ -282,9 +322,10 @@ func TestHeadlessCatalogDropsTheScreenAndStopsPromisingATerminal(t *testing.T) {
 
 func TestHeadlessFullAccessAddsFileChangesWithoutInventingATerminal(t *testing.T) {
 	full := Headless(true, true, false)
-	// Dropped from the window catalog: terminal_read, tool_output_read, the three
-	// job tools, and the three rz/sz tools. Three host metadata tools are added.
-	if len(full) != len(All())-8+3 {
+	// Dropped from the headless catalog: terminal_read, tool_output_read, the
+	// three job tools, the three rz/sz tools and the three network-operations
+	// tools. Three host file tools are added.
+	if len(full) != len(All())-11+3 {
 		t.Fatal("full access did not expose every tool that works without a terminal")
 	}
 	var writes int
