@@ -1,0 +1,20 @@
+{
+  "version": "0.3.4.1",
+  "tag": "v0.3.4-netcli-build.1-genshin",
+  "source": "https://github.com/NOTFROMCONCEN/motty-network-cli-exec/releases/tag/v0.3.4-netcli-build.1-genshin",
+  "notes": "基于上游 t8y2/motty **v0.3.4**（`41ceea3`）的 Genshin 系列版本（0.3.4.1）。\n\n\u003e 机器版本 `0.3.4.1`：基线升到上游 0.3.4，构建号在新基线上从 1 重新计数（上一版 0.3.2.7 可应用内自动更新到本版）。\n\n## 随上游 v0.3.3 / v0.3.4 带来\n\n**窗口与分屏**\n- 分割画面外壳可拖到标签栏变成标签页；双击分屏栏重命名\n- 新开分屏继承第一个分屏的当前目录\n- 关闭正在运行的会话前先确认\n- 拖拽滚动按边缘要求的速率进行\n\n**终端**\n- 双击选词、三击选行，Shift+点击扩展选择\n- Shift+Insert 粘贴、Ctrl+Insert 复制\n- 可调行距与光标粗细；慢速链路上输入立即显示\n- 在 sudo 提示处自动填入已保存密码\n- 杀掉程序后回收提示符残留的终端模式；重连的 shell 拿到干净的屏幕\n\n**更新提示改版**\n- 更新不再弹对话框，改为窗口栏上的绿色圆环按钮 + 轻提示\n\n**其它**\n- 新增**繁体中文**语言\n- 远程工具支持复制进程详情、读取容器环境变量\n- SFTP 目录只读时原地保存文本；chmod 处提供权限复选框\n- AI 面板显示请求活动、耗时与 token 用量；长粘贴文本以 4 MiB 上限转为附件\n\n## fork 自身\n\n- 设备日志自动着色（0.3.2.7 起）：眼睛图标开关、13 条厂商规则、按终端记忆\n- AI 网络设备 CLI 执行模式（裸键入、设备提示符判完成、独立超时）\n- Windows + Linux 双平台发布；更新来自 fork 自己的发布页\n",
+  "files": [
+    {
+      "name": "motty-0.3.4.1-windows-amd64-setup.exe",
+      "size": 10566783,
+      "sha256": "64c48330682cb935d6e96b5d167f5014f0875809fd0a58ad677c633a9abe9cd8",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2b2M1bnRLb09oc2d4U3ZJV1hTRXhCQnYySDhwWFZaRVZ1TVg5c3NkTWJPdTNrSDFBa0ZkV2tlWWtLQXk4djVrK2U2TEoxYXFINHcvQ1NKVTBFWjFvUVU9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTM5MzA2MjIJZmlsZTptb3R0eS0wLjMuNC4xLXdpbmRvd3MtYW1kNjQtc2V0dXAuZXhlCXZlcnNpb246MC4zLjQuMQoxaGNaWDVCUk5xTE01TGV1czViaTRyNWoySjZkaFY2WGVSMzlZM0RwWXhxRlFFR2dOdFNHOStiaThOcVhaYmtwMDN5TCt5ejVVUksrUndhUWtIVm5EUT09Cg=="
+    },
+    {
+      "name": "motty-0.3.4.1-linux-amd64.tar.gz",
+      "size": 14095938,
+      "sha256": "e4747b149bb5b7318280fe32ad3cd4826a7de469a860857219ba6eed6fcbb227",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2cVQ1Y21taVNWRkp6cTg5WGQyZGhyaG4xNEh1UWFOV2diQTFLMStoODhyNGdxL0JJOXBueXNkSlhtZVN0RjlKb2kvejJNcmI3L1JnOFplcXBYaFBNZ009CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTM5MzA2MjIJZmlsZTptb3R0eS0wLjMuNC4xLWxpbnV4LWFtZDY0LnRhci5negl2ZXJzaW9uOjAuMy40LjEKYjQ2d3M3Nm5EeFNualF2aTNpeUhaaE9tY0szdGNOOUs1bEw2U0s0blFsYmM4T0t3QVY5UUo3NmdIMk1YWFQwUG51eC9uVjFFMTRIMzNMOS9TWk8yRHc9PQo="
+    }
+  ]
+}
