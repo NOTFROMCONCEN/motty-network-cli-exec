@@ -75,6 +75,12 @@ func TestPlatformTableAndNames(t *testing.T) {
 	if !Table("huawei_vrp").Shaped() || Table(GenericID).Shaped() {
 		t.Fatal("shaped-ness of the tables is wrong")
 	}
+	if Table("huawei_vrp").FactsCommand() != "display version" || Table("cisco_ios").InterfaceCommand() != "show ip interface brief" {
+		t.Fatal("the built-in read commands are missing")
+	}
+	if Table(GenericID).FactsCommand() != "" || Table(GenericID).ConfigCommand() != "" {
+		t.Fatal("the generic table claimed a read command")
+	}
 	ids := IDs()
 	if ids[0] != GenericID || len(ids) != 5 {
 		t.Fatalf("ids %v", ids)

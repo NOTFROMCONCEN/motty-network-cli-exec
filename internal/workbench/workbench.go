@@ -47,6 +47,7 @@ var (
 	hitAddHost                 = tree.ID(shellHits, "add-host")
 	hitAddHostEmpty            = tree.ID(shellHits, "add-host-empty")
 	hitImportSSHConfig         = tree.ID(shellHits, "import-ssh-config")
+	hitReloadPlatforms         = tree.ID(shellHits, "reload-platforms")
 	hitEditHost                = tree.ID(shellHits, "edit-host")
 	hitCopyHost                = tree.ID(shellHits, "copy-host")
 	hitDeleteHost              = tree.ID(shellHits, "delete-host")
@@ -1359,6 +1360,10 @@ func New(options Options) *State {
 func (state *State) loadApplicationProfile() {
 	state.initKnownHosts()
 	state.initSecrets()
+
+	// The user's platform tables must be installed before the saved hosts are
+	// decoded: a host may name one, and an unknown id must not drop it.
+	state.loadPlatformTables()
 	state.starting = true
 	// A fresh window's completion is the automatic list: the menu opens as the
 	// user types, and the inline suggestion is a choice in Settings. Capturing
@@ -2222,6 +2227,8 @@ func (state *State) click(id gfx.ID, feedback bool) {
 		state.openHostDialog()
 	case id == hitImportSSHConfig:
 		state.importSSHConfig()
+	case id == hitReloadPlatforms:
+		state.reloadPlatformTables()
 	case id == hitLocalTerminal || id == hitWindowLocalTerminal:
 		state.openLocalTerminal()
 	case id == hitGitHub:

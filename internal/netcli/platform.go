@@ -13,7 +13,10 @@
 // known as its platform table.
 package netcli
 
-import "strings"
+import (
+	"strings"
+	"sync"
+)
 
 // Platform describes one family of network device CLIs: what its prompt looks
 // like, how its pager behaves, which lines report a command error, and what the
@@ -52,6 +55,21 @@ type Platform struct {
 	// critical are first words of commands that can destroy the device, its
 	// data or the access to it.
 	critical []string
+	// criticalPrefix and riskyPrefix are longer case-insensitive command
+	// prefixes that a first word cannot express, such as "request system
+	// reboot". They are checked before the first-word lists.
+	criticalPrefix []string
+	riskyPrefix    []string
+	// banners are substrings a device's login banner carries for this vendor.
+	// Automatic detection needs one of them: a prompt shape alone is shared by
+	// several vendors.
+	banners []string
+	// factsCommand, interfaceCommand and configCommand are the platform's own
+	// words for the three read paths this build uses. Empty means the platform
+	// has no verified command for that purpose.
+	factsCommand     string
+	interfaceCommand string
+	configCommand    string
 }
 
 // GenericID is the platform a network CLI session uses when it names none: it
@@ -149,11 +167,15 @@ var generic = &Platform{
 // quit key.
 var platforms = []*Platform{
 	{
-		ID:          "huawei_vrp",
-		Name:        "Huawei VRP",
-		matchPrompt: anglePrompt,
-		pagers:      []string{"---- More ----"},
-		pagerKey:    []byte{' '},
+		ID:               "huawei_vrp",
+		Name:             "Huawei VRP",
+		matchPrompt:      anglePrompt,
+		banners:          []string{"Huawei Versatile Routing Platform", "VRP (R) software", "Huawei Technologies"},
+		pagers:           []string{"---- More ----"},
+		factsCommand:     "display version",
+		interfaceCommand: "display interface brief",
+		configCommand:    "display current-configuration",
+		pagerKey:         []byte{' '},
 		errors: []string{
 			"Unrecognized command", "Ambiguous command", "Incomplete command",
 			"Too many parameters", "Wrong parameter", "Incorrect command",
@@ -169,11 +191,15 @@ var platforms = []*Platform{
 		critical: []string{"reboot", "format", "restore", "factory-reset"},
 	},
 	{
-		ID:          "h3c_comware",
-		Name:        "H3C Comware",
-		matchPrompt: anglePrompt,
-		pagers:      []string{"---- More ----"},
-		pagerKey:    []byte{' '},
+		ID:               "h3c_comware",
+		Name:             "H3C Comware",
+		matchPrompt:      anglePrompt,
+		banners:          []string{"H3C Comware", "Comware Software", "Hangzhou H3C"},
+		pagers:           []string{"---- More ----"},
+		factsCommand:     "display version",
+		interfaceCommand: "display interface brief",
+		configCommand:    "display current-configuration",
+		pagerKey:         []byte{' '},
 		errors: []string{
 			"Unrecognized command", "Ambiguous command", "Incomplete command",
 			"Too many parameters", "Wrong parameter", "Incorrect command",
@@ -189,11 +215,15 @@ var platforms = []*Platform{
 		critical: []string{"reboot", "format", "restore", "factory-reset"},
 	},
 	{
-		ID:          "cisco_ios",
-		Name:        "Cisco IOS/IOS-XE",
-		matchPrompt: hashPrompt,
-		pagers:      []string{"--More--"},
-		pagerKey:    []byte{' '},
+		ID:               "cisco_ios",
+		Name:             "Cisco IOS/IOS-XE",
+		matchPrompt:      hashPrompt,
+		banners:          []string{"Cisco IOS Software", "Cisco Internetwork Operating System", "Cisco Systems"},
+		pagers:           []string{"--More--"},
+		factsCommand:     "show version",
+		interfaceCommand: "show ip interface brief",
+		configCommand:    "show running-config",
+		pagerKey:         []byte{' '},
 		errors: []string{
 			"Invalid input detected", "Ambiguous command", "Incomplete command",
 			"Unknown command", "Invalid input", "% Error",
@@ -207,11 +237,15 @@ var platforms = []*Platform{
 		critical: []string{"reload", "erase", "format", "restore"},
 	},
 	{
-		ID:          "ruijie_rgos",
-		Name:        "Ruijie RGOS",
-		matchPrompt: hashPrompt,
-		pagers:      []string{"--More--"},
-		pagerKey:    []byte{' '},
+		ID:               "ruijie_rgos",
+		Name:             "Ruijie RGOS",
+		matchPrompt:      hashPrompt,
+		banners:          []string{"Ruijie Networks", "Ruijie", "RGOS"},
+		pagers:           []string{"--More--"},
+		factsCommand:     "show version",
+		interfaceCommand: "show ip interface brief",
+		configCommand:    "show running-config",
+		pagerKey:         []byte{' '},
 		errors: []string{
 			"Invalid input detected", "Ambiguous command", "Incomplete command",
 			"Unknown command", "Invalid input", "% Error",
@@ -226,10 +260,24 @@ var platforms = []*Platform{
 	},
 }
 
+// userRegistry holds the tables a user's YAML file added. Built-in tables are
+// never replaced: a user file can add a vendor, not redefine one.
+var userRegistry struct {
+	sync.RWMutex
+	tables []*Platform
+}
+
 // Lookup returns the platform table with the given id, or false when the id is
-// not one of the verified ones.
+// not one of the built-in or user-added ones.
 func Lookup(id string) (*Platform, bool) {
 	for _, p := range platforms {
+		if p.ID == id {
+			return p, true
+		}
+	}
+	userRegistry.RLock()
+	defer userRegistry.RUnlock()
+	for _, p := range userRegistry.tables {
 		if p.ID == id {
 			return p, true
 		}
@@ -247,14 +295,72 @@ func Table(id string) *Platform {
 	return generic
 }
 
-// IDs lists the platform ids a host setting can name, generic first.
+// IDs lists the platform ids a host setting can name: generic, the built-in
+// tables, then the user's tables in file order.
 func IDs() []string {
-	out := make([]string, 0, 1+len(platforms))
+	userRegistry.RLock()
+	defer userRegistry.RUnlock()
+	out := make([]string, 0, 1+len(platforms)+len(userRegistry.tables))
 	out = append(out, GenericID)
 	for _, p := range platforms {
 		out = append(out, p.ID)
 	}
+	for _, p := range userRegistry.tables {
+		out = append(out, p.ID)
+	}
 	return out
+}
+
+// Platforms returns every non-generic table, built-in first then user-added.
+// The slice is a copy; the tables themselves are immutable after loading.
+func Platforms() []*Platform {
+	userRegistry.RLock()
+	defer userRegistry.RUnlock()
+	out := make([]*Platform, 0, len(platforms)+len(userRegistry.tables))
+	out = append(out, platforms...)
+	out = append(out, userRegistry.tables...)
+	return out
+}
+
+// BannerMatch reports the first banner keyword text contains, ignoring case.
+// Detection requires one: prompt shapes are shared by vendors.
+func (p *Platform) BannerMatch(text string) (string, bool) {
+	if p == nil {
+		return "", false
+	}
+	lower := strings.ToLower(text)
+	for _, banner := range p.banners {
+		if strings.Contains(lower, strings.ToLower(banner)) {
+			return banner, true
+		}
+	}
+	return "", false
+}
+
+// FactsCommand is the platform's version command, "" when the table names none.
+func (p *Platform) FactsCommand() string {
+	if p == nil {
+		return ""
+	}
+	return p.factsCommand
+}
+
+// InterfaceCommand is the platform's brief interface command, "" when the table
+// names none.
+func (p *Platform) InterfaceCommand() string {
+	if p == nil {
+		return ""
+	}
+	return p.interfaceCommand
+}
+
+// ConfigCommand is the platform's running-configuration command, "" when the
+// table names none.
+func (p *Platform) ConfigCommand() string {
+	if p == nil {
+		return ""
+	}
+	return p.configCommand
 }
 
 // LooksLikeLoginPrompt reports whether a terminal line is a login, account or
