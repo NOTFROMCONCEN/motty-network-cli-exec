@@ -8,6 +8,38 @@ import (
 	"motty/internal/netcli"
 )
 
+func TestEditingKeepsAPlatformWhoseTableIsNotLoaded(t *testing.T) {
+	netcli.ResetUserPlatforms()
+	var editor hostEditor
+	editor.load(Host{Label: "Edge", Address: "edge.example.com", User: "me", Protocol: protocolTelnet,
+		ExecMode: "network_cli", CLIPlatform: "juniper_junos"})
+	built := editor.host(1)
+	if built.CLIPlatform != "juniper_junos" {
+		t.Fatalf("an edit turned the saved platform into %q; the id must survive until its table returns", built.CLIPlatform)
+	}
+	// Once the table is loaded again the dropdown still selects it.
+	tables, err := netcli.ParseConfig([]byte(juniperPlatformYAML))
+	if err != nil {
+		t.Fatal(err)
+	}
+	netcli.SetUserPlatforms(tables)
+	t.Cleanup(netcli.ResetUserPlatforms)
+	editor.load(built)
+	if built := editor.host(1); built.CLIPlatform != "juniper_junos" {
+		t.Fatalf("the loaded table lost its host binding: %q", built.CLIPlatform)
+	}
+}
+
+const juniperPlatformYAML = `version: 1
+platforms:
+  - id: juniper_junos
+    name: Juniper Junos
+    prompt: hash
+    banners: ["JUNOS"]
+    read_only: ["show "]
+    critical_prefix: ["request system reboot"]
+`
+
 func TestUserPlatformFileLoadsBeforeSavedHosts(t *testing.T) {
 	options := freshOptions(t)
 	options.StatePath = filepath.Join(t.TempDir(), "state.json")
