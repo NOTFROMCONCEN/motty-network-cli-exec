@@ -88,6 +88,19 @@ func TestTapEchoOff(t *testing.T) {
 	}
 }
 
+// A character-mode device echoes the bytes it received — the bare command,
+// without the prompt in front — and that echo must not reach the output.
+func TestTapBareEchoedCommandStaysOutOfOutput(t *testing.T) {
+	tap := NewTap(Table("huawei_vrp"), "<Huawei>", "display clock", 4096)
+	result := complete(tap, "display clock\r\n2026-11-04 12:00:00\r\n<Huawei>")
+	if result.Status != StatusPrompt {
+		t.Fatalf("status %v", result.Status)
+	}
+	if result.Output != "2026-11-04 12:00:00" {
+		t.Fatalf("output %q; want the answer without the echoed command", result.Output)
+	}
+}
+
 func TestTapSilentCommand(t *testing.T) {
 	// Echo on, and the command prints nothing: the echo line, then the prompt.
 	tap := newVRPTap("<Huawei>", "return")
