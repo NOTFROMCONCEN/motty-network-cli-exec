@@ -30,6 +30,11 @@ type aiExec struct {
 	// netcli.Tap.Pending); nil while the shell path runs or output keeps
 	// arriving.
 	confirm *time.Timer
+	// confirmGen counts every quiet window armed or retracted for this
+	// command. A timer that already fired leaves its callback queued; the
+	// generation tells that stale callback the window it was armed for is
+	// gone, so it cannot confirm a newer candidate early.
+	confirmGen int
 	// A device console has no completion marker. The prompt seen before the
 	// command is the signal: once it is drawn again on a later line, the command
 	// has returned.
@@ -369,16 +374,22 @@ func (state *State) watchCLIExec(t *terminal) {
 	}
 	switch {
 	case !exec.cli.Pending():
+		exec.confirmGen++
 		if exec.confirm != nil {
 			exec.confirm.Stop()
 			exec.confirm = nil
 		}
 	case exec.confirm != nil:
+		// The candidate may be a different one than the timer was armed for,
+		// so the window starts over under a new generation.
+		exec.confirmGen++
 		exec.confirm.Reset(cliQuiet)
 	default:
+		exec.confirmGen++
+		generation := exec.confirmGen
 		exec.confirm = time.AfterFunc(cliQuiet, func() {
 			state.aiPost(func(*State) {
-				if t.exec == exec && exec.cli.Confirm() {
+				if t.exec == exec && exec.confirmGen == generation && exec.cli.Confirm() {
 					t.endConfirmed(exec)
 				}
 			})
@@ -392,6 +403,7 @@ func (t *terminal) endConfirmed(exec *aiExec) {
 		return
 	}
 	t.exec = nil
+	exec.confirmGen++
 	if exec.confirm != nil {
 		exec.confirm.Stop()
 		exec.confirm = nil
@@ -425,6 +437,7 @@ func (t *terminal) endExecAt(end execEnd, cliStatus netcli.Status, timedOut, int
 		return
 	}
 	t.exec = nil
+	exec.confirmGen++
 	if exec.confirm != nil {
 		exec.confirm.Stop()
 		exec.confirm = nil

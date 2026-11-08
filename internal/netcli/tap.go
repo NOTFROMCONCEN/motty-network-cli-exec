@@ -97,7 +97,11 @@ type Tap struct {
 	before string // the prompt captured before the command was sent, normalized
 	host   string // the hostname token of that prompt, "" on the generic table
 	echo   string // the line the device echoes for the command, "" when unknown
-	send   func([]byte) bool
+	// bareEcho is the command without the prompt: a character-mode device
+	// echoes the bytes it received, so its first line back is the bare
+	// command rather than prompt+command.
+	bareEcho string
+	send     func([]byte) bool
 
 	// The cleaned copy of the current line, and how it is being drawn: a
 	// carriage return restarts the line, a backspace steps back over it, and
@@ -148,14 +152,16 @@ func NewTap(plat *Platform, prompt, command string, maxOutput int) *Tap {
 		// Without a shape match only the exact line can end the command.
 		host = ""
 	}
+	bare := normalizePrompt(command)
 	return &Tap{
-		plat:    plat,
-		before:  before,
-		host:    host,
-		echo:    before + normalizePrompt(command),
-		headCap: maxOutput / 2,
-		tailCap: maxOutput - maxOutput/2,
-		status:  StatusRunning,
+		plat:     plat,
+		before:   before,
+		host:     host,
+		echo:     before + bare,
+		bareEcho: bare,
+		headCap:  maxOutput / 2,
+		tailCap:  maxOutput - maxOutput/2,
+		status:   StatusRunning,
 	}
 }
 
@@ -310,7 +316,9 @@ func (t *Tap) commit() {
 	}
 	if !t.echoDecided {
 		t.echoDecided = true
-		if line == t.echo {
+		// A line-mode device echoes the prompt and the command; a
+		// character-mode one echoes only the bytes it received.
+		if line == t.echo || (t.bareEcho != "" && line == t.bareEcho) {
 			return // the device echoed the command; the terminal already shows it
 		}
 	}
@@ -335,7 +343,7 @@ func (t *Tap) atLineEnd() {
 	if line == "" || t.isPager(line) {
 		return
 	}
-	if !t.echoDecided && strings.HasPrefix(t.echo, line) {
+	if !t.echoDecided && (strings.HasPrefix(t.echo, line) || (t.bareEcho != "" && strings.HasPrefix(t.bareEcho, line))) {
 		// The echoed command starts with the prompt itself: what looks like the
 		// prompt coming back can still be the first characters of the echo,
 		// arriving in pieces. Wait until the echo is decided.

@@ -219,16 +219,14 @@ func (state *State) scanPlatform(session *Session) {
 // tab of the same saved host. The status line says what changed; the host
 // dialog remains the place to undo it.
 func (state *State) adoptPlatform(session *Session, id string) {
-	// Pin the execution mode only when this host would otherwise run a shell.
-	// Telnet and serial already resolve to the network CLI, and leaving them
-	// automatic keeps the transport's default meaningful.
-	switched := session.host.ExecMode == "" && resolveExecMode(session.host) == shellMode
+	// The detection records the platform, and only the platform: the banner
+	// it matched may be no more than a config file catted in a scroll of
+	// output, so it must not flip an SSH session's execution mode on its own.
+	// Telnet and serial resolve to the network CLI by transport anyway; an
+	// SSH host that wants it picks network CLI in the host dialog.
 	set := func(host *Host) {
 		host.CLIPlatform = id
 		host.platformDetected = true
-		if switched {
-			host.ExecMode = "network_cli"
-		}
 	}
 	set(&session.host)
 	if session.HostID != 0 {

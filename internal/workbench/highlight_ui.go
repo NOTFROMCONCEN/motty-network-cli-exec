@@ -217,8 +217,14 @@ func (state *State) importHighlightRules() {
 	trimmed := bytes.TrimLeft(bytes.TrimPrefix(data, []byte("\ufeff")), " \t\r\n")
 	if len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[') {
 		if parsed, skipped, err = highlight.ParseJSONRules(data); err != nil {
-			state.showActionWarning(title, m.HighlightImportInvalidJSON)
-			return
+			if !errors.Is(err, highlight.ErrNotRules) {
+				state.showActionWarning(title, m.HighlightImportInvalidJSON)
+				return
+			}
+			// A text-format pattern may itself begin with [ or { — a regex
+			// character class — so the sniff is only a hint: parse the file
+			// as text before calling it invalid.
+			parsed, skipped = highlight.ParseRules(string(data))
 		}
 	} else {
 		parsed, skipped = highlight.ParseRules(string(data))
