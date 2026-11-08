@@ -61,14 +61,31 @@ var forkTagPattern = regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)-netcli-build\.(\d
 // the machine-readable version move together. NSIS and the update comparison
 // only take plain dotted versions, which is why the name is a layer above
 // them, not a replacement. A version from another line keeps a plain tag.
+//
+// A codename that cannot live in a tag — spaces, punctuation, non-ASCII — or
+// a non-canonical version spelling ("0.03.8.1") has no name either: both
+// would publish a tag the feed can never read back, silently breaking every
+// client's update check, so the caller sees a plain tag and forkrelease
+// refuses to publish it.
 func TagFor(version, base, codename string) string {
 	v, okV := parse(version)
 	b, okB := parse(base)
 	if !okV || !okB || v[0] != b[0] || v[1] != b[1] || v[2] != b[2] || v[3] <= 0 {
 		return "v" + version
 	}
-	return fmt.Sprintf("v%s-netcli-build.%d-%s", base, v[3], strings.ToLower(codename))
+	if canonical := fmt.Sprintf("%d.%d.%d.%d", v[0], v[1], v[2], v[3]); canonical != version {
+		return "v" + version
+	}
+	name := strings.ToLower(codename)
+	if !codenamePattern.MatchString(name) {
+		return "v" + version
+	}
+	return fmt.Sprintf("v%s-netcli-build.%d-%s", base, v[3], name)
 }
+
+// codenamePattern is the era name as a tag carries it: lower-case letters and
+// digits only, the same class forkTagPattern reads back.
+var codenamePattern = regexp.MustCompile(`^[a-z0-9]+$`)
 
 // VersionFromTag reads a tag the fork publishes back into the dotted version
 // the update machinery compares: v0.3.1-netcli-build.4-arknights is 0.3.1.4. A
@@ -113,6 +130,14 @@ func checkFork(ctx context.Context, client *http.Client, goos, goarch string) (R
 	for _, mirror := range feedMirrors {
 		full, mirrorErr := mirrorRelease(ctx, client, mirror, ForkRepo, goos, goarch)
 		if mirrorErr == nil {
+			// A mirror is only a copy. When the feed itself already named a
+			// release, a mirror's answer must not be older than that: a stale
+			// mirror pinning every client to the previous version is worse
+			// than the feed's page-only answer, which at least tells the
+			// truth about what was released.
+			if haveFallback && !Newer(fallback.Version, full.Version) && full.Version != fallback.Version {
+				return fallback, nil
+			}
 			return full, nil
 		}
 		lastErr = mirrorErr

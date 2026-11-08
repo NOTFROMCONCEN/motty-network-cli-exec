@@ -75,6 +75,13 @@ func TestTagForNamesBuildsOnTheUpstreamBase(t *testing.T) {
 		{version: "1.0.1.1", base: "0.3.1", codename: "Arknights", want: "v1.0.1.1"},
 		{version: "0.3.1.0", base: "0.3.1", codename: "Arknights", want: "v0.3.1.0"},
 		{version: "0.3.5", base: "0.3.1", codename: "Arknights", want: "v0.3.5"},
+		// A codename the feed could never read back, or a version spelled a
+		// second way, keeps the plain name too: a tag nobody can parse would
+		// break every client's update check after it is published.
+		{version: "0.3.1.4", base: "0.3.1", codename: "Genshin Impact", want: "v0.3.1.4"},
+		{version: "0.3.1.4", base: "0.3.1", codename: "原神", want: "v0.3.1.4"},
+		{version: "0.3.1.4", base: "0.3.1", codename: "", want: "v0.3.1.4"},
+		{version: "0.03.1.4", base: "0.3.1", codename: "Genshin", want: "v0.03.1.4"},
 	} {
 		if got := TagFor(test.version, test.base, test.codename); got != test.want {
 			t.Errorf("TagFor(%q, %q, %q) = %q, want %q", test.version, test.base, test.codename, got, test.want)

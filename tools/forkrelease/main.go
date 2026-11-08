@@ -105,6 +105,9 @@ func keygen(args []string) error {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "private key: %s (keep it off the repository and back it up)\n", *privatePath)
+	if *password == "" {
+		fmt.Fprintln(os.Stderr, "note: the key is written in plain text. Pass -password (or keep the key in an encrypted store) on a machine others can reach; 0600 restricts nothing on Windows — set the file's ACL by hand there.")
+	}
 	fmt.Print(string(publicText))
 	return nil
 }
@@ -135,7 +138,8 @@ func manifest(args []string) error {
 	}
 	tag := update.TagFor(*version, *base, *codename)
 	if tag == "v"+*version {
-		return fmt.Errorf("version %s is not a build on top of %s; the tag would carry no build number", *version, *base)
+		return fmt.Errorf("version %s with base %s and codename %q has no publishable tag: the version must sit on the base with a build counter, be spelled canonically (no leading zeros), and the codename must be one word of letters and digits — anything else publishes a tag the update feed can never read back",
+			*version, *base, *codename)
 	}
 	privateKey, err := loadPrivateKey(*keyPath, *password)
 	if err != nil {
