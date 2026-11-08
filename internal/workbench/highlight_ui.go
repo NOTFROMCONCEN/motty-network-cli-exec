@@ -33,8 +33,14 @@ type highlightRule struct {
 }
 
 // maxCustomHighlightRules leaves room for the built-in rules of the logcolor
-// library under the package's own limit.
+// library under the package's own limit. New rules and imports stop here.
 const maxCustomHighlightRules = highlight.MaxRules - logcolor.RuleCount
+
+// maxRestoredHighlightRules is what an earlier version could save. A state
+// from before the logcolor library kept this many; on restore they are all
+// kept — deleting a user's saved rules is worse than the built-in pack losing
+// a few rules to the compile cap, which takes the user's rules first.
+const maxRestoredHighlightRules = highlight.MaxRules - 8
 
 // highlightUiHits is the place of the controls this file paints.
 var highlightUiHits = tree.Feature("highlight-ui")
@@ -508,7 +514,7 @@ func (state *State) restoreTerminalTools(saved savedState) {
 	state.highlighting.rules = state.highlighting.rules[:0]
 	for _, entry := range saved.Highlights {
 		rule := highlightRule{Pattern: entry.Pattern, Regex: entry.Regex, CaseSensitive: entry.CaseSensitive, Slot: highlight.SlotFromName(entry.Color)}
-		if len(state.highlighting.rules) == maxCustomHighlightRules ||
+		if len(state.highlighting.rules) == maxRestoredHighlightRules ||
 			highlight.Validate(highlight.Rule{Pattern: rule.Pattern, Regex: rule.Regex, CaseSensitive: rule.CaseSensitive, Slot: rule.Slot}) != nil {
 			continue
 		}
