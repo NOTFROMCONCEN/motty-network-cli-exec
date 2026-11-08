@@ -97,6 +97,7 @@ func (c cliTap) Result() gate.ExecResult {
 		ExitKnown: false,
 		Status:    r.Status.String(),
 		CLIError:  r.CLIError,
+		PagerSeen: r.PagerSeen,
 	}
 }
 
