@@ -252,7 +252,7 @@ var specs = []Spec{
 		Description: "Run read-only commands on up to eight network CLI sessions and collect every result. Any command that is not a recognized read-only check refuses the whole batch; use a change plan for changes. The user approves the batch once.",
 		Schema: json.RawMessage(`{"type":"object","properties":{` +
 			`"targets":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"object","properties":{` +
-			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Defaults to the active session."},` +
+			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Required: a batch names every target; it never defaults to the active session."},` +
 			`"commands":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"string","minLength":1,"maxLength":8192}}` +
 			`},"required":["session","commands"],"additionalProperties":false}},` +
 			`"label":{"type":"string","maxLength":128,"description":"Optional short name for the batch."},` +
@@ -319,9 +319,9 @@ func Targeted() []Spec {
 			spec.Schema = json.RawMessage(strings.ReplaceAll(schema, activeHint, targetHint))
 		}
 		switch spec.Name {
-				case NameListSessions:
+		case NameListSessions:
 			spec.Description = "List this request's locked primary connection and explicitly @referenced sessions with ids, titles, addresses and readiness. Active marks the locked primary, not the currently visible tab. Call this first when you need a session id."
-				case NameTerminalExec:
+		case NameTerminalExec:
 			spec.Description = "Run one command in the addressed terminal session and return its output and how it ended. The command must suit the session's execution mode, which list_sessions shows: one shell command line on a shell session, with its exit status, or one raw device command on a network CLI session (Telnet/serial consoles included), never shell wrapping. If the session id is omitted, use the locked primary."
 		}
 		out = append(out, spec)
