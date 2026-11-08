@@ -115,9 +115,12 @@ func hashPrompt(line string) (string, bool) {
 
 // validHostname keeps the prompt matcher from reading arbitrary text as a
 // hostname: one token of the characters a network OS puts in a host name.
+// The characters a unix shell puts in its prompt but no network OS allows in
+// a name — the user@host colon form, a home path's ~ — are refused here, so a
+// root shell on a Linux box cannot pose as a device prompt.
 func validHostname(host string) bool {
 	if host == "" || len(host) > 64 || strings.ContainsFunc(host, func(r rune) bool {
-		return r <= ' ' || r >= 0x7f || strings.ContainsRune("<>[]()#", r)
+		return r <= ' ' || r >= 0x7f || strings.ContainsRune("<>[]()#@:~", r)
 	}) {
 		return false
 	}
