@@ -222,7 +222,7 @@ func beginShellExec(t *terminal, args tools.TerminalExecArgs) (*aiExec, []byte, 
 		t.screen.ScrollToBottom()
 		consolePrompt = t.consolePrompt()
 		if consolePrompt == "" {
-			return nil, errNoConsolePrompt
+			return nil, nil, errNoConsolePrompt
 		}
 	} else {
 		nonce = capture.NewNonce()
@@ -342,6 +342,66 @@ func (t *terminal) finishConsoleExec() {
 
 }
 
+// captureTap pulls the concrete capture out of a shell or console collector;
+// a network CLI command has none.
+func captureTap(t execTap) *capture.Tap {
+	switch tap := t.(type) {
+	case shellTap:
+		return tap.tap
+	case consoleTap:
+		return tap.tap
+	}
+	return nil
+}
+
+// cliQuiet is how long a device must have stopped sending before a candidate
+// prompt counts as the command's end (see netcli.Tap.Pending).
+const cliQuiet = 400 * time.Millisecond
+
+// watchCLIExec arms the quiet-window confirmation of a network CLI command
+// after each output chunk: a candidate prompt is confirmed only once the
+// device has stayed silent for cliQuiet, and retracted by any output in
+// between. Window thread.
+func (state *State) watchCLIExec(t *terminal) {
+	exec := t.exec
+	if exec == nil || exec.cli == nil {
+		return
+	}
+	switch {
+	case !exec.cli.Pending():
+		if exec.confirm != nil {
+			exec.confirm.Stop()
+			exec.confirm = nil
+		}
+	case exec.confirm != nil:
+		exec.confirm.Reset(cliQuiet)
+	default:
+		exec.confirm = time.AfterFunc(cliQuiet, func() {
+			state.aiPost(func(*State) {
+				if t.exec == exec && exec.cli.Confirm() {
+					t.endConfirmed(exec)
+				}
+			})
+		})
+	}
+}
+
+// endConfirmed completes a network CLI command whose quiet window passed.
+func (t *terminal) endConfirmed(exec *aiExec) {
+	if t.exec != exec {
+		return
+	}
+	t.exec = nil
+	if exec.confirm != nil {
+		exec.confirm.Stop()
+		exec.confirm = nil
+	}
+	// The shell path finishes inside the pump, which marks the block right
+	// after; this path ends on a timer, so it closes the mark itself.
+	t.markAIBlock(true)
+	exec.done <- exec.tap.Result()
+}
+
 // finishExec ends the running command: normally when its marker arrived, or
 // because the wait timed out, was canceled, or the user pressed Ctrl-C. The
 // command may still be running on the remote side then, so an interrupt is sent.
@@ -387,7 +447,13 @@ func (t *terminal) endExec(cliStatus netcli.Status, timedOut, interrupt bool) {
 		t.markAIBlock(true)
 	}
 	if exec.job != nil {
-		exec.job.finish(end, result.ExitCode)
+		// endExec does not carry the shell path's reason; the job's record
+		// only asks whether the wait timed out or was stopped.
+		jobEnd := endStop
+		if timedOut {
+			jobEnd = endTimeout
+		}
+		exec.job.finish(jobEnd, result.ExitCode)
 	}
 	exec.done <- result
 }
