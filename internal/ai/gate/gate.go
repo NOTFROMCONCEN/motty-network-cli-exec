@@ -77,6 +77,10 @@ type ExecResult struct {
 	Status string
 	// CLIError is the device error line a network CLI command printed, or "".
 	CLIError string
+	// PagerSeen says a network CLI command's device stopped to page and the
+	// platform table has no key to continue it: the output is only what the
+	// first screen held, and a timeout after it means the rest is unknown.
+	PagerSeen bool
 }
 
 // FileEntry is one SFTP directory entry.
@@ -817,6 +821,15 @@ func formatExec(r ExecResult) string {
 	}
 	if r.CLIError != "" {
 		fmt.Fprintf(&b, "[device CLI error: %s]\n", r.CLIError)
+	}
+	if r.PagerSeen {
+		// The device stopped at a pager this platform table cannot continue:
+		// what came back is one screen, not the whole answer.
+		b.WriteString("[the device paged its output and this platform has no key to continue it; run the command again with paging off (screen-length 0 temporary or terminal length 0) for the whole output]\n")
+	}
+	if !r.ExitKnown && r.Truncated {
+		// A CLI result's truncation has no exit-status line to ride on.
+		b.WriteString("[output truncated]\n")
 	}
 	switch {
 	case r.ExitCode < 0 && r.Truncated:

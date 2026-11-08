@@ -28,7 +28,7 @@ func common() []highlight.Rule {
 	return []highlight.Rule{
 		highlight.WordRule(highlight.Red, "error", "errors", "err", "fail", "fails", "failed", "failure", "fatal", "panic", "denied", "refused", "critical", "exception", "traceback", "segfault", "segmentation fault"),
 		highlight.WordRule(highlight.Yellow, "warn", "warning", "warnings", "deprecated", "timeout", "timed out", "retrying"),
-		highlight.WordRule(highlight.Green, "ok", "success", "successful", "successfully", "passed", "done", "connected", "active (running)"),
+		highlight.WordRule(highlight.Green, "ok", "success", "successful", "successfully", "passed", "done", "connected", "active"),
 		highlight.IPv4Rule(),
 	}
 }
@@ -48,8 +48,10 @@ func device() []highlight.Rule {
 		{Slot: highlight.Red, Regex: true, Pattern: `%%[0-9]{2}[A-Za-z0-9_]+/[0-3]/[A-Za-z0-9_]+`},
 		{Slot: highlight.Yellow, Regex: true, Pattern: `%%[0-9]{2}[A-Za-z0-9_]+/4/[A-Za-z0-9_]+`},
 		// A failure mnemonic (LOGIN_FAIL, USER_ONLINE_FAIL, SNMP_AUTHEN_FAILED)
-		// can sit at a severity that is otherwise left alone.
-		{Slot: highlight.Red, Regex: true, Pattern: `\b[A-Za-z0-9_]*FAIL[A-Za-z0-9_]*\b`},
+		// can sit at a severity that is otherwise left alone. Device mnemonics
+		// are upper-case, and staying case-sensitive keeps the good news of a
+		// failover or a failback out of the red.
+		{Slot: highlight.Red, Regex: true, CaseSensitive: true, Pattern: `\b[A-Za-z0-9_]*FAIL[A-Za-z0-9_]*\b`},
 		// The state a link changed to says more than its severity.
 		{Slot: highlight.Green, Regex: true, Pattern: `changed (state )?to up`},
 		{Slot: highlight.Red, Regex: true, Pattern: `changed (state )?to down`},

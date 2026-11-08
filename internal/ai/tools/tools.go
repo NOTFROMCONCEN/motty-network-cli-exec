@@ -261,7 +261,7 @@ var specs = []Spec{
 		Description: "Run read-only commands on up to eight network CLI sessions and collect every result. Any command that is not a recognized read-only check refuses the whole batch; use a change plan for changes. The user approves the batch once.",
 		Schema: json.RawMessage(`{"type":"object","properties":{` +
 			`"targets":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"object","properties":{` +
-			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Defaults to the active session."},` +
+			`"session":{"type":"string","maxLength":256,"description":"Session id from list_sessions. Required: a batch names every target; it never defaults to the active session."},` +
 			`"commands":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"string","minLength":1,"maxLength":8192}}` +
 			`},"required":["session","commands"],"additionalProperties":false}},` +
 			`"label":{"type":"string","maxLength":128,"description":"Optional short name for the batch."},` +

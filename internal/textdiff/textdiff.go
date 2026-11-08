@@ -201,7 +201,9 @@ func unified(ops []op, context int, truncated *bool) string {
 		fmt.Fprintf(&out, "@@ -%d,%d +%d,%d @@\n", aStart, aCount, bStart, bCount)
 		lines++
 		for _, item := range ops[first:end] {
-			if out.Len() >= maxUnifiedBytes || lines >= maxUnifiedLines {
+			// Budget for the line about to be written, not the bytes already
+			// written: one long line must not blow past the cap.
+			if out.Len()+len(item.line)+1 >= maxUnifiedBytes || lines >= maxUnifiedLines {
 				*truncated = true
 				return out.String() + "[diff truncated]\n"
 			}
