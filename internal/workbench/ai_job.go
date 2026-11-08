@@ -68,6 +68,11 @@ func (j *aiJob) terminalState() string {
 }
 
 func (j *aiJob) status(offset, maxBytes int) gate.JobStatus {
+	if j.tap == nil {
+		// A network CLI command keeps no paged capture; its output was the
+		// whole answer.
+		return gate.JobStatus{ID: j.id, Session: j.session, State: j.state, ExitCode: j.exitCode, Terminal: j.terminalState()}
+	}
 	page := j.tap.Page(offset, maxBytes)
 	return gate.JobStatus{
 		ID: j.id, Session: j.session, State: j.state, ExitCode: j.exitCode, Terminal: j.terminalState(),
@@ -96,7 +101,7 @@ func (state *State) startJob(owner string, args tools.TerminalExecArgs) (gate.Jo
 	}
 	job := &aiJob{
 		id: base64.RawURLEncoding.EncodeToString(random[:]), owner: owner, session: args.Session,
-		t: exec.t, exec: exec, tap: exec.tap, state: gate.JobRunning,
+		t: exec.t, exec: exec, tap: captureTap(exec.tap), state: gate.JobRunning,
 	}
 	exec.job = job
 	state.pruneJobs()
