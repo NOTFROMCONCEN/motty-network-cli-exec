@@ -319,10 +319,10 @@ func Targeted() []Spec {
 			spec.Schema = json.RawMessage(strings.ReplaceAll(schema, activeHint, targetHint))
 		}
 		switch spec.Name {
-		case NameListSessions:
-			spec.Description = "Run one command in the addressed terminal session and return its output and how it ended. The command must suit the session's execution mode (list_sessions shows it): one non-interactive shell command line on a shell session, with its exit status, or one raw device command on a network CLI session, never shell wrapping. Telnet/serial consoles count as network CLI."
-		case NameTerminalExec:
-			spec.Description = "Run one command in the addressed terminal session and return its output and how it ended. The command must suit the session's execution mode, which list_sessions shows: one non-interactive shell command line on a shell session (the result carries the real exit status), or one raw device command on a network CLI session — never shell wrapping, no exit status. Telnet and serial consoles count as network CLI. If the session id is omitted, use the locked primary. Explicitly supply the id for an @referenced session; cross-connection execution requires approval naming that actual target. The command remains visible in that session's tab and must finish within the timeout."
+				case NameListSessions:
+			spec.Description = "List this request's locked primary connection and explicitly @referenced sessions with ids, titles, addresses and readiness. Active marks the locked primary, not the currently visible tab. Call this first when you need a session id."
+				case NameTerminalExec:
+			spec.Description = "Run one command in the addressed terminal session and return its output and how it ended. The command must suit the session's execution mode, which list_sessions shows: one shell command line on a shell session, with its exit status, or one raw device command on a network CLI session (Telnet/serial consoles included), never shell wrapping. If the session id is omitted, use the locked primary."
 		}
 		out = append(out, spec)
 	}
