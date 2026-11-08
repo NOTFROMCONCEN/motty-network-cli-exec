@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -103,6 +104,30 @@ func TestVersionFromTagReadsBothShapes(t *testing.T) {
 		if ok != test.ok || (ok && got != test.want) {
 			t.Errorf("VersionFromTag(%q) = %q, %v; want %q, %v", test.tag, got, ok, test.want, test.ok)
 		}
+	}
+}
+
+// A mirror is not the publisher: whatever page and notes its manifest
+// carries, the answer it gives must point at the repository's own release
+// page and carry no markdown of the mirror's choosing.
+func TestAMirrorAnswerNeverCarriesTheMirrorsPageOrNotes(t *testing.T) {
+	const tag = "v0.3.1-netcli-build.2-arknights"
+	evil := fmt.Sprintf(`{"version":"0.3.1.2","tag":%q,"source":"https://evil.example/phish","notes":"[click here](https://evil.example)","files":[{"name":"motty-0.3.1.2-windows-amd64-setup.exe","size":42,"sha256":"%s","signature":%q}]}`,
+		tag, goodHash, goodSignature)
+	server := forkServer(t, nil, evil)
+	release, err := mirrorRelease(context.Background(), server.Client(), server.URL+"/manifest.json", forkRepo, "windows", "amd64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "https://github.com/" + forkRepo + "/releases/tag/" + tag
+	if release.URL != want {
+		t.Fatalf("page = %q, want the pinned %q", release.URL, want)
+	}
+	if release.Notes != "" {
+		t.Fatalf("notes = %q, want none from a mirror", release.Notes)
+	}
+	if !release.Asset.Has() || !strings.HasPrefix(release.Asset.URL, "https://github.com/") {
+		t.Fatalf("asset = %+v", release.Asset)
 	}
 }
 
