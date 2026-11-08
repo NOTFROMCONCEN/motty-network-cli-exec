@@ -8,11 +8,12 @@ import (
 
 	"github.com/vivaui/viva/gfx"
 	"motty/internal/highlight"
+	"motty/internal/logcolor"
 	"motty/internal/term"
 )
 
 func TestResizeReusesRowsWhoseContentStillFits(t *testing.T) {
-	for _, rules := range [][]highlight.Rule{nil, highlight.Builtin()} {
+	for _, rules := range [][]highlight.Rule{nil, logcolor.Rules()} {
 		screen := term.New(40, 3, 10)
 		screen.Write([]byte("error: 你好 é"))
 		look := darkPalette
@@ -31,8 +32,14 @@ func TestResizeReusesRowsWhoseContentStillFits(t *testing.T) {
 				t.Fatalf("at width %d, cached row %+v disagrees with fresh row %+v", cols, entry, want)
 			}
 		}
-		if cache.builds != 1 {
-			t.Fatalf("resizing blank padding rebuilt the same row %d times", cache.builds)
+		// A pack whose rules can depend on trailing padding rebuilds on every
+		// width change by design; one that cannot must reuse the row.
+		wantBuilds := uint64(1)
+		if look.highlight.PaddingSensitive() {
+			wantBuilds = 5
+		}
+		if cache.builds != wantBuilds {
+			t.Fatalf("resizing blank padding rebuilt the same row %d times, want %d", cache.builds, wantBuilds)
 		}
 	}
 }
