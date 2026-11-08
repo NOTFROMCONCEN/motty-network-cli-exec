@@ -26,7 +26,7 @@ var (
 // one entry per keyboard shortcut and what the About page holds. The test keeps
 // a quarter of it free, so adding entries fails loudly here instead of becoming
 // silently unsearchable when the array fills.
-const maxSettingsEntries = 192
+const maxSettingsEntries = 256
 
 // settingsEntry is one thing a user may look for.
 type settingsEntry struct {
