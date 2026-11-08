@@ -806,8 +806,8 @@ func TestAIBehaviourChoicesPersistAndSurviveANewWindow(t *testing.T) {
 	if state.ai.settings != want {
 		t.Fatalf("settings = %+v, want %+v", state.ai.settings, want)
 	}
-	if world.changed != 6 {
-		t.Fatalf("the application was told %d times, want 6", world.changed)
+	if world.changed != 7 {
+		t.Fatalf("the application was told %d times, want 7", world.changed)
 	}
 	state.Close()
 	again := world.open(t)
