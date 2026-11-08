@@ -53,6 +53,18 @@ func TestImportHighlightRules(t *testing.T) {
 	}
 }
 
+// A text-format pattern may begin with [ or { — a regex character class —
+// and the JSON sniff is only a hint: such a file still imports as text.
+func TestImportingATextRuleThatBeginsLikeJSON(t *testing.T) {
+	state := importFile(t, "[Ee]rror | red | regex\nBSRKTN{2} | cyan | regex\n")
+	if len(state.highlighting.rules) != 2 {
+		t.Fatalf("rules = %d, want both text rules", len(state.highlighting.rules))
+	}
+	if state.highlighting.rules[0].Pattern != "[Ee]rror" || !state.highlighting.rules[0].Regex {
+		t.Fatalf("first rule = %+v", state.highlighting.rules[0])
+	}
+}
+
 // A file whose lines are all unusable says so; it must not claim the list is
 // full when the user may still add a rule.
 func TestImportingOnlyUnusableLinesDoesNotClaimTheCap(t *testing.T) {

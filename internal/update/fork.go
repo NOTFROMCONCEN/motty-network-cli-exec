@@ -176,6 +176,12 @@ func manifestRelease(ctx context.Context, client *http.Client, manifestURL, tag,
 // no release feed answers: the manifest itself names the version and tag, and
 // both have to be a shape this fork publishes. A mirror that is behind only
 // offers an older release, which the caller's version comparison rejects.
+//
+// A mirror is not the publisher, so the page and the notes the manifest
+// carries never reach the user from it: a CDN this project does not control
+// must not be able to put its own address or its own markdown in front of the
+// update dialog. Both are pinned to the repository the manifest belongs to;
+// notes only come from the release feed itself.
 func mirrorRelease(ctx context.Context, client *http.Client, manifestURL, repo, goos, goarch string) (Release, error) {
 	var manifest manifestFile
 	if err := readJSON(ctx, client, manifestURL, &manifest); err != nil {
@@ -185,7 +191,13 @@ func mirrorRelease(ctx context.Context, client *http.Client, manifestURL, repo, 
 	if !ok || manifest.Version != version {
 		return Release{}, errors.New("update: the mirrored manifest has no usable version")
 	}
-	return releaseFromManifest(version, strings.TrimSpace(manifest.Tag), &manifest, repo, goos, goarch)
+	release, err := releaseFromManifest(version, strings.TrimSpace(manifest.Tag), &manifest, repo, goos, goarch)
+	if err != nil {
+		return Release{}, err
+	}
+	release.URL = "https://github.com/" + repo + "/releases/tag/" + strings.TrimSpace(manifest.Tag)
+	release.Notes = ""
+	return release, nil
 }
 
 // releaseFromManifest turns a manifest into the release it describes. The
