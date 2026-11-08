@@ -41,13 +41,16 @@ func TestDetectsHuaweiFromBannerAndPrompt(t *testing.T) {
 	if session.host.CLIPlatform != "huawei_vrp" {
 		t.Fatalf("platform = %q; want huawei_vrp", session.host.CLIPlatform)
 	}
-	if session.host.ExecMode != "network_cli" {
-		t.Fatalf("exec mode = %q; want network_cli", session.host.ExecMode)
+	// The detection records the platform, and only the platform: the banner
+	// it matched may be no more than a config file catted through a shell, so
+	// an SSH session's execution mode stays the user's choice.
+	if session.host.ExecMode != "" {
+		t.Fatalf("exec mode = %q; the detection must not flip it", session.host.ExecMode)
 	}
 	if !session.host.platformDetected {
 		t.Fatal("the detection did not mark the platform as automatic")
 	}
-	if state.hosts[0].CLIPlatform != "huawei_vrp" || state.hosts[0].ExecMode != "network_cli" {
+	if state.hosts[0].CLIPlatform != "huawei_vrp" || state.hosts[0].ExecMode != "" {
 		t.Fatalf("saved host = %+v", state.hosts[0])
 	}
 	if !strings.Contains(state.status, "Huawei VRP") {
