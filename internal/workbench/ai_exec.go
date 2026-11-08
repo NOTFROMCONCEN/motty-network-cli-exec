@@ -406,13 +406,20 @@ func (t *terminal) endConfirmed(exec *aiExec) {
 // because the wait timed out, was canceled, or the user pressed Ctrl-C. The
 // command may still be running on the remote side then, so an interrupt is sent.
 func (t *terminal) finishExec(end execEnd) {
-	t.endExec(netcli.StatusCancelled, end == endTimeout, end == endTimeout || end == endStop)
+	t.endExecAt(end, netcli.StatusCancelled, end == endTimeout, end == endTimeout || end == endStop)
 }
 
-// endExec is finishExec with a say in how a network CLI wait ended: a timeout
-// and a cancellation read differently from a connection that died under the
-// command. A shell command ignores the status; its result is its exit code.
+// endExec is finishExec for the paths that know how a network CLI wait ended:
+// a connection that died under the command reports itself, and the shell
+// timeout wrapper. A shell command ignores the status; its result is its exit
+// code.
 func (t *terminal) endExec(cliStatus netcli.Status, timedOut, interrupt bool) {
+	t.endExecAt(endStop, cliStatus, timedOut, interrupt)
+}
+
+// endExecAt is the one ending: it knows both why the wait ended and, for a
+// shell command, the execEnd the job record keeps.
+func (t *terminal) endExecAt(end execEnd, cliStatus netcli.Status, timedOut, interrupt bool) {
 	exec := t.exec
 	if exec == nil {
 		return
@@ -447,13 +454,7 @@ func (t *terminal) endExec(cliStatus netcli.Status, timedOut, interrupt bool) {
 		t.markAIBlock(true)
 	}
 	if exec.job != nil {
-		// endExec does not carry the shell path's reason; the job's record
-		// only asks whether the wait timed out or was stopped.
-		jobEnd := endStop
-		if timedOut {
-			jobEnd = endTimeout
-		}
-		exec.job.finish(jobEnd, result.ExitCode)
+		exec.job.finish(end, result.ExitCode)
 	}
 	exec.done <- result
 }
