@@ -35,6 +35,11 @@ func Classify(platformID, command string) risk.Assessment {
 				"may destroy the device, its data or the access to it"}}
 		}
 	}
+	if verb, writes := pipeWrite(line); writes {
+		// Whatever the table says about the command's first word, piping its
+		// output to a file or a remote host makes it a write.
+		return risk.Assessment{Level: risk.High, Reasons: []string{verb}}
+	}
 	for _, prefix := range p.configRead {
 		if hasPrefixFold(line, prefix) {
 			return risk.Assessment{Level: risk.Medium, Reasons: []string{
@@ -58,6 +63,30 @@ func Classify(platformID, command string) risk.Assessment {
 	}
 	return risk.Assessment{Level: risk.High, Reasons: []string{
 		"is not a recognized read-only command of this device platform"}}
+}
+
+// pipeWrite reports whether a command that reads the device also sends its
+// output somewhere that keeps it. The IOS family's pipes redirect, tee and
+// append write to a file or a TFTP host, and a ">" redirection does the same
+// job on the shells some devices embed — a display command carrying one of
+// these is a write, whatever the table says about its first word.
+func pipeWrite(line string) (reason string, writes bool) {
+	rest := line
+	for {
+		cut := strings.IndexByte(rest, '|')
+		if cut < 0 {
+			break
+		}
+		rest = strings.TrimLeft(rest[cut+1:], " ")
+		switch firstWord(rest) {
+		case "redirect", "tee", "append":
+			return "pipes the command's output to a file or a remote host", true
+		}
+	}
+	if strings.ContainsAny(line, ">") {
+		return "redirects the command's output", true
+	}
+	return "", false
 }
 
 // firstWord is the command's first word, lowercased.
