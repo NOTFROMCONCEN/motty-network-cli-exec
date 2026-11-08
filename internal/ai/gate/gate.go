@@ -819,6 +819,10 @@ func formatExec(r ExecResult) string {
 		fmt.Fprintf(&b, "[device CLI error: %s]\n", r.CLIError)
 	}
 	switch {
+	case r.ExitCode < 0 && r.Truncated:
+		b.WriteString("[output truncated] [exit status unknown: the command returned to the prompt]")
+	case r.ExitCode < 0:
+		b.WriteString("[exit status unknown: the command returned to the prompt]")
 	case r.TimedOut && !r.ExitKnown:
 		b.WriteString("[timed out; the device never showed its prompt again, so whether the command finished is unknown]")
 	case r.TimedOut:
