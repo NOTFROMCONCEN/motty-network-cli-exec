@@ -264,6 +264,25 @@ func (g Gate) groupRun(ctx context.Context, raw []byte) Result {
 	if denied := g.ask(ctx, tools.NameGroupRun, tools.Exec, targets[0].id, summary, assessment, others...); denied != nil {
 		return *denied
 	}
+	if g.Target != nil {
+		// Approval can remain open while a tab closes or reconnects, and a
+		// platform adopted mid-wait can change what a session runs. Check the
+		// whole batch again before starting any command, the way
+		// terminal_exec_many does.
+		current, err := g.Backend.Sessions(ctx)
+		if err != nil {
+			return failure(err)
+		}
+		for _, target := range targets {
+			ready := false
+			for _, session := range current {
+				ready = ready || session.ID == target.id && session.Ready
+			}
+			if !ready {
+				return Result{Text: "nothing was run: target " + target.id + " changed or disconnected while awaiting approval", IsError: true}
+			}
+		}
+	}
 
 	results := make(map[int][]ExecResult, len(targets))
 	var mu sync.Mutex
