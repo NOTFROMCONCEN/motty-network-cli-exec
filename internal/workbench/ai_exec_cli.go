@@ -20,6 +20,7 @@ import (
 var (
 	errCLIOneLine  = errors.New("a network CLI session takes one command line; send each line as its own terminal_exec call")
 	errCLINoPrompt = errors.New("no device prompt is visible in this terminal yet; wait until the device shows one (for example after its login banner) before running commands")
+	errCLINoJobs   = errors.New("a network CLI session has no background jobs; run the command with terminal_exec and wait for its answer")
 )
 
 // cliWaitFloor is the smallest wait a network CLI command gets, from the
@@ -48,11 +49,21 @@ func (exec *aiExec) effectiveWait(requested time.Duration) time.Duration {
 // device something nobody could match later. The floor stamps the command's
 // smallest wait (see effectiveWait).
 func beginCLIExec(session *Session, t *terminal, args tools.TerminalExecArgs, floor time.Duration) (*aiExec, []byte, error) {
+	if args.Background {
+		// A background job polls its output page by page from the shell
+		// capture; a device command has no such capture, and its quiet-window
+		// completion never reaches the job record, so the job would run
+		// forever. Run device commands with terminal_exec instead.
+		return nil, nil, errCLINoJobs
+	}
 	command := strings.TrimSpace(args.Command)
 	if command == "" || strings.ContainsAny(command, "\n\r\t") || strings.IndexByte(command, 0) >= 0 {
 		return nil, nil, errCLIOneLine
 	}
-	prompt := strings.TrimSpace(t.screen.RowText(t.screen.Cursor().Y))
+	// The prompt is what the cursor's line holds up to the cursor, not the
+	// whole row: a command whose output is still arriving leaves the cursor
+	// mid-line, and only the text before it can be a prompt.
+	prompt := t.consolePrompt()
 	plat := session.host.cliPlatform()
 	if prompt == "" {
 		return nil, nil, errCLINoPrompt

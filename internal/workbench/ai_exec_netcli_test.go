@@ -61,6 +61,26 @@ func waitExec(t *testing.T, state *State, exec *aiExec) gate.ExecResult {
 	return awaitExec(t, state, exec, 20*time.Second)
 }
 
+// A device command cannot be a background job: it has no paged capture, and
+// the quiet-window completion never reaches a job record, so the job would
+// run forever.
+func TestTerminalExecCLIRefusesBackgroundJobs(t *testing.T) {
+	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
+	seedPrompt(t, state, shell, "<Huawei>")
+
+	if _, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "display version", Background: true}); err == nil {
+		t.Fatal("a background device command was accepted")
+	} else if !strings.Contains(err.Error(), "terminal_exec") {
+		t.Fatalf("the refusal does not point at terminal_exec: %v", err)
+	}
+	if shell.typed() != "" {
+		t.Fatalf("the refused command still typed %q", shell.typed())
+	}
+	if state.ai.jobs != nil && len(state.ai.jobs) > 0 {
+		t.Fatalf("the refusal left %d jobs behind", len(state.ai.jobs))
+	}
+}
+
 func TestTerminalExecCLISendsRawCommand(t *testing.T) {
 	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
 	seedPrompt(t, state, shell, "<Huawei>")
