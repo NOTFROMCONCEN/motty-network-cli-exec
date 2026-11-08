@@ -243,8 +243,18 @@ func (t *Tap) step(b byte) {
 			t.state = stGround
 		}
 	case stCSI:
-		if b >= 0x40 && b <= 0x7e || b == 0x1b || b == 0x18 || b == 0x1a {
+		switch b {
+		case 0x1b:
+			// A fresh escape inside an unterminated CSI starts over as one,
+			// the way a terminal does; treating it as payload would let a
+			// stalled sequence swallow the prompt that follows it.
+			t.state = stEsc
+		case 0x18, 0x1a:
 			t.state = stGround
+		default:
+			if b >= 0x40 && b <= 0x7e {
+				t.state = stGround
+			}
 		}
 	case stOSC:
 		switch b {
@@ -330,7 +340,11 @@ func (t *Tap) commit() {
 		return
 	}
 	if t.cliErr == "" {
-		t.cliErr = t.plat.errFirst(line)
+		// The matched phrase only says the line is an error reply; the whole
+		// line is what the device said, and that is the verdict to report.
+		if t.plat.errFirst(line) != "" {
+			t.cliErr = line
+		}
 	}
 	t.put(line)
 }
@@ -362,7 +376,10 @@ func (t *Tap) hold() {
 func (t *Tap) isPager(line string) bool {
 	matched := false
 	for _, pager := range t.plat.pagers {
-		if strings.HasSuffix(line, pager) {
+		// The pager prompt is a line of its own: a log line that merely ends
+		// with the same words must not earn the device a keypress, so the
+		// line is the pager text and nothing else but spaces.
+		if strings.TrimSpace(line) == strings.TrimSpace(pager) {
 			matched = true
 			break
 		}

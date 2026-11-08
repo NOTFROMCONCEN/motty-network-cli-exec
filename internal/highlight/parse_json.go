@@ -63,17 +63,19 @@ func JSONRules(rules []Rule) []byte {
 // An error of ErrNotRules says the bytes hold no rules list at all.
 func ParseJSONRules(data []byte) (rules []Rule, skipped int, err error) {
 	data = bytes.TrimPrefix(data, []byte("\ufeff"))
-	var bare []jsonRule
-	if err := json.Unmarshal(data, &bare); err != nil {
-		var wrapped struct {
-			Rules []jsonRule `json:"rules"`
-		}
-		if err := json.Unmarshal(data, &wrapped); err != nil || wrapped.Rules == nil {
-			return nil, 0, ErrNotRules
-		}
-		bare = wrapped.Rules
+	// Entries decode one by one: a hand-edited file with one malformed entry
+	// (a "regex": "true", a number where a string belongs) costs that entry,
+	// not the whole document — the same tolerance the text parser has.
+	entries, err := jsonEntries(data)
+	if err != nil {
+		return nil, 0, ErrNotRules
 	}
-	for _, entry := range bare {
+	for _, raw := range entries {
+		var entry jsonRule
+		if err := json.Unmarshal(raw, &entry); err != nil {
+			skipped++
+			continue
+		}
 		pattern := strings.TrimSpace(entry.Pattern)
 		slot := SlotFromName(strings.ToLower(strings.TrimSpace(entry.Color)))
 		rule := Rule{Pattern: pattern, Regex: entry.Regex, CaseSensitive: entry.CaseSensitive || entry.CaseSensitiveAlias, Slot: slot}
@@ -84,4 +86,21 @@ func ParseJSONRules(data []byte) (rules []Rule, skipped int, err error) {
 		rules = append(rules, rule)
 	}
 	return rules, skipped, nil
+}
+
+// jsonEntries pulls the rule objects out of either shape the document takes:
+// a bare array, or an object with a "rules" array. A document that holds
+// neither is not a rules document.
+func jsonEntries(data []byte) ([]json.RawMessage, error) {
+	var bare []json.RawMessage
+	if err := json.Unmarshal(data, &bare); err == nil {
+		return bare, nil
+	}
+	var wrapped struct {
+		Rules []json.RawMessage `json:"rules"`
+	}
+	if err := json.Unmarshal(data, &wrapped); err != nil || wrapped.Rules == nil {
+		return nil, ErrNotRules
+	}
+	return wrapped.Rules, nil
 }

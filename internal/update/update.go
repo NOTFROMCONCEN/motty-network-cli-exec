@@ -154,10 +154,21 @@ const (
 )
 
 // CheckPackage selects the package matching the installation on this machine.
-// This fork has one package per platform, so every choice reads the fork feed.
+// This fork publishes no system packages, so a DEB installation has nothing
+// to update to from this feed: it answers with the release and no asset,
+// which the caller reports as "no package for this installation" instead of
+// downloading an archive the installer would only refuse.
 func CheckPackage(ctx context.Context, client *http.Client, goos, goarch string, pkg Package) (Release, error) {
+	if pkg == PackageDeb {
+		release, err := checkFork(ctx, client, goos, goarch)
+		if err != nil {
+			return Release{}, err
+		}
+		release.Asset = Asset{}
+		release.PlatformPackageChecked = true
+		return release, nil
+	}
 	return checkFork(ctx, client, goos, goarch)
-
 }
 
 // StableName is the name the mirror gives the package of a platform, or "" for
@@ -307,13 +318,18 @@ func Newer(current, latest string) bool {
 
 // parse reads one to four dot-separated numbers into a fixed-width version:
 // a version with fewer parts than four is padded with zeros, so 0.3.2 and
-// 0.3.2.0 are the same version and 0.3.1.4 is newer than both.
+// 0.3.2.0 are the same version and 0.3.1.4 is newer than both. Each part is
+// plain digits — a "+3" or a "03" is not a version this project publishes,
+// and taking it would let a tampered feed invent spellings of its own.
 func parse(version string) (parts [4]int, ok bool) {
 	fields := strings.Split(version, ".")
 	if len(fields) == 0 || len(fields) > 4 {
 		return parts, false
 	}
 	for index, field := range fields {
+		if field == "" || strings.IndexFunc(field, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
+			return parts, false
+		}
 		number, err := strconv.Atoi(field)
 		if err != nil || number < 0 || number > 1<<20 {
 			return parts, false
