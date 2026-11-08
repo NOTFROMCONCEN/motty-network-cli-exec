@@ -127,13 +127,17 @@ func validHostname(host string) bool {
 	return true
 }
 
-// errFirst returns the first error pattern the line contains.
+// errFirst returns the first error pattern the line begins with. A device's
+// error reply is a line of its own, so the phrase stands at the line's start;
+// the same words inside a log the command printed ("Error:" in a buffered
+// log line) are the device's story, not the command's verdict.
 func (p *Platform) errFirst(line string) string {
 	if p == nil {
 		return ""
 	}
+	trimmed := strings.TrimLeft(line, " ")
 	for _, e := range p.errors {
-		if strings.Contains(line, e) {
+		if strings.HasPrefix(trimmed, e) {
 			return e
 		}
 	}
