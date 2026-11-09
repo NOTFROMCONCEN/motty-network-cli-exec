@@ -26,7 +26,11 @@ import (
 )
 
 // Current is the version of this build. A test keeps it equal to viva.toml's.
+<<<<<<< HEAD
 const Current = "0.4.18"
+=======
+const Current = "0.3.9.1"
+>>>>>>> 51df8067 (chore(release): v0.3.9-netcli-build.1-genshin)
 
 // Feed is the GitHub release the project publishes its builds to.
 const Feed = "https://api.github.com/repos/t8y2/motty/releases/latest"
