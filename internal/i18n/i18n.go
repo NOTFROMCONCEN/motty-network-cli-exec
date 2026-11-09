@@ -458,6 +458,17 @@ type Messages struct {
 	HostsEmpty       string
 	HostsEmptySub    string
 
+	// Adding many hosts at once by pasting a list.
+	BatchAddMenu         string // the import menu's item and the group menu's
+	BatchAddTitle        string
+	BatchAddDescription  string
+	BatchAddListField    string
+	BatchAddPlaceholder  string // the form a list line may take
+	BatchAddSubmit       string
+	BatchAddSummaryFmt   string // hosts, duplicates
+	BatchAddLineErrorFmt string // line number, the line
+	BatchAddEmpty        string
+
 	// OpenSSH config import.
 	SSHConfigImport             string
 	SSHConfigPickerTitle        string

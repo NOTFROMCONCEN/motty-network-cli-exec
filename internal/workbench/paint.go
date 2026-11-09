@@ -108,6 +108,7 @@ const (
 	iconSave
 	iconProcess
 	iconDirectoryTree
+	iconClipboardPaste
 )
 
 // terminalPage reports whether the window shows the panes of a workspace rather
@@ -1625,9 +1626,10 @@ func (state *State) paintHostsHeader(canvas *gfx.Canvas) {
 // button, right-aligned with it.
 func (state *State) paintImportMenu(canvas *gfx.Canvas, viewport gfx.Rect) {
 	m := state.messages
-	menu := components.BeginDropdownMenu(canvas, state.Theme(), state.popupBelow(canvas, state.chrome.importButton, 200, 4*32+8+9, ui.End),
+	menu := components.BeginDropdownMenu(canvas, state.Theme(), state.popupBelow(canvas, state.chrome.importButton, 200, 5*32+8+9, ui.End),
 		components.DropdownMenuOptions{Layer: dialogLayer, Scope: dialogScope, DismissID: hitImportMenuDismiss, Viewport: viewport, Scroll: state.menuScrollFor(hitImportMenuDismiss)})
 	state.menuPlaced(menu.Bounds())
+	menu.AddItem(components.DropdownMenuItem{ID: hitBatchAddPaste, Label: m.BatchAddMenu})
 	menu.AddItem(components.DropdownMenuItem{ID: hitImportSessions, Label: m.Tools.ImportSessions})
 	menu.AddItem(components.DropdownMenuItem{ID: hitImportHostCatalog, Label: m.ImportCatalog})
 	menu.AddItem(components.DropdownMenuItem{ID: hitImportSSHConfig, Label: m.SSHConfigImport})
@@ -2542,6 +2544,7 @@ var lucideIcons = [...]gfx.Icon{
 	iconWrench:         icons.Wrench,
 	iconProcess:        icons.Process,
 	iconDirectoryTree:  icons.PanelLeft,
+	iconClipboardPaste: icons.ClipboardPaste,
 	iconCloseOthers:    icons.ListX,
 	iconCloseRight:     icons.ArrowRightToLine,
 	iconSparkles:       icons.Sparkles,
