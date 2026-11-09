@@ -125,6 +125,8 @@ func (state *State) clickHostManagement(id gfx.ID) bool {
 		state.exportHostCatalog()
 	case hitImportHostCatalog:
 		state.importHostCatalog()
+	case hitBatchAddPaste:
+		state.openBatchHostForm("")
 	default:
 		return false
 	}

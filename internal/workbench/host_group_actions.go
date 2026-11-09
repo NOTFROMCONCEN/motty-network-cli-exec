@@ -17,6 +17,7 @@ var (
 	hitGroupNewChild      = tree.ID(hostGroupActionHits, "new-child")
 	hitGroupNewHost       = tree.ID(hostGroupActionHits, "new-host")
 	hitGroupPaste         = tree.ID(hostGroupActionHits, "paste")
+	hitGroupBatchHosts    = tree.ID(hostGroupActionHits, "batch-hosts")
 )
 
 type hostGroupOperation uint8
@@ -141,6 +142,8 @@ func (state *State) chooseHostGroupAction(id gfx.ID) {
 		state.editor.group.Insert(a.path)
 	case hitGroupPaste:
 		state.pasteHostsInto(a.path)
+	case hitGroupBatchHosts:
+		state.openBatchHostForm(a.path)
 	case hitGroupRename, hitGroupNewChild:
 		if a.path == "" && id == hitGroupRename {
 			return
@@ -186,6 +189,7 @@ func (state *State) declareHostGroupActions(c ui.C) {
 	m := state.messages.HostGroupActions
 	var rows menuRows
 	rows.add(components.ContextMenuItem{ID: hitGroupNewHost, Label: state.messages.NewHost, Icon: lucideIcons[iconPlus]})
+	rows.add(components.ContextMenuItem{ID: hitGroupBatchHosts, Label: state.messages.BatchAddMenu, Icon: lucideIcons[iconClipboardPaste]})
 	rows.add(components.ContextMenuItem{ID: hitGroupNewChild, Label: m.NewChild, Icon: lucideIcons[iconFolderOpen]})
 	rows.add(components.ContextMenuItem{ID: hitGroupPaste, Label: state.messages.PasteHost, Icon: lucideIcons[iconCopy], Disabled: len(state.hostClipboard) == 0})
 	rows.add(components.ContextMenuItem{ID: hitGroupRename, Label: m.Rename, Icon: lucideIcons[iconPencil], Disabled: a.path == ""})
