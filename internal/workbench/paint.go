@@ -118,6 +118,7 @@ const (
 	// The solid folders mark a group in the host trees, open or closed.
 	iconFolderSolid
 	iconFolderSolidOpen
+	iconClipboardPaste
 )
 
 // terminalPage reports whether the window shows the panes of a workspace rather
@@ -1764,6 +1765,7 @@ func (state *State) declareImportMenu(c ui.C, anchor ui.Box) {
 			id    gfx.ID
 			label string
 		}{
+			{hitBatchAddPaste, m.BatchAddMenu},
 			{hitImportSessions, m.Tools.ImportSessions},
 			{hitImportHostCatalog, m.ImportCatalog},
 			{hitImportSSHConfig, m.SSHConfigImport},
@@ -2737,6 +2739,7 @@ var lucideIcons = [...]gfx.Icon{
 	iconFileClock:        icons.FileClock,
 	iconClock:            icons.Clock3,
 	iconFollowFolder:     icons.LocateFixed,
+	iconClipboardPaste:   icons.ClipboardPaste,
 }
 
 func paintIcon(canvas *gfx.Canvas, kind uint8, bounds gfx.Rect, foreground gfx.Color) {
