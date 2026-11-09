@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vivaui/viva/ui"
+	"github.com/vivaui/viva/gfx"
 	"motty/internal/netcli"
 )
 
@@ -123,7 +123,7 @@ func platformPromptCandidate(session *Session) bool {
 // requestPlatformDetectFrames asks for the frame that reads a prompt once the
 // device has gone quiet. A terminal that is waiting on its quiet window asks
 // for exactly one.
-func (state *State) requestPlatformDetectFrames(canvas *ui.Canvas) {
+func (state *State) requestPlatformDetectFrames(canvas *gfx.Canvas) {
 	now := state.now()
 	for index := range state.sessions {
 		session := &state.sessions[index]
