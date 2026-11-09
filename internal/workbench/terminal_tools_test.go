@@ -53,13 +53,8 @@ func TestHighlightColorsTheMatchedWordsAndKeepsEveryOtherCell(t *testing.T) {
 }
 
 func TestHighlightLeavesTextAProgramAlreadyColoredAlone(t *testing.T) {
-<<<<<<< HEAD
-	entry := buildWith(t, "\x1b[34merror\x1b[0m error", highlight.Builtin())
-	red := gfx.RGB(255, 150, 150)
-=======
 	entry := buildWith(t, "\x1b[34merror\x1b[0m error", logcolor.Rules())
-	red := ui.RGB(255, 150, 150)
->>>>>>> bcc2d25 (feat(workbench): color a device's log by severity, off until asked)
+	red := gfx.RGB(255, 150, 150)
 	first, last := entry.runs[0], entry.runs[len(entry.runs)-1]
 	if first.Color == red {
 		t.Errorf("a word the program colored blue was recolored: %+v", first)
@@ -70,13 +65,8 @@ func TestHighlightLeavesTextAProgramAlreadyColoredAlone(t *testing.T) {
 }
 
 func TestHighlightFollowsWideCharactersToTheirCells(t *testing.T) {
-<<<<<<< HEAD
-	entry := buildWith(t, "你好 error", highlight.Builtin())
-	red := gfx.RGB(255, 150, 150)
-=======
 	entry := buildWith(t, "你好 error", logcolor.Rules())
-	red := ui.RGB(255, 150, 150)
->>>>>>> bcc2d25 (feat(workbench): color a device's log by severity, off until asked)
+	red := gfx.RGB(255, 150, 150)
 	for _, run := range entry.runs {
 		if run.Column >= 5 && run.Color != red {
 			t.Errorf("run at cell %d is %+v, want red: the word starts at cell 5 after two wide characters", run.Column, run)
