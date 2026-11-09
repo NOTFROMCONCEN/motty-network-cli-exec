@@ -33,7 +33,7 @@ func (state *State) clickHostManagement(id gfx.ID) bool {
 		// directly; any other press only dismisses it.
 		state.importMenu = false
 		switch id {
-		case hitImportSSHConfig, hitImportHostCatalog, hitImportSessions, hitExportHosts:
+		case hitImportSSHConfig, hitImportHostCatalog, hitImportSessions, hitExportHosts, hitBatchAddPaste:
 		default:
 			return true
 		}
@@ -133,6 +133,8 @@ func (state *State) clickHostManagement(id gfx.ID) bool {
 		state.exportHostCatalog()
 	case hitImportHostCatalog:
 		state.importHostCatalog()
+	case hitBatchAddPaste:
+		state.openBatchHostForm("")
 	default:
 		return false
 	}
