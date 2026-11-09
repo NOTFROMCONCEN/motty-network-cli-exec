@@ -51,6 +51,7 @@ var (
 	hitConnectSelectedHosts    = tree.ID(shellHits, "connect-selected-hosts")
 	hitExportHosts             = tree.ID(shellHits, "export-hosts")
 	hitImportHostCatalog       = tree.ID(shellHits, "import-host-catalog")
+	hitBatchAddPaste           = tree.ID(shellHits, "batch-add-paste")
 	hitImportMenu              = tree.ID(shellHits, "import-menu")
 	hitImportMenuDismiss       = tree.ID(shellHits, "import-menu-dismiss")
 	hitHostGroupDismiss        = tree.ID(shellHits, "host-group-dismiss")
@@ -617,6 +618,7 @@ type State struct {
 	hostImportResult  hostImportResult
 	sessionImport     sessionImportPreview
 	mobaEncoding      mobaEncodingPrompt
+	xshellDirectory   xshellDirectoryImport
 	knownHosts        knownHostsView
 	knownHostsLayout  ui.View
 	settingsRow       ui.View
