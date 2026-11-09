@@ -3,7 +3,9 @@ package workbench
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/vivaui/viva/app"
 	"github.com/vivaui/viva/components"
@@ -27,6 +29,7 @@ var (
 	hitImportSessions        = tree.ID(sessionImportHits, "import-sessions")
 	hitImportPuTTY           = tree.ID(sessionImportHits, "import-pu-tty")
 	hitImportXshell          = tree.ID(sessionImportHits, "import-xshell")
+	hitImportXshellDirectory = tree.ID(sessionImportHits, "import-xshell-directory")
 	hitImportMobaXterm       = tree.ID(sessionImportHits, "import-moba-xterm")
 	hitMobaChooseUTF8        = tree.ID(sessionImportHits, "moba-choose-utf8")
 	hitMobaChooseGB18030     = tree.ID(sessionImportHits, "moba-choose-gb18030")
@@ -64,6 +67,13 @@ type mobaEncodingPrompt struct {
 	gb    string
 }
 
+// xshellDirectoryImport is a Sessions folder read while its import waits for
+// the group prefix the user confirms.
+type xshellDirectoryImport struct {
+	root   string
+	result sessionimport.Result
+}
+
 func importClientName(client sessionimport.Client) string {
 	switch client {
 	case sessionimport.PuTTY:
@@ -86,6 +96,8 @@ func (state *State) clickImportSessions(id gfx.ID) {
 		state.importSessions(sessionimport.PuTTY)
 	case hitImportXshell:
 		state.importSessions(sessionimport.Xshell)
+	case hitImportXshellDirectory:
+		state.importXshellDirectory()
 	case hitImportMobaXterm:
 		state.importSessions(sessionimport.MobaXterm)
 	case hitImportWindTerm:
@@ -123,6 +135,69 @@ func (state *State) importSessionsWithOptions(client sessionimport.Client, optio
 	state.readSessionImport(client, paths, options)
 }
 
+// importXshellDirectory reads a Sessions folder, whose subfolders become the
+// groups, and asks which name the top of that tree should carry before the
+// sessions are added.
+func (state *State) importXshellDirectory() {
+	m := state.messages.Tools
+	state.modal = modalNone
+	root, err := state.options.OpenDirectory(app.OpenDirectoryOptions{Title: m.ImportXshellDirPicker})
+	if errors.Is(err, app.ErrCanceled) || err == nil && root == "" {
+		state.status = m.ImportCanceled
+		return
+	}
+	if err != nil {
+		state.showActionFailure(m.ImportXshellDirPicker, err, state.messages.ActionFeedback.FilePickerFailed)
+		return
+	}
+	result, err := sessionimport.ParseXshellDirectory(root)
+	if err != nil {
+		state.showFileReadFailure(m.ImportXshellDirPicker, err, fmt.Sprintf(state.messages.ActionFeedback.ImportSessionsFailedFmt, importClientName(sessionimport.Xshell)))
+		return
+	}
+	if len(result.Entries) == 0 {
+		state.showActionWarning(m.ImportChooserTitle, fmt.Sprintf(m.ImportXshellDirEmptyFmt, root))
+		return
+	}
+	state.xshellDirectory = xshellDirectoryImport{root: root, result: result}
+	prefix := filepath.Base(root)
+	if strings.EqualFold(prefix, "Sessions") {
+		prefix = ""
+	}
+	form := state.openForm(formDialog{
+		title:       m.ImportXshellDirTitle,
+		description: fmt.Sprintf(m.ImportXshellDirDescFmt, root, len(result.Entries)),
+		submit:      m.ImportXshellDirSubmit,
+		run:         (*State).submitXshellDirectory,
+	}, formField{label: m.ImportXshellDirPrefix})
+	if prefix != "" {
+		form.fields[0].editor.Insert(prefix)
+	}
+}
+
+// submitXshellDirectory prefixes every session's group with the confirmed name
+// and hands the result to the same import as a picked file's.
+func (state *State) submitXshellDirectory(form *formDialog) string {
+	prefix := normalizeHostGroupPath(strings.TrimSpace(form.value(0)))
+	if prefix != "" && !validHostGroup(prefix) {
+		return state.messages.ErrHostGroupInvalid
+	}
+	result := state.xshellDirectory.result
+	state.xshellDirectory = xshellDirectoryImport{}
+	if prefix != "" {
+		for index := range result.Entries {
+			entry := &result.Entries[index]
+			if entry.Group == "" {
+				entry.Group = prefix
+				continue
+			}
+			entry.Group = prefix + "/" + entry.Group
+		}
+	}
+	state.applySessionImport(sessionimport.Xshell, result)
+	return ""
+}
+
 func (state *State) readSessionImport(client sessionimport.Client, paths []string, options sessionimport.ParseOptions) {
 	m := state.messages.Tools
 	result, err := sessionimport.ParseWithOptions(client, paths, options)
@@ -154,6 +229,15 @@ func (state *State) readSessionImport(client sessionimport.Client, paths []strin
 		state.showFileReadFailure(fmt.Sprintf(m.ImportPickerFmt, importClientName(client)), err, fmt.Sprintf(state.messages.ActionFeedback.ImportSessionsFailedFmt, importClientName(client)))
 		return
 	}
+	state.applySessionImport(client, result)
+}
+
+// applySessionImport is what a parsed Result becomes: hosts appended, the
+// passwords the same file held asked about separately, and what came of it said
+// in the result dialog. Both the file picker and the Sessions-folder reader
+// end here.
+func (state *State) applySessionImport(client sessionimport.Client, result sessionimport.Result) {
+	m := state.messages.Tools
 	plan := state.sessionImportPlan(result)
 	if result.Keys > 0 {
 		plan.warnings = append(plan.warnings, fmt.Sprintf(m.ImportWarningKeysFmt, result.Keys))
