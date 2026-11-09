@@ -569,7 +569,7 @@ func (state *State) paintImportSessionsDialog(canvas *gfx.Canvas, viewport gfx.R
 		}
 		components.BeginButton(canvas, theme, choice.id, cell).Large().Outline(choice.label)
 	}
-	directory := ui.Rect{
+	directory := gfx.Rect{
 		X: layout.Body.X, Y: layout.Body.Y + float32((len(choices)+columns-1)/columns)*(rowHeight+gap),
 		Width: layout.Body.Width,
 	}
