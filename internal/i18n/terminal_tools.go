@@ -323,6 +323,15 @@ type ToolsMessages struct {
 	ImportHostSaveFailedFmt      string
 	ImportHostSaveRollbackFailed string
 
+	// Importing a folder of Xshell sessions, whose subfolders become groups.
+	ImportXshellDirectory   string // the chooser button under the clients
+	ImportXshellDirPicker   string
+	ImportXshellDirTitle    string
+	ImportXshellDirDescFmt  string // path, sessions
+	ImportXshellDirPrefix   string
+	ImportXshellDirSubmit   string
+	ImportXshellDirEmptyFmt string // the folder that held no sessions
+
 	// Broadcast input.
 	BroadcastStart            string
 	BroadcastStop             string
