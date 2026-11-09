@@ -707,6 +707,53 @@ func parseXshellArchive(path string) (Result, error) {
 	return result, nil
 }
 
+// ParseXshellDirectory reads every Xshell session file (.xsh) in a folder and
+// its subfolders. Each session's subfolder path, relative to the picked folder
+// and joined with "/", becomes its group, so the folder tree of the Sessions
+// directory carries over. A file that cannot be read is a warning, not a
+// failure of the whole folder.
+func ParseXshellDirectory(root string) (Result, error) {
+	var result Result
+	var files []string
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			if path == root {
+				return err
+			}
+			result.warn("%s: %v", filepath.ToSlash(path), err)
+			return filepath.SkipDir
+		}
+		if !entry.IsDir() && strings.EqualFold(filepath.Ext(entry.Name()), ".xsh") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return Result{}, err
+	}
+	for _, path := range files {
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			relative = filepath.Base(path)
+		}
+		source := filepath.ToSlash(relative)
+		text, err := readFile(path)
+		if err != nil {
+			result.warn("%s: %v", source, err)
+			continue
+		}
+		group := filepath.ToSlash(filepath.Dir(relative))
+		if group == "." {
+			group = ""
+		}
+		name := strings.TrimSuffix(filepath.Base(relative), filepath.Ext(relative))
+		if err := parseXshellSession(&result, text, name, group, source); err != nil {
+			result.warn("%s: %v", source, err)
+		}
+	}
+	return result, nil
+}
+
 // ---- MobaXterm ----
 
 // ParseMobaXterm reads an exported MobaXterm sessions file (.mxtsessions), or the
