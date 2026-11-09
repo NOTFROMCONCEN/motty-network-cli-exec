@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/vivaui/viva/components"
-	"github.com/vivaui/viva/ui"
+	"github.com/vivaui/viva/gfx"
 	"motty/internal/i18n"
 	"motty/internal/netcli"
 )
@@ -100,7 +100,7 @@ func execPaintable(protocol hostProtocol) bool {
 	return protocol != protocolVNC && protocol != protocolRDP
 }
 
-func (state *State) paintExecModeChoice(canvas *ui.Canvas, bounds ui.Rect) {
+func (state *State) paintExecModeChoice(canvas *gfx.Canvas, bounds gfx.Rect) {
 	m := state.messages.Tools
 	content := components.BeginField(canvas, state.Theme(), bounds).Paint(m.ExecModeField, "", "")
 	options := [...]components.SegmentOption{
@@ -112,7 +112,7 @@ func (state *State) paintExecModeChoice(canvas *ui.Canvas, bounds ui.Rect) {
 	state.rememberHostControl(options[state.editor.execChoice].ID, content)
 }
 
-func (state *State) paintCLIPlatformChoice(canvas *ui.Canvas, bounds ui.Rect) {
+func (state *State) paintCLIPlatformChoice(canvas *gfx.Canvas, bounds gfx.Rect) {
 	editor, theme := &state.editor, state.Theme()
 	m := state.messages.Tools
 	ids := editor.platformIDs()
@@ -142,7 +142,7 @@ func (state *State) paintCLIPlatformChoice(canvas *ui.Canvas, bounds ui.Rect) {
 
 // clickExecChoice handles a click on the execution setting and reports whether
 // it was one.
-func (state *State) clickExecChoice(id ui.ID) bool {
+func (state *State) clickExecChoice(id gfx.ID) bool {
 	editor := &state.editor
 	switch {
 	case id == hitDialogExecAuto:
