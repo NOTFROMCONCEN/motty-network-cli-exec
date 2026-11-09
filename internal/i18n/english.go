@@ -2245,6 +2245,14 @@ var englishTools = ToolsMessages{
 	ImportXshellDirSubmit:   "Import",
 	ImportXshellDirEmptyFmt: "No importable Xshell sessions (.xsh) were found in %s.",
 
+	ImportXshellDirectory:   "Xshell session folder (folders become groups)…",
+	ImportXshellDirPicker:   "Choose an Xshell session folder",
+	ImportXshellDirTitle:    "Import Xshell Sessions from a Folder",
+	ImportXshellDirDescFmt:  "Found %2$d sessions in %1$s; each goes to the group of its subfolder.",
+	ImportXshellDirPrefix:   "Group prefix",
+	ImportXshellDirSubmit:   "Import",
+	ImportXshellDirEmptyFmt: "No importable Xshell sessions (.xsh) were found in %s.",
+
 	BroadcastStart:            "Broadcast input to all connected terminals in this tab",
 	BroadcastStop:             "Stop broadcast input",
 	BroadcastScopeAll:         "All tabs",

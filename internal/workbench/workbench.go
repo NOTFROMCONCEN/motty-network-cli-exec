@@ -55,6 +55,7 @@ var (
 	hitConnectSelectedHosts    = tree.ID(shellHits, "connect-selected-hosts")
 	hitExportHosts             = tree.ID(shellHits, "export-hosts")
 	hitImportHostCatalog       = tree.ID(shellHits, "import-host-catalog")
+	hitBatchAddPaste           = tree.ID(shellHits, "batch-add-paste")
 	hitImportMenu              = tree.ID(shellHits, "import-menu")
 	hitHostGroupDismiss        = tree.ID(shellHits, "host-group-dismiss")
 	hitHostFilterAll           = tree.ID(shellHits, "host-filter-all")
@@ -667,6 +668,7 @@ type State struct {
 	hostImportResult  hostImportResult
 	sessionImport     sessionImportPreview
 	mobaEncoding      mobaEncodingPrompt
+	xshellDirectory   xshellDirectoryImport
 	knownHosts        knownHostsView
 	// selectedWorkspaceTemplateID is the template the library will apply next.
 	// It is view state only and is not persisted.

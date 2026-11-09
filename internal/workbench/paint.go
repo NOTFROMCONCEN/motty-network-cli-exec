@@ -134,6 +134,7 @@ const (
 	iconSFTPUploadDirectory
 	iconSFTPNewFile
 	iconSFTPNewDirectory
+	iconClipboardPaste
 )
 
 // terminalPage reports whether the window shows the panes of a workspace rather
@@ -1914,6 +1915,7 @@ func (state *State) declareImportMenu(c ui.C, anchor ui.Box) {
 			id    gfx.ID
 			label string
 		}{
+			{hitBatchAddPaste, m.BatchAddMenu},
 			{hitImportSessions, m.Tools.ImportSessions},
 			{hitImportHostCatalog, m.ImportCatalog},
 			{hitImportSSHConfig, m.SSHConfigImport},
@@ -2904,6 +2906,59 @@ var lucideIcons = [...]gfx.Icon{
 	iconSFTPUploadDirectory: icons.SftpUploadFolder,
 	iconSFTPNewFile:         icons.SftpNewFile,
 	iconSFTPNewDirectory:    icons.SftpNewFolder,
+	iconBot:                 icons.Bot,
+	iconHistory:             icons.History,
+	iconCopy:                icons.Copy,
+	iconChevronRight:        icons.ChevronRight,
+	iconChevronLeft:         icons.ChevronLeft,
+	iconChevronDown:         icons.ChevronDown,
+	iconChevronsExpand:      icons.ChevronsUpDown,
+	iconChevronsCollapse:    icons.ChevronsDownUp,
+	iconSliders:             icons.SlidersHorizontal,
+	iconAlert:               icons.CircleAlert,
+	iconCircleCheck:         icons.CircleCheck,
+	iconRadio:               icons.RadioTower,
+	iconKeyboard:            icons.Keyboard,
+	iconStar:                icons.Star,
+	iconStarSolid:           icons.StarSolid,
+	iconArchive:             icons.Archive,
+	iconHardDrive:           icons.HardDrive,
+	iconExternal:            icons.SquarePen,
+	iconPlug:                icons.Plug,
+	iconPaperclip:           icons.Paperclip,
+	iconImage:               icons.Image,
+	iconSave:                icons.Download,
+	iconPaste:               icons.ClipboardPaste,
+	iconSelectAll:           icons.SquareDashed,
+	iconEraser:              icons.Eraser,
+	iconEye:                 icons.Eye,
+	iconEyeOff:              icons.EyeOff,
+	iconEllipsis:            icons.Ellipsis,
+	iconWrench:              icons.Wrench,
+	iconProcess:             icons.Process,
+	iconDirectoryTree:       icons.PanelLeft,
+	iconListTree:            icons.ListTree,
+	iconArrowUpDown:         icons.ArrowUpDown,
+	iconCloseOthers:         icons.ListX,
+	iconCloseRight:          icons.ArrowRightToLine,
+	iconSparkles:            icons.Sparkles,
+	iconTransfer:            icons.ArrowUpDown,
+	iconBug:                 icons.Bug,
+	iconInfo:                icons.Info,
+	iconQQ:                  icons.Qq,
+	iconWeChat:              icons.Wechat,
+	iconDiscord:             icons.Discord,
+	iconGitHub:              icons.Github,
+	iconNotebook:            icons.Notebook,
+	iconSnippets:            icons.Zap,
+	iconLocalProxy:          icons.Waypoints,
+	iconSFTPTransfer:        icons.SftpTransfer,
+	iconSFTPBrowseSync:      icons.SftpSync,
+	iconSFTPProfiles:        icons.SftpProfiles,
+	iconFileClock:           icons.FileClock,
+	iconClock:               icons.Clock3,
+	iconFollowFolder:        icons.LocateFixed,
+	iconClipboardPaste:      icons.ClipboardPaste,
 }
 
 func paintIcon(canvas *gfx.Canvas, kind uint8, bounds gfx.Rect, foreground gfx.Color) {

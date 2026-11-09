@@ -2245,6 +2245,14 @@ var chineseTools = ToolsMessages{
 	ImportXshellDirSubmit:   "导入",
 	ImportXshellDirEmptyFmt: "在 %s 没有找到可导入的 Xshell 会话(.xsh)。",
 
+	ImportXshellDirectory:   "Xshell 会话目录(按文件夹建组)…",
+	ImportXshellDirPicker:   "选择 Xshell 会话目录",
+	ImportXshellDirTitle:    "从目录导入 Xshell 会话",
+	ImportXshellDirDescFmt:  "在 %1$s 找到 %2$d 个会话;各会话按其所在子文件夹归入分组。",
+	ImportXshellDirPrefix:   "分组前缀",
+	ImportXshellDirSubmit:   "导入",
+	ImportXshellDirEmptyFmt: "在 %s 没有找到可导入的 Xshell 会话(.xsh)。",
+
 	BroadcastStart:            "开启广播输入：同时输入到当前标签页的所有已连接终端",
 	BroadcastStop:             "停止广播输入",
 	BroadcastScopeAll:         "所有标签页",
