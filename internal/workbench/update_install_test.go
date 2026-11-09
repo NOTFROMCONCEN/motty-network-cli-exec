@@ -224,7 +224,10 @@ func TestAnUpdateThatCannotBeInstalledSaysWhyAndKeepsTheDownloadPage(t *testing.
 	state := updateWindow(t, updater, &quits, &opened)
 	_, texts := paintedTexts(state)
 	m := state.messages.Tools
-	if contains(texts, m.UpdateInstall) || !contains(texts, m.GeneralUpdateDownload) || !contains(texts, m.UpdateWhyNotUserInstall) {
+	// The reason wraps across two painted lines in this dialog's width, so it
+	// is looked for in the whole text, not in one segment.
+	joined := strings.Join(texts, " ")
+	if contains(texts, m.UpdateInstall) || !contains(texts, m.GeneralUpdateDownload) || !strings.Contains(joined, m.UpdateWhyNotUserInstall) {
 		t.Fatalf("texts %q", texts)
 	}
 	state.Click(hitUpdateDownload)
