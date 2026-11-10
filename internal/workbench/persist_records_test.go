@@ -71,6 +71,9 @@ func TestEverySavedStateFieldIsSharedOrKeptOnThisDevice(t *testing.T) {
 		// absence in a saved state means on, which a shared setting could not
 		// express when another device turns it back on.
 		"terminal_paste_confirm_off": true,
+		// So does the intranet mode: whether this machine keeps itself off the
+		// internet is a local decision, never a setting to carry to others.
+		"intranet_mode": true,
 	}
 	entity := map[string]bool{}
 	for _, field := range entityFields {
