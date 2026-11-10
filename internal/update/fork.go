@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"motty/internal/netguard"
 )
 
 // The fork publishes its own builds, so it checks its own releases instead of
@@ -329,6 +331,9 @@ func forkRelease(ctx context.Context, client *http.Client, feed string) (Release
 // readJSON fetches one JSON answer into into. A 404 is ErrNoRelease, which is
 // also what a private repository looks like to an anonymous request.
 func readJSON(ctx context.Context, client *http.Client, address string, into any) error {
+	if err := netguard.CheckURL(address); err != nil {
+		return err
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
 		return err

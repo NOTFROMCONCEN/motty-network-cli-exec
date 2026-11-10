@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"motty/internal/netguard"
 	"motty/internal/update"
 )
 
@@ -34,6 +35,9 @@ const progressEvery = 100 * time.Millisecond
 func Download(ctx context.Context, client *http.Client, asset update.Asset, dir string, progress func(Progress)) (string, error) {
 	if !asset.Has() || asset.Size <= 0 || asset.Name == "" || filepath.Base(asset.Name) != asset.Name {
 		return "", errors.New("selfupdate: the release names no usable package")
+	}
+	if err := netguard.CheckURL(asset.URL); err != nil {
+		return "", err
 	}
 	if client == nil {
 		// No overall timeout: a large package on a slow link is allowed to take

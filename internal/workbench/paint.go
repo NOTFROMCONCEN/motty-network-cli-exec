@@ -287,7 +287,9 @@ func (state *State) Paint(canvas *gfx.Canvas, size gfx.Size) {
 	workspaceSlot := chrome.workspaceSlot
 	state.paintWindowBarParts(canvas, geometry.area)
 	state.paintWindowBarScrollbar(canvas)
-	if !fullPage {
+	// The intranet mode hides the logo: the slot is not declared either, so a
+	// stale place from the frame before must not be painted into.
+	if !fullPage && !state.intranetMode {
 		state.paintLockup(canvas, chrome.lockup.Rect())
 	}
 
@@ -1338,8 +1340,14 @@ type hostToggleBoxes struct {
 func (state *State) declareNavigation(c ui.C) {
 	m := state.messages
 	ui.Column(c).Width(navigationWidth).Shrink(0).Children(func() {
-		// The logo with the name beside it, painted into this slot after layout.
-		state.chrome.lockup = ui.Slot(c).Size(lockupWidth, lockupHeight).MarginSides(15, 0, 20, 0).Self(ui.Center)
+		// The logo with the name beside it, painted into this slot after
+		// layout. The intranet mode hides it; a small spacer keeps the first
+		// entry off the window's edge.
+		if state.intranetMode {
+			ui.Spacer(c).Height(12)
+		} else {
+			state.chrome.lockup = ui.Slot(c).Size(lockupWidth, lockupHeight).MarginSides(15, 0, 20, 0).Self(ui.Center)
+		}
 		for _, item := range sidebarPages {
 			if state.hiddenNav.has(item.page) {
 				continue

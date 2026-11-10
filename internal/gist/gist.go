@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"motty/internal/cloudsync"
+	"motty/internal/netguard"
 )
 
 // Provider is the service that holds the snippet.
@@ -156,6 +157,9 @@ func (client *Client) do(ctx context.Context, method, route string, body any) (*
 		reader = bytes.NewReader(encoded)
 	}
 	target := client.base.String() + route
+	if err := netguard.CheckURL(target); err != nil {
+		return nil, err
+	}
 	if client.config.Provider == Gitee {
 		// Gitee API v5 takes the token as a query parameter rather than an
 		// Authorization header.
