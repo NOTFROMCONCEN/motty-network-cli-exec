@@ -2577,7 +2577,7 @@ var englishTools = ToolsMessages{
 	TransferField:                   "File transfer",
 	TransferAuto:                    "Auto",
 	ExecModeField:                   "Command execution",
-	ExecModeAuto:                    "Auto",
+	ExecModeAuto:                    "Follow transport",
 	ExecModeShell:                   "Shell",
 	ExecModeNetworkCLI:              "Network CLI",
 	CLIPlatformField:                "Device platform",
