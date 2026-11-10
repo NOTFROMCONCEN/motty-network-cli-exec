@@ -61,6 +61,9 @@ func TestEverySavedStateFieldIsSharedOrKeptOnThisDevice(t *testing.T) {
 		// hides or excludes: restoreLocal applies both, and the sync scope test
 		// holds that one computer's selection never reaches another.
 		"hidden_nav": true, "sync_excluded": true,
+		// So does the intranet mode: whether this machine keeps itself off the
+		// internet is a local decision, never a setting to carry to others.
+		"intranet_mode": true,
 	}
 	entity := map[string]bool{}
 	for _, field := range entityFields {
