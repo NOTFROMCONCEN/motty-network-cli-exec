@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"motty/internal/cloudsync"
+	"motty/internal/netguard"
 )
 
 // Config says where the file is and who may touch it.
@@ -82,6 +83,9 @@ func (client *Client) address(parts ...string) string {
 }
 
 func (client *Client) do(ctx context.Context, method, address string, body []byte, header map[string]string) (*http.Response, error) {
+	if err := netguard.CheckURL(address); err != nil {
+		return nil, err
+	}
 	var reader io.Reader
 	if body != nil {
 		reader = bytes.NewReader(body)
