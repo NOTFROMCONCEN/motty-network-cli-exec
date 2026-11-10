@@ -371,7 +371,10 @@ func (state *State) scheduleUpdateCheck(delay time.Duration) {
 	state.stopUpdateCheck()
 	state.update.timer = time.AfterFunc(delay, func() {
 		state.aiPost(func(state *State) {
-			if state.closed || !state.updateAtStart {
+			// The intranet mode is the user saying this machine stays off the
+			// internet's back, so an automatic check never asks the feed; a
+			// manual one still can, and reports the refusal.
+			if state.closed || !state.updateAtStart || state.intranetMode {
 				return
 			}
 			state.checkForUpdates(false)

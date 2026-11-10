@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"motty/internal/netguard"
 )
 
 // Role is the author of a Message.
@@ -289,6 +291,9 @@ func (b *base) scrubErr(err error) error {
 
 // do performs a request and converts non-2xx statuses to *HTTPError.
 func (b *base) do(ctx context.Context, method, url string, body []byte, hdr func(*http.Request)) (*http.Response, error) {
+	if err := netguard.CheckURL(url); err != nil {
+		return nil, err
+	}
 	var rd io.Reader
 	if body != nil {
 		rd = bytes.NewReader(body)

@@ -18,6 +18,7 @@ import (
 
 	"github.com/vivaui/viva/components"
 	"github.com/vivaui/viva/gfx"
+	"motty/internal/netguard"
 )
 
 var hitNoteLoadImages = tree.ID(notesHits, "load-images")
@@ -120,6 +121,9 @@ func (s *State) loadNoteImagesTarget(n *notesUI, resolve func(*State) *notesUI, 
 	}()
 }
 func fetchNoteImage(ctx context.Context, url string) (gfx.Bitmap, error) {
+	if err := netguard.CheckURL(url); err != nil {
+		return gfx.Bitmap{}, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return gfx.Bitmap{}, err

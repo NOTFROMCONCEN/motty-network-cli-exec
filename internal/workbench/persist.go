@@ -152,7 +152,10 @@ type savedState struct {
 	NoteFolders             []savedNoteFolder   `json:"note_folders,omitempty"`
 	// SessionLogsOff stops the local session journal. Unset means capture is on;
 	// it belongs to this computer and is never synced.
-	SessionLogsOff          bool                  `json:"session_logs_off,omitempty"`
+	SessionLogsOff bool `json:"session_logs_off,omitempty"`
+	// IntranetMode keeps the machine off the internet's back. Like the session
+	// journal it belongs to this computer and is never synced.
+	IntranetMode            bool                  `json:"intranet_mode,omitempty"`
 	SessionLogsView         *savedSessionLogsView `json:"session_logs_view,omitempty"`
 	CommandInlineSuggestOff bool                  `json:"command_inline_suggest_off,omitempty"`
 	LocalProxyPort          int                   `json:"local_proxy_port,omitempty"`
@@ -538,6 +541,7 @@ func (state *State) snapshot() savedState {
 		CommandHistory:             state.history.on,
 		CommandSuggestOff:          state.history.suggestOff,
 		SessionLogsOff:             state.sessionLogsOff,
+		IntranetMode:               state.intranetMode,
 		SessionLogsView:            state.snapshotSessionLogsView(),
 		CommandInlineSuggestOff:    state.history.inlineOff,
 		SFTPParallel:               state.sftpParallel,
@@ -945,6 +949,7 @@ func (state *State) restoreLocal(saved savedState) {
 	state.backgroundOutputAlerts = saved.BackgroundOutputAlerts
 	state.setTabOrientation(tabOrientationFromString(saved.TabOrientation))
 	state.setTabNumbers(saved.TabNumbers)
+	state.setIntranetMode(saved.IntranetMode)
 	state.setVerticalTabsAutoHide(saved.VerticalTabsAutoHide)
 	state.setVerticalTabsGrouping(saved.VerticalTabsGrouping)
 	state.restoreSFTPLocalFavorites(saved.SFTPLocalBookmarks)

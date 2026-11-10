@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"motty/internal/netguard"
 )
 
 // Current is the version of this build. A test keeps it equal to viva.toml's.
@@ -78,6 +80,9 @@ const (
 // Latest reads the feed. The client decides timeouts and proxies; nil uses one
 // with a 15 second timeout and the environment's proxy.
 func Latest(ctx context.Context, client *http.Client, feed string) (Release, error) {
+	if err := netguard.CheckURL(feed); err != nil {
+		return Release{}, err
+	}
 	if client == nil {
 		client = &http.Client{Timeout: 15 * time.Second}
 	}
@@ -218,6 +223,9 @@ func LatestMirror(ctx context.Context, client *http.Client, feed, goos, goarch s
 }
 
 func latestMirrorPackage(ctx context.Context, client *http.Client, feed, goos, goarch string, pkg Package) (Release, error) {
+	if err := netguard.CheckURL(feed); err != nil {
+		return Release{}, err
+	}
 	if client == nil {
 		client = &http.Client{Timeout: 15 * time.Second}
 	}
