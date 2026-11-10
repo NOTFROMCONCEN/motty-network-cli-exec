@@ -272,6 +272,8 @@ type Messages struct {
 	SettingsInterfaceFontUnsupportedFmt    string
 	SettingsOutputAlerts                   string
 	SettingsOutputAlertsDescription        string
+	SettingsIntranetMode                   string
+	SettingsIntranetModeDescription        string
 	SettingsTabOrientation                 string
 	SettingsTabOrientationDescription      string
 	SettingsTabsHorizontal                 string

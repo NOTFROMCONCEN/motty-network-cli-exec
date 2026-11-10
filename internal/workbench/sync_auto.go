@@ -6,6 +6,7 @@ import (
 
 	"motty/internal/backup"
 	"motty/internal/cloudsync"
+	"motty/internal/netguard"
 	"motty/internal/vault"
 )
 
@@ -28,7 +29,7 @@ const (
 // scheduleSync asks for a sync soon. Windows of one process share the work: the
 // first one does it, and the others hand their changes to it.
 func (state *State) scheduleSync() {
-	if state.sync.holdBack {
+	if state.intranetMode || state.sync.holdBack {
 		return
 	}
 	leader := state.syncLeader()
@@ -81,7 +82,7 @@ func (state *State) stopSyncTimer() {
 
 // autoSync is a sync nobody asked for.
 func (state *State) autoSync() {
-	if state.closed || !state.sync.configured() || state.sync.manual {
+	if state.intranetMode || state.closed || !state.sync.configured() || state.sync.manual {
 		return
 	}
 	state.runSync(true)
@@ -111,10 +112,12 @@ func (state *State) reloadOtherWindows() {
 }
 
 // syncRetryable says whether trying again later could help: a network that was
-// down can come back, a wrong password cannot.
+// down can come back, a wrong password cannot. A refusal from the intranet
+// mode cannot either; the next sync the user asks for will hear the same.
 func syncRetryable(err error) bool {
 	switch {
-	case errors.Is(err, cloudsync.ErrUnauthorized), errors.Is(err, cloudsync.ErrInsecure), errors.Is(err, cloudsync.ErrTooLarge),
+	case errors.Is(err, netguard.ErrBlocked),
+		errors.Is(err, cloudsync.ErrUnauthorized), errors.Is(err, cloudsync.ErrInsecure), errors.Is(err, cloudsync.ErrTooLarge),
 		errors.Is(err, backup.ErrWrongPassword), errors.Is(err, backup.ErrNotBackup), errors.Is(err, backup.ErrTooNew),
 		errors.Is(err, backup.ErrWeakPassword), errors.Is(err, vault.ErrNeedsConversion):
 		return false

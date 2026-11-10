@@ -239,6 +239,8 @@ var ChineseMessages = Messages{
 	SettingsInterfaceFontUnsupportedFmt:    "“%s”未生效：当前平台不支持更改界面字体。",
 	SettingsOutputAlerts:                   "后台终端输出提醒",
 	SettingsOutputAlertsDescription:        "通过标签标题提示未查看的输出：蓝色表示输出中，绿色表示输出结束或静默，黄色表示命令报告失败。",
+	SettingsIntranetMode:                   "内网模式",
+	SettingsIntranetModeDescription:        "仅允许访问本机与内网地址：检查更新、云同步、AI 助手等不再连接互联网，Logo 也将隐藏。SSH、TELNET 等会话不受影响。",
 	SettingsTabOrientation:                 "标签方向",
 	SettingsTabOrientationDescription:      "将会话标签显示在顶部，或垂直排列在左侧栏。",
 	SettingsTabsHorizontal:                 "水平",
