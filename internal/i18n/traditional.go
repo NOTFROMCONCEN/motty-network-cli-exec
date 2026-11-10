@@ -2494,7 +2494,7 @@ var traditionalTools = ToolsMessages{
 	TransferField:                   "檔案傳輸協議",
 	TransferAuto:                    "自動",
 	ExecModeField:                   "指令執行",
-	ExecModeAuto:                    "自動",
+	ExecModeAuto:                    "跟隨傳輸協議",
 	ExecModeShell:                   "Shell",
 	ExecModeNetworkCLI:              "網路 CLI",
 	CLIPlatformField:                "裝置平台",
