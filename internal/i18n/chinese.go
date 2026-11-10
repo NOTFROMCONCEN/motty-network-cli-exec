@@ -2507,7 +2507,7 @@ var chineseTools = ToolsMessages{
 	TransferField:                   "文件传输协议",
 	TransferAuto:                    "自动",
 	ExecModeField:                   "命令执行",
-	ExecModeAuto:                    "自动",
+	ExecModeAuto:                    "跟随传输协议",
 	ExecModeShell:                   "Shell",
 	ExecModeNetworkCLI:              "网络 CLI",
 	CLIPlatformField:                "设备平台",
