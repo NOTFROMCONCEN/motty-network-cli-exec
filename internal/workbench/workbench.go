@@ -228,6 +228,7 @@ var (
 	hitSettingsLatencyToggle   = tree.ID(settingsHits, "settings-latency")
 	hitSettingsLinkPlainClick  = tree.ID(settingsHits, "settings-link-plain-click")
 	hitSettingsShareToggle     = tree.ID(settingsHits, "settings-share")
+	hitSettingsIntranetMode    = tree.ID(settingsHits, "settings-intranet-mode")
 	hitSettingsVaultForget     = tree.ID(settingsHits, "settings-vault-forget")
 	hitSettingsVaultConvert    = tree.ID(settingsHits, "settings-vault-convert")
 )
@@ -525,8 +526,13 @@ type State struct {
 	tabNumbers             bool // each tab shows its place number next to the name
 	// hiddenNav is the set of page rows the sidebar leaves out. Hiding is the
 	// entry only: the page keeps its section, shortcuts and command entry.
-	hiddenNav          navHidden
-	sidebarEditor      sidebarSettingsUI
+	hiddenNav     navHidden
+	sidebarEditor sidebarSettingsUI
+	// intranetMode keeps this machine off the internet's back: the features
+	// that call out on their own — update checks, cloud sync, the assistant —
+	// reach only local and private hosts, and the logo stays hidden. It is
+	// this computer's choice, never synced.
+	intranetMode       bool
 	verticalTabs       verticalTabs
 	tabMenu            tabMenu
 	hostMenu           hostMenu
