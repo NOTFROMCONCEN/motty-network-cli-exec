@@ -24,6 +24,7 @@ import (
 	vivaupdate "github.com/vivaui/viva/update"
 
 	"motty/internal/netclient"
+	"motty/internal/netguard"
 )
 
 // Current is the version of this build. A test keeps it equal to viva.toml's.
@@ -131,6 +132,9 @@ var feedAttemptTimeout = 10 * time.Second
 // Latest reads the feed. The client decides timeouts and proxies; nil uses the
 // desktop's proxy settings, as netclient does, with a 15 second timeout.
 func Latest(ctx context.Context, client *http.Client, feed string) (Release, error) {
+	if err := netguard.CheckURL(feed); err != nil {
+		return Release{}, err
+	}
 	if client == nil {
 		client = netclient.Client(15 * time.Second)
 	}
@@ -618,6 +622,9 @@ func LatestMirror(ctx context.Context, client *http.Client, feed, goos, goarch s
 }
 
 func latestMirrorPackage(ctx context.Context, client *http.Client, feed, goos, goarch string, pkg Package) (Release, error) {
+	if err := netguard.CheckURL(feed); err != nil {
+		return Release{}, err
+	}
 	if client == nil {
 		client = netclient.Client(15 * time.Second)
 	}

@@ -13,6 +13,7 @@ import (
 
 	"motty/internal/ai/llm"
 	"motty/internal/ai/store"
+	"motty/internal/netguard"
 )
 
 // Category classifies the capability and intended workload of a model.
@@ -231,6 +232,9 @@ func probeHTTPClient(provider store.Provider, timeout time.Duration) *http.Clien
 }
 
 func probeOllama(ctx context.Context, provider store.Provider, modelName string, timeout time.Duration) (time.Duration, error) {
+	if err := netguard.CheckURL(ollamaAPIBase(provider.BaseURL)); err != nil {
+		return 0, err
+	}
 	start := time.Now()
 	url := ollamaAPIBase(provider.BaseURL) + "/api/show"
 	bodyBytes, _ := json.Marshal(map[string]string{"name": modelName})
@@ -286,6 +290,9 @@ func probeEmbedding(ctx context.Context, provider store.Provider, modelName stri
 		"input": "ping",
 	}
 	bodyBytes, _ := json.Marshal(payload)
+	if err := netguard.CheckURL(url); err != nil {
+		return 0, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return 0, err
@@ -321,6 +328,9 @@ func probeRerank(ctx context.Context, provider store.Provider, modelName string,
 		"documents": []string{"test"},
 	}
 	bodyBytes, _ := json.Marshal(payload)
+	if err := netguard.CheckURL(url); err != nil {
+		return 0, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return 0, err

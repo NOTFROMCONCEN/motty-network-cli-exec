@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"motty/internal/netclient"
+	"motty/internal/netguard"
 )
 
 // The catalog comes from one public source. The repository is a constant so a
@@ -236,6 +237,9 @@ func resolveTag(ctx context.Context, client *http.Client, tag string) (Release, 
 }
 
 func getJSON(ctx context.Context, client *http.Client, url string, out any) error {
+	if err := netguard.CheckURL(url); err != nil {
+		return err
+	}
 	return readUpdate(ctx, client, url, "application/vnd.github+json", "the release service", func(body io.Reader) error {
 		return json.NewDecoder(io.LimitReader(body, 1<<20)).Decode(out)
 	})
@@ -251,6 +255,9 @@ func FetchCatalog(ctx context.Context, client *http.Client, release Release) (*C
 		return nil, ImportStats{}, errors.New("the release is not pinned")
 	}
 	url := "https://codeload.github.com/" + RepositoryOwner + "/" + RepositoryName + "/tar.gz/" + release.Commit
+	if err := netguard.CheckURL(url); err != nil {
+		return nil, ImportStats{}, err
+	}
 	var source *SourceArchive
 	err := readUpdate(ctx, client, url, "", "the download", func(body io.Reader) error {
 		var err error

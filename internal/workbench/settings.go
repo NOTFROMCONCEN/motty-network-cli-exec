@@ -599,7 +599,9 @@ func (state *State) clickSettings(id gfx.ID) bool {
 		} else {
 			changed = state.setShareConnections(shareConnectionsOff)
 		}
-	case hitSettingsStartupHosts:
+	case hitSettingsIntranetMode:
+		changed = state.setIntranetMode(!state.intranetMode)
+	case hitSettingsStartupHosts, hitSettingsStartupLocal, hitSettingsStartupDismiss:
 		state.clickStartupHosts(id)
 	case hitSettingsSSHSyncToggle, hitSettingsSSHSyncFile, hitSettingsSSHSyncReset, hitSettingsSSHSyncNow:
 		state.clickSSHSync(id)

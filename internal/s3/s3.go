@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"motty/internal/cloudsync"
+	"motty/internal/netguard"
 )
 
 // Config says where the object is and who may touch it.
@@ -117,6 +118,9 @@ func (client *Client) address() *url.URL {
 }
 
 func (client *Client) do(ctx context.Context, method string, body []byte, header map[string]string) (*http.Response, error) {
+	if err := netguard.CheckURL(client.address().String()); err != nil {
+		return nil, err
+	}
 	var reader io.Reader
 	if body != nil {
 		reader = bytes.NewReader(body)

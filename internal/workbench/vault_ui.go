@@ -530,6 +530,9 @@ func (state *State) paintSecuritySettings(page *settingsPage) {
 	m := state.messages
 	page.groups(func() {
 		state.paintAppLockSettings(page)
+		page.group("", func() {
+			page.toggleRow(m.SettingsIntranetMode, m.SettingsIntranetModeDescription, state.intranetMode, hitSettingsIntranetMode)
+		})
 		state.paintCredentialSettings(page)
 		state.paintSessionLogSettingsGroup(page)
 		vaultFile := state.secrets.vault
