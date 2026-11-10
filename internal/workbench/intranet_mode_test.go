@@ -1,9 +1,12 @@
 package workbench
 
 import (
+	"bytes"
+	"path/filepath"
 	"testing"
 
 	"github.com/vivaui/viva/gfx"
+	"motty/internal/configstore"
 	"motty/internal/netguard"
 )
 
@@ -80,5 +83,44 @@ func TestTheIntranetModeToggleSitsInSettingsAndPersists(t *testing.T) {
 	restored.Click(hitSettingsIntranetMode)
 	if restored.intranetMode || netguard.Enabled() {
 		t.Fatal("the switch did not turn the mode off")
+	}
+}
+
+// TestTheIntranetModeStaysOnThisDevice keeps the choice out of the shared
+// records. Turning the mode on here must never turn it on for another device:
+// each computer decides for itself whether it reaches the internet.
+func TestTheIntranetModeStaysOnThisDevice(t *testing.T) {
+	if syncedSettings["intranet_mode"] {
+		t.Fatal("the intranet mode is a synced setting")
+	}
+	path := filepath.Join(t.TempDir(), "config.db")
+	want := richState()
+	want.IntranetMode = true
+	if err := saveState(path, want); err != nil {
+		t.Fatal(err)
+	}
+	got, report, err := loadState(path)
+	if err != nil || report.outcome != loadOK {
+		t.Fatalf("load: %+v, %v", report, err)
+	}
+	if !got.IntranetMode {
+		t.Fatal("the saved mode did not come back")
+	}
+	store, err := configstore.Open(path, configFormat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	entries, local, err := store.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if bytes.Contains(entry.Payload, []byte("intranet_mode")) {
+			t.Fatalf("the mode became a shared record: %s/%s", entry.Kind, entry.ID)
+		}
+	}
+	if !bytes.Contains(local[localKey], []byte(`"intranet_mode":true`)) {
+		t.Fatalf("the mode is not in the local state: %s", local[localKey])
 	}
 }
