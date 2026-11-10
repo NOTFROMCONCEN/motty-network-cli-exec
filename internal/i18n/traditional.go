@@ -240,6 +240,8 @@ var TraditionalMessages = Messages{
 	SettingsInterfaceFontUnsupportedFmt:    "「%s」未生效：目前平台不支援更改介面字型。",
 	SettingsOutputAlerts:                   "背景終端機輸出提醒",
 	SettingsOutputAlertsDescription:        "透過分頁標題提示未檢視的輸出：藍色表示輸出中，綠色表示輸出結束或靜默，黃色表示指令報告失敗。",
+	SettingsIntranetMode:                   "內網模式",
+	SettingsIntranetModeDescription:        "僅允許存取本機與內網位址：檢查更新、雲同步、AI 助手等不再連接網際網路，Logo 也將隱藏。SSH、TELNET 等會話不受影響。",
 	SettingsTabOrientation:                 "分頁方向",
 	SettingsTabOrientationDescription:      "將工作階段分頁顯示在頂部，或垂直排列在左側邊欄。",
 	SettingsTabsHorizontal:                 "水平",

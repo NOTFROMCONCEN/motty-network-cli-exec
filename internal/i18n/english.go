@@ -240,6 +240,8 @@ var EnglishMessages = Messages{
 	SettingsInterfaceFontUnsupportedFmt:    "“%s” is not in use: this platform cannot change the interface font.",
 	SettingsOutputAlerts:                   "Background terminal output alerts",
 	SettingsOutputAlertsDescription:        "Color tab titles for unseen output: blue while receiving, green when quiet, yellow on a reported command failure.",
+	SettingsIntranetMode:                   "Intranet mode",
+	SettingsIntranetModeDescription:        "Only local and private addresses are reached: update checks, cloud sync and the assistant stay offline, and the logo is hidden. SSH, TELNET and other sessions are unaffected.",
 	SettingsTabOrientation:                 "Tab orientation",
 	SettingsTabOrientationDescription:      "Show session tabs across the top or in the left sidebar.",
 	SettingsTabsHorizontal:                 "Horizontal",

@@ -218,6 +218,7 @@ var (
 	hitSettingsLatencyToggle   = tree.ID(settingsHits, "settings-latency")
 	hitSettingsLinkPlainClick  = tree.ID(settingsHits, "settings-link-plain-click")
 	hitSettingsShareToggle     = tree.ID(settingsHits, "settings-share")
+	hitSettingsIntranetMode    = tree.ID(settingsHits, "settings-intranet-mode")
 	hitSettingsVaultForget     = tree.ID(settingsHits, "settings-vault-forget")
 	hitSettingsVaultConvert    = tree.ID(settingsHits, "settings-vault-convert")
 )
@@ -467,26 +468,31 @@ type State struct {
 	windowBarScroll        windowBarScroll
 	tabOrientation         tabOrientation
 	tabNumbers             bool // each tab shows its place number next to the name
-	verticalTabs           verticalTabs
-	tabMenu                tabMenu
-	hostMenu               hostMenu
-	hostPrivacy            hostPrivacyState
-	localShellPicker       localShellPicker
-	snippetMenu            snippetMenu
-	sftpMenu               sftpMenu
-	sftpHeaderMenu         sftpHeaderMenuRequest
-	fileProperties         sftpFileProperties
-	popups                 popupMenus
-	selectedHostID         uint32
-	hostRevealID           uint32
-	activeSessionID        uint32
-	nextSessionID          uint32
-	nextHostID             uint32
-	nextIdentityID         uint32
-	nextForwardID          uint32
-	nextForwardStartID     uint64
-	nextProxyID            uint32
-	forwards               []forwardRecord
+	// intranetMode keeps this machine off the internet's back: the features
+	// that call out on their own — update checks, cloud sync, the assistant —
+	// reach only local and private hosts, and the logo stays hidden. It is
+	// this computer's choice, never synced.
+	intranetMode       bool
+	verticalTabs       verticalTabs
+	tabMenu            tabMenu
+	hostMenu           hostMenu
+	hostPrivacy        hostPrivacyState
+	localShellPicker   localShellPicker
+	snippetMenu        snippetMenu
+	sftpMenu           sftpMenu
+	sftpHeaderMenu     sftpHeaderMenuRequest
+	fileProperties     sftpFileProperties
+	popups             popupMenus
+	selectedHostID     uint32
+	hostRevealID       uint32
+	activeSessionID    uint32
+	nextSessionID      uint32
+	nextHostID         uint32
+	nextIdentityID     uint32
+	nextForwardID      uint32
+	nextForwardStartID uint64
+	nextProxyID        uint32
+	forwards           []forwardRecord
 	// forwardTunnels are the SSH transports forwards use when no open tab
 	// carries one. They have no terminal and are never saved.
 	forwardTunnels     []*forwardTunnel
