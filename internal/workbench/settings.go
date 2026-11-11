@@ -273,7 +273,6 @@ func (state *State) openSettings() {
 	state.activeSection = sectionSettings
 	state.settingsScroll = 0
 	state.settings.navScroll = 0
-	state.settings.applyScroll, state.settings.applyNavScroll = true, true
 	state.settings.aboutCopied = false
 	state.schemeBrowserOpen = false
 	state.revealSettingsCategory()
@@ -298,16 +297,10 @@ func (state *State) scrollSettings(event gfx.ScrollEvent) gfx.EventResult {
 	if nav.Width > 0 && event.X >= nav.X && event.X < nav.X+nav.Width && event.Y >= nav.Y && event.Y < nav.Y+nav.Height {
 		before := view.navScroll
 		view.navScroll = min(max(before+step, 0), max(view.navContent-nav.Height, 0))
-		if view.navScroll != before {
-			view.applyNavScroll = true
-		}
 		return gfx.EventResult{Handled: true, Repaint: view.navScroll != before}
 	}
 	before := state.settingsScroll
 	state.settingsScroll = min(max(before+step, 0), max(state.settingsContent-view.pageView, 0))
-	if state.settingsScroll != before {
-		view.applyScroll = true
-	}
 	return gfx.EventResult{Handled: true, Repaint: state.settingsScroll != before}
 }
 

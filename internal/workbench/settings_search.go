@@ -56,15 +56,6 @@ type settingsUI struct {
 	jump   string
 	jumped bool
 
-	// applyScroll and applyNavScroll say the next declaration must set the
-	// page's, or the category list's, offset by hand (ui.ScrollAt). The areas
-	// keep their offsets in the page itself — that is what makes the wheel
-	// work — so a move decided outside a paint, a jump to a search result or a
-	// category change, is applied once this way and the paint reads the settled
-	// value back.
-	applyScroll    bool
-	applyNavScroll bool
-
 	// The category list scrolls on its own when there are more categories than
 	// the window can show: navScroll is its offset, navContent and navView how
 	// tall its rows and its window were when last painted, and navRect where the
@@ -310,7 +301,6 @@ func (state *State) openSettingsResult(index int) {
 	view.built, view.count, view.raw = false, 0, ""
 	state.selectSettingsCategory(entry.category)
 	state.settingsScroll = 0
-	state.settings.applyScroll = true
 	view.jump = entry.anchor
 }
 
@@ -329,7 +319,6 @@ func (state *State) clickSettingsCategory(id gfx.ID) bool {
 		state.settings.jump = ""
 		state.selectSettingsCategory(settingsCategory(uint32(item(id))))
 		state.settingsScroll = 0
-		state.settings.applyScroll = true
 		return true
 	}
 	return false
