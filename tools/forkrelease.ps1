@@ -10,6 +10,12 @@
     and — with -Publish — commits the bump, pushes it and creates the GitHub
     release with all three assets.
 
+    Every finished build is also copied to -MirrorDir so the FTP share serves
+    it: the packages carry the version in their names, so a new build lands
+    beside the older ones instead of replacing them. Only latest.json, which
+    is a manifest rather than a package, is overwritten each time. Pass
+    -MirrorDir "" to skip the copy.
+
     The versions must be plain dot-separated numbers: NSIS refuses a suffix,
     and update.Newer compares only numbers.
 
@@ -18,6 +24,9 @@
 
 .EXAMPLE
     ./tools/forkrelease.ps1 0.3.1.4 -NotesPath ./release-notes.md -Publish
+
+.EXAMPLE
+    ./tools/forkrelease.ps1 0.3.1.4 -MirrorDir D:\share\motty
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Version,
@@ -33,6 +42,10 @@ param(
     [string]$KeyPath = "",
     [string]$Branch = "feature/network-cli-exec",
     [string]$GoBinary = "",
+    # Where the built packages are copied for the local FTP share. The names
+    # keep their version, so old builds stay beside the new one; pass "" to
+    # skip the copy on a machine without that directory.
+    [string]$MirrorDir = "F:\A-工作间\A-FTP\Motty_SSH",
     [switch]$Publish
 )
 
@@ -76,6 +89,37 @@ function Invoke-WithRetry([string]$what, [scriptblock]$command) {
         if ($LASTEXITCODE -eq 0) { return }
     }
     throw "$what failed after 4 attempts"
+}
+
+# Copy-ReleaseToMirror puts the finished build where the FTP share serves it.
+# The packages keep the names the update feed uses, so each version sits beside
+# the previous ones; only the manifest is overwritten. A failure here is
+# reported but does not fail the release: the assets are already published, and
+# the copy can be repeated by hand.
+function Copy-ReleaseToMirror([string]$dir, [string[]]$files) {
+    if ($dir -eq "") {
+        Write-Host "==> mirror skipped: no directory configured" -ForegroundColor DarkGray
+        return
+    }
+    try {
+        if (-not (Test-Path -LiteralPath $dir)) {
+            New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        }
+        foreach ($file in $files) {
+            Copy-Item -LiteralPath $file -Destination $dir -Force
+        }
+        Write-Host "==> mirrored to $dir" -ForegroundColor Cyan
+        foreach ($file in $files) {
+            $name = Split-Path $file -Leaf
+            $size = (Get-Item -LiteralPath (Join-Path $dir $name)).Length
+            Write-Host ("    {0}  {1:N0} B" -f $name, $size)
+        }
+    }
+    catch {
+        Write-Host "WARNING: the release was not mirrored to $dir" -ForegroundColor Red
+        Write-Host "         $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "         copy it by hand from build/dist, or rerun with -MirrorDir" -ForegroundColor Red
+    }
 }
 
 Push-Location $repo
@@ -128,7 +172,10 @@ try {
     Write-Host "  $tarball"
     Write-Host "  $out"
 
+    $assets = @($setup, $tarball, $out)
+
     if (-not $Publish) {
+        Copy-ReleaseToMirror $MirrorDir $assets
         Write-Host ""
         Write-Host "to publish:" -ForegroundColor Yellow
         Write-Host "  git add viva.toml internal/update/update.go"
@@ -191,6 +238,7 @@ try {
     Write-Host ""
     Write-Host "released $tag" -ForegroundColor Green
     Write-Host "installed builds check for it when 设置 → 通用 → 启动时检查更新 is on."
+    Copy-ReleaseToMirror $MirrorDir $assets
 }
 finally {
     Pop-Location
