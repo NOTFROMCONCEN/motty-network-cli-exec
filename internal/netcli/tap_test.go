@@ -338,3 +338,21 @@ func TestTapEchoOffWithOutputCompletes(t *testing.T) {
 		t.Fatal("never completed after the echo was ruled out")
 	}
 }
+
+// MyPower uses a third pager wording. The generic table should recognize it
+// as a pager but keep its rule: an unknown device never gets a keypress.
+func TestTapReportsTheMaipuPagerWithoutContinuing(t *testing.T) {
+	tap := NewTap(Table(GenericID), "Hostname#", "show version", 4096)
+	var sent []byte
+	tap.SetSend(func(p []byte) bool { sent = append(sent, p...); return true })
+	if done := tap.Feed([]byte("Hostname#show version\r\nline\r\n---MORE---")); done {
+		t.Fatal("completed on a pager of an unknown platform")
+	}
+	if len(sent) != 0 {
+		t.Fatalf("sent %q to an unknown device", sent)
+	}
+	if r := tap.Result(); !r.PagerSeen {
+		t.Fatal("pager not reported")
+	}
+	tap.Abort(StatusTimeout)
+}

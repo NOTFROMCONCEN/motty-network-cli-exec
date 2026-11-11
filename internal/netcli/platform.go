@@ -159,12 +159,12 @@ func (p *Platform) MatchPrompt(line string) (string, bool) {
 func (p *Platform) Shaped() bool { return p != nil && p.matchPrompt != nil }
 
 // generic classifies nothing as known: every command asks. It still detects
-// the two pager wordings every verified platform uses, and keeps the universal
+// the pager wordings every verified platform uses, and keeps the universal
 // destructive words, but has no key to continue a pager with.
 var generic = &Platform{
 	ID:       GenericID,
 	Name:     "Generic CLI",
-	pagers:   []string{"---- More ----", "--More--"},
+	pagers:   []string{"---- More ----", "--More--", "---MORE---"},
 	critical: []string{"reboot", "reload", "format", "erase", "restore"},
 }
 
