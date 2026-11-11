@@ -34,12 +34,7 @@ type ToolsMessages struct {
 	HighlightAdd                 string
 	HighlightImport              string
 	HighlightImportDescription   string
-	HighlightExport              string
-	HighlightExportDescription   string
-	HighlightExportPickerTitle   string
-	HighlightExportedFmt         string
 	HighlightImportPickerTitle   string
-	HighlightImportInvalidJSON   string
 	HighlightImportNothing       string
 	HighlightImportAllSkippedFmt string
 	HighlightImportTooLarge      string
@@ -423,17 +418,16 @@ type ToolsMessages struct {
 	TabbyImportSavedFmt       string
 	TabbyImportKeysSkippedFmt string
 
-	TabbyVaultTitle        string
-	TabbyVaultDescription  string
-	TabbyVaultOptional     string
-	TabbyVaultSkip         string
-	TabbyVaultPassword     string
-	TabbyVaultUnlock       string
-	TabbyVaultReadFailed   string
-	TabbyVaultUnlockFailed string
-	TabbyVaultPreviewFmt   string
-	TabbyVaultSave         string
-	// Importing a folder of Xshell sessions, whose subfolders become groups.
+	TabbyVaultTitle         string
+	TabbyVaultDescription   string
+	TabbyVaultOptional      string
+	TabbyVaultSkip          string
+	TabbyVaultPassword      string
+	TabbyVaultUnlock        string
+	TabbyVaultReadFailed    string
+	TabbyVaultUnlockFailed  string
+	TabbyVaultPreviewFmt    string
+	TabbyVaultSave          string
 	ImportXshellDirectory   string // the chooser button under the clients
 	ImportXshellDirPicker   string
 	ImportXshellDirTitle    string

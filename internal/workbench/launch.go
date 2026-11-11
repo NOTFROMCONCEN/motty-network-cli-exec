@@ -16,6 +16,7 @@ import (
 	"github.com/vivaui/viva/gfx"
 	"github.com/vivaui/viva/ui"
 	"motty/internal/netclient"
+	"motty/internal/netguard"
 	"motty/internal/update"
 )
 
@@ -512,6 +513,15 @@ func (state *State) checkForUpdatesWithClient(asked bool, direct bool) {
 				state.update.direct = false
 				if asked {
 					state.update.text = m.UpdateNoReleaseText
+				} else {
+					state.update.text = ""
+				}
+			case errors.Is(err, netguard.ErrBlocked):
+				// The intranet mode refused on purpose: the address is out of
+				// this network. Say so in the user's words, and say where the
+				// switch is, instead of showing the raw refusal.
+				if asked {
+					state.update.text = m.UpdateBlockedByIntranet
 				} else {
 					state.update.text = ""
 				}

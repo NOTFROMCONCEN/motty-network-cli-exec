@@ -45,12 +45,10 @@ type AboutMessages struct {
 	RepoDescription    string
 	Docs               string
 	DocsDescription    string
-	// Fork is this fork's own repository: where this build's source and
-	// releases live, next to the upstream card above it.
-	Fork            string
-	ForkDescription string
 	// Viva is the desktop framework Motty is built on, listed with the project
 	// like the repository and the site.
+	Fork            string
+	ForkDescription string
 	Viva            string
 	VivaDescription string
 	Join            string

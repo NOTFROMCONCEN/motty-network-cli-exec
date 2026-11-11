@@ -84,13 +84,23 @@ func Allowed(host string) bool {
 	if index := strings.IndexByte(host, '%'); index >= 0 {
 		host = host[:index]
 	}
+	// A bracketed literal, as a URL writes one: "[::1]" or "[::1]:8080".
+	if strings.HasPrefix(host, "[") {
+		if end := strings.IndexByte(host, ']'); end > 0 {
+			host = host[1:end]
+		}
+	}
+	// An address is judged as an address before it is judged as a name. An
+	// IPv6 literal carries no dot at all, so the single-label rule below would
+	// read every one of them as a local name and let a public address
+	// through — 2001:4860::1 is a public resolver, not this network.
+	if addr, err := netip.ParseAddr(host); err == nil {
+		return allowedAddr(addr.Unmap())
+	}
 	// A name with no dot is this machine or a name the local resolver's search
 	// domains complete; it cannot be a public host.
 	if host == "localhost" || !strings.Contains(host, ".") {
 		return true
-	}
-	if addr, err := netip.ParseAddr(host); err == nil {
-		return allowedAddr(addr.Unmap())
 	}
 	for _, suffix := range []string{".local", ".lan", ".internal", ".home.arpa"} {
 		if strings.HasSuffix(host, suffix) {
