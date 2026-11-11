@@ -152,9 +152,6 @@ func TestSchemeDrawerOverlaysThePage(t *testing.T) {
 	// The scheme section is at the bottom of the terminal category; scroll to
 	// it the way someone looking for it would.
 	state.settingsScroll = max(state.settingsContent-900, 0)
-	// The page keeps the scroll area's offset now; a move decided outside a
-	// paint reaches it once through the apply flag.
-	state.settings.applyScroll = true
 	folded = gfx.Canvas{}
 	state.Paint(&folded, gfx.Size{Width: 1400, Height: 900})
 	if _, ok := hitByID(&folded, hitSchemeBrowseAll); !ok {
@@ -245,7 +242,6 @@ func TestSchemeDrawerPageTakesPointerAndTyping(t *testing.T) {
 	var folded gfx.Canvas
 	state.Paint(&folded, gfx.Size{Width: 1400, Height: 900})
 	state.settingsScroll = max(state.settingsContent-900, 0)
-	state.settings.applyScroll = true
 	view, err := headless.Open(state.WindowConfig(app.Config{
 		Title: "schemes", Width: 1400, Height: 900, Tree: Tree(),
 		Paint: state.Paint, OnPointer: state.Pointer, OnKey: state.Key, OnScroll: state.Scroll,
