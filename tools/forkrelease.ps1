@@ -5,10 +5,17 @@
 
 .DESCRIPTION
     Bumps the version in viva.toml and internal/update/update.go (the update
-    checker reports this build's version), packages the Windows installer and
-    the Linux archive, writes the signed latest.json the update feed reads,
-    and — with -Publish — commits the bump, pushes it and creates the GitHub
-    release with all three assets.
+    checker reports this build's version), packages the Windows installer, the
+    Windows portable copy and the Linux archive, writes the signed latest.json
+    the update feed reads, and — with -Publish — commits the bump, pushes it
+    and creates the GitHub release with all the assets.
+
+    The installer and the portable copy carry the same executable: the program
+    is built once and both are packaged from those bytes, so a machine that
+    takes the portable copy runs exactly what the installer would have put on
+    disk. The portable copy is a zip holding motty.exe beside a motty-data
+    folder, which is what tells Motty to keep its hosts, settings and saved
+    passwords next to itself and leave nothing else on the machine.
 
     Every finished build is also copied to -MirrorDir so the FTP share serves
     it: the packages carry the version in their names, so a new build lands
@@ -147,8 +154,30 @@ try {
     [IO.File]::WriteAllText((Join-Path $repo $current), [regex]::Replace($text, $pattern, "const Current = `"$Version`"", 1), $utf8)
 
     Write-Host "==> packaging Motty $Version" -ForegroundColor Cyan
-    & $GoBinary run ../viva/cmd/viva package -C . --target windows --arch amd64 --format nsis
+
+    # The Windows program is built once and both the installer and the
+    # portable copy are packaged from those bytes, so a machine that takes
+    # the portable copy runs exactly what the installer would have written.
+    $work = Join-Path $repo "build/portable"
+    if (Test-Path $work) { Remove-Item $work -Recurse -Force }
+    New-Item -ItemType Directory -Path $work | Out-Null
+    $program = Join-Path $work "motty.exe"
+    & $GoBinary run ../viva/cmd/viva build -C . --target windows --arch amd64 -o $program
+    if ($LASTEXITCODE -ne 0) { throw "the windows build failed" }
+
+    & $GoBinary run ../viva/cmd/viva package -C . --target windows --arch amd64 --format nsis --program $program
     if ($LASTEXITCODE -ne 0) { throw "the windows package failed" }
+
+    # The portable copy: the same program beside a motty-data folder, which is
+    # what switches Motty to keeping its data next to itself. The archive is a
+    # function of the program and the commit time, so the same commit rebuilds
+    # the same bytes.
+    $commitTime = (git show -s --format=%cI HEAD).Trim()
+    if (-not $commitTime) { throw "the commit time could not be read" }
+    $portable = Join-Path $repo "build/dist/motty-$Version-windows-amd64.zip"
+    & $GoBinary run ./tools/portablezip -program $program -time $commitTime -o $portable
+    if ($LASTEXITCODE -ne 0) { throw "the portable copy failed" }
+
     & $GoBinary run ../viva/cmd/viva package -C . --target linux --arch amd64 --format tar.gz
     if ($LASTEXITCODE -ne 0) { throw "the linux package failed" }
 
@@ -156,12 +185,13 @@ try {
     # the app picks its platform's file out of the manifest by these.
     $setup = Join-Path $repo "build/dist/motty-$Version-windows-amd64-setup.exe"
     if (-not (Test-Path $setup)) { throw "the installer was not written to $setup" }
+    if (-not (Test-Path $portable)) { throw "the portable copy was not written to $portable" }
     $tarball = Join-Path $repo "build/dist/motty-$Version-linux-amd64.tar.gz"
     if (-not (Test-Path $tarball)) { throw "the linux archive was not written to $tarball" }
 
     Write-Host "==> signing the manifest" -ForegroundColor Cyan
     $out = Join-Path $repo "build/dist/latest.json"
-    $signArgs = @("run", "./tools/forkrelease", "manifest", "-version", $Version, "-base", $Base, "-codename", $Codename, "-pkg", $setup, "-pkg", $tarball, "-key", $KeyPath, "-out", $out, "-repo", $forkRepo)
+    $signArgs = @("run", "./tools/forkrelease", "manifest", "-version", $Version, "-base", $Base, "-codename", $Codename, "-pkg", $setup, "-pkg", $portable, "-pkg", $tarball, "-key", $KeyPath, "-out", $out, "-repo", $forkRepo)
     if ($NotesPath -ne "") { $signArgs += @("-notes", $NotesPath) }
     & $GoBinary @signArgs
     if ($LASTEXITCODE -ne 0) { throw "signing the manifest failed" }
@@ -169,10 +199,11 @@ try {
     Write-Host ""
     Write-Host "built:" -ForegroundColor Green
     Write-Host "  $setup"
+    Write-Host "  $portable"
     Write-Host "  $tarball"
     Write-Host "  $out"
 
-    $assets = @($setup, $tarball, $out)
+    $assets = @($setup, $portable, $tarball, $out)
 
     if (-not $Publish) {
         Copy-ReleaseToMirror $MirrorDir $assets
@@ -181,7 +212,7 @@ try {
         Write-Host "  git add viva.toml internal/update/update.go"
         Write-Host "  git commit -m `"chore(release): $tag`""
         Write-Host "  git push fork $Branch"
-        Write-Host "  gh release create $tag --repo $forkRepo --target $Branch --title `"Motty NetCLI $tag`" --notes-file <notes> `"$setup`" `"$tarball`" `"$out`""
+        Write-Host "  gh release create $tag --repo $forkRepo --target $Branch --title `"Motty NetCLI $tag`" --notes-file <notes> `"$setup`" `"$portable`" `"$tarball`" `"$out`""
         return
     }
 
@@ -204,7 +235,7 @@ try {
     Write-Host "==> creating the release" -ForegroundColor Cyan
     $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty NetCLI $tag")
     $releaseArgs += if ($NotesPath -ne "") { @("--notes-file", $NotesPath) } else { @("--generate-notes") }
-    $releaseArgs += @($setup, $tarball, $out)
+    $releaseArgs += @($setup, $portable, $tarball, $out)
     Invoke-WithRetry "gh release create $tag" { gh @releaseArgs }
 
     # The manifest is mirrored on the feed branch — one branch, one file — so
