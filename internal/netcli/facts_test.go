@@ -35,6 +35,20 @@ func TestParseFacts(t *testing.T) {
 				"Ruijie S5750-24GT4XS uptime is 12 weeks, 3 days\n",
 			want: Facts{Platform: "ruijie_rgos", Version: "11.4(1)B12P1", Model: "S5750-24GT4XS", Uptime: "12 weeks, 3 days"},
 		},
+		{
+			// The boot image line also says "version", so the generic match
+			// would take that one; the labelled line has to win.
+			name: "maipu", platform: "maipu_mypower",
+			output: "MyPower (R) Operating System Software\n" +
+				"RM1800-35E-AC(V2) system image file (ge0: vmlinux), version 7.1.0.35(integrity), Compiled on Sep 11 2015, 05:48:01\n" +
+				"Copyright (C) 2014 Maipu Communication Technology Co., Ltd. All Rights Reserved.\n" +
+				"RM1800-35E-AC(V2) Version Information\n" +
+				"System ID : 00017ac620dc\n" +
+				"Hardware Model : RM1800-35E-AC(V2) with 512 MBytes SDRAM, 4096 MBytes flash\n" +
+				"Software Version : 7.1.0.35(integrity)\n" +
+				"System Uptime is 0 hour 6 minutes 23 seconds\n",
+			want: Facts{Platform: "maipu_mypower", Version: "7.1.0.35(integrity)", Model: "RM1800-35E-AC(V2)", Uptime: "0 hour 6 minutes 23 seconds"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
