@@ -2541,6 +2541,7 @@ var chineseTools = ToolsMessages{
 	AlgoWeakFmt:                     "这条连接协商到了较弱的算法:%s",
 	AlgoNegotiatedFmt:               "算法 %s",
 	UpdateFailedFmt:                 "无法检查更新:%v",
+	UpdateBlockedByIntranet:         "内网模式已开启，不连接互联网检查更新。可在设置 → 安全中关闭内网模式。",
 	LoginFailedFmt:                  "无法更改开机自启:%v",
 }
 var chineseAutofill = AutofillMessages{
