@@ -45,6 +45,7 @@ func TestCheckPassesLocalAndPrivateHosts(t *testing.T) {
 		"printer.lan",
 		"server.internal",
 		"box.home.arpa",
+		"[::1]",
 	}
 	for _, host := range passing {
 		if err := CheckAddress(host); err != nil {
@@ -59,6 +60,14 @@ func TestCheckPassesLocalAndPrivateHosts(t *testing.T) {
 		"1.1.1.1:53",
 		"[::ffff:8.8.8.8]:443",
 		"nas.example.com",
+		// An IPv6 literal carries no dot, so a name that reads as a single
+		// label would let a public address through. These are public
+		// resolvers and routes, and the mode must refuse them.
+		"2001:4860::1",
+		"2001:4860:4860::8888",
+		"2606:4700:4700::1111",
+		"[2001:4860::1]",
+		"[2001:4860::1]:443",
 	}
 	for _, host := range blocking {
 		if err := CheckAddress(host); err == nil {
