@@ -69,3 +69,26 @@ func TestParseInterfacesStripsANSI(t *testing.T) {
 		t.Fatalf("table = %+v", table)
 	}
 }
+
+// MyPower prints the IOS-shaped brief table but ends a page with its own
+// "---MORE---" wording. The parser has to stop there rather than read the
+// pager line and whatever follows it as interface rows.
+func TestParseMaipuInterfaceBriefStopsAtItsPager(t *testing.T) {
+	output := "show ip interface brief start...\n" +
+		"Interface IP-Address Status Protocol Description\n" +
+		"null0 unassigned up up\n" +
+		"gigabitethernet0 130.255.20.29 up up\n" +
+		"gigabitethernet2 unassigned down down\n" +
+		"---MORE---\n" +
+		"Hostname#\n"
+	table := ParseInterfaces(output)
+	if len(table.Warnings) != 0 {
+		t.Fatalf("warnings = %v", table.Warnings)
+	}
+	if len(table.Rows) != 3 {
+		t.Fatalf("rows = %d; want 3", len(table.Rows))
+	}
+	if got := table.Rows[1]; got[0] != "gigabitethernet0" || got[1] != "130.255.20.29" || got[2] != "up" || got[3] != "up" {
+		t.Fatalf("row = %v", got)
+	}
+}
