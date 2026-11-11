@@ -166,7 +166,25 @@ try {
     # release.
     Write-Host "==> publishing the feed branch" -ForegroundColor Cyan
     $blob = git hash-object -w $out
-    $tree = "100644 blob $blob`tlatest.json" | git mktree
+    # PowerShell pipes strings to native commands with CRLF endings, and
+    # git mktree keeps the CR as part of the entry name ("latest.json\r"),
+    # which makes the feed unreadable. Build the tree through a temporary
+    # index instead, so the file name is byte-exact.
+    $indexFile = Join-Path ([IO.Path]::GetTempPath()) "motty-feed-index-$([guid]::NewGuid().ToString('N'))"
+    $previousIndex = $env:GIT_INDEX_FILE
+    try {
+        $env:GIT_INDEX_FILE = $indexFile
+        git read-tree --empty
+        if ($LASTEXITCODE -ne 0) { throw "could not create the feed index" }
+        git update-index --add --cacheinfo "100644,$blob,latest.json"
+        if ($LASTEXITCODE -ne 0) { throw "could not stage latest.json" }
+        $tree = git write-tree
+        if ($LASTEXITCODE -ne 0) { throw "could not write the feed tree" }
+    }
+    finally {
+        $env:GIT_INDEX_FILE = $previousIndex
+        if (Test-Path $indexFile) { [IO.File]::Delete($indexFile) }
+    }
     $feedCommit = git commit-tree $tree -m "feed: $tag"
     Invoke-WithRetry "git push -f fork feed" { git push -f fork "${feedCommit}:refs/heads/feed" }
 
