@@ -265,6 +265,31 @@ var platforms = []*Platform{
 		},
 		critical: []string{"reboot", "reload", "erase", "format", "restore"},
 	},
+	// MyPower shares the IOS prompt shape, so its banner is the only thing
+	// that tells it from a Cisco or a Ruijie session. The pager word and the
+	// three read commands are MyPower's own; a pipe to "redirect" is still a
+	// write, which Classify already knows.
+	{
+		ID:               "maipu_mypower",
+		Name:             "Maipu MyPower",
+		matchPrompt:      hashPrompt,
+		banners:          []string{"MyPower (R) Operating System Software", "Maipu Communication Technology"},
+		pagers:           []string{"---MORE---"},
+		pagerKey:         []byte{' '},
+		factsCommand:     "show version",
+		interfaceCommand: "show ip interface brief",
+		configCommand:    "show running-config",
+		errors: []string{
+			"% Invalid input detected", "% Incomplete command", "% Ambiguous command",
+		},
+		readOnly:   []string{"show ", "ping ", "traceroute "},
+		configRead: []string{"show running-config", "show startup-config"},
+		risky: []string{
+			"configure", "enable", "write", "copy", "delete", "rename",
+			"terminal", "more", "sysupdate", "filesystem", "bootloader",
+		},
+		critical: []string{"reboot", "reload", "format"},
+	},
 }
 
 // userRegistry holds the tables a user's YAML file added. Built-in tables are
