@@ -158,9 +158,10 @@ try {
     # The Windows program is built once and both the installer and the
     # portable copy are packaged from those bytes, so a machine that takes
     # the portable copy runs exactly what the installer would have written.
+    # The folder is reused between builds and the build overwrites the file in
+    # it, so there is nothing to clean out first.
     $work = Join-Path $repo "build/portable"
-    if (Test-Path $work) { Remove-Item $work -Recurse -Force }
-    New-Item -ItemType Directory -Path $work | Out-Null
+    if (-not (Test-Path $work)) { New-Item -ItemType Directory -Path $work | Out-Null }
     $program = Join-Path $work "motty.exe"
     & $GoBinary run ../viva/cmd/viva build -C . --target windows --arch amd64 -o $program
     if ($LASTEXITCODE -ne 0) { throw "the windows build failed" }
@@ -196,14 +197,27 @@ try {
     & $GoBinary @signArgs
     if ($LASTEXITCODE -ne 0) { throw "signing the manifest failed" }
 
+    # Every release carries the same set of assets: the Windows installer, the
+    # Windows portable copy, the Linux archive and the signed manifest. The
+    # portable copy is what a machine with no installer runs, and the intranet
+    # deployments fetch it from the release and the FTP share alike, so a build
+    # that left it out would be published incomplete. The check runs before
+    # anything is pushed: a missing asset stops the release instead of
+    # reaching the users.
+    $assets = @($setup, $portable, $tarball, $out)
+    $missing = @($assets | Where-Object { -not (Test-Path -LiteralPath $_) })
+    if ($missing.Count -gt 0) {
+        Write-Host "==> the release is missing assets:" -ForegroundColor Red
+        foreach ($file in $missing) { Write-Host "         $file" -ForegroundColor Red }
+        throw "every release must carry the installer, the portable copy, the linux archive and the manifest"
+    }
+
     Write-Host ""
     Write-Host "built:" -ForegroundColor Green
     Write-Host "  $setup"
     Write-Host "  $portable"
     Write-Host "  $tarball"
     Write-Host "  $out"
-
-    $assets = @($setup, $portable, $tarball, $out)
 
     if (-not $Publish) {
         Copy-ReleaseToMirror $MirrorDir $assets
