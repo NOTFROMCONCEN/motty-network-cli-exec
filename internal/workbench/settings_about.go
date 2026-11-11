@@ -294,14 +294,14 @@ func (state *State) paintAboutSettings(page *settingsPage) {
 			// once it is laid out, as the sidebar header does.
 			row := ui.Row(c).Height(96).PadX(18).Gap(16).Items(ui.Center)
 			row.Children(func() {
-				page.f.Column().Grow(1).Children(func() {
+				ui.Column(c).Grow(1).Children(func() {
 					// The intranet mode hides the wordmark as it hides the
 					// sidebar's; the tagline then leads the page.
 					if !state.intranetMode {
-						page.add(settingsControl{kind: controlLogo, slot: page.f.Slot().Size(lockupWidth, lockupHeight).Shrink(0)})
+						page.add(settingsControl{kind: controlLogo, slot: ui.Slot(c).Size(lockupWidth, lockupHeight).Shrink(0)})
 					}
-					page.f.Paragraph(m.About.Tagline, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 0, 0, 0)
-					page.f.Paragraph(m.About.ForkNotice, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 4, 0, 0)
+					ui.Paragraph(c, m.About.Tagline, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 0, 0, 0)
+					ui.Paragraph(c, m.About.ForkNotice, 2).FontSize(metrics.FontSizeS).Color(pal.muted).LineHeight(16).MarginSides(6, 4, 0, 0)
 				})
 				page.button(hitAboutCopyInfo, copyAction, aiButtonOutline, false).Shrink(0)
 			})
