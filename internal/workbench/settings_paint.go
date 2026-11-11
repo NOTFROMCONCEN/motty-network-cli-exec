@@ -145,14 +145,22 @@ func (state *State) declareSettingsWorkspace(c ui.C) {
 
 	view.controls, view.actions, view.colors = view.controls[:0], view.actions[:0], view.colors[:0]
 	page := settingsPage{state: state, c: c, width: min(settingsColumnMax, max(areaWidth-64, 0)), rowHeight: settingsRowHeight}
-	// The wheel in settings.go owns the offsets; each area starts at its
-	// declared offset and the paint reads the clamped value back afterwards.
 	c.Part(settingsWorkspacePart)
 	ui.Stack(c).Absolute().Left(bounds.X).Top(bounds.Y).Width(bounds.Width).Height(bounds.Height).Clip().Children(func() {
 		ui.Row(c).Fill().Children(func() {
 			page.nav(navWidth, searching)
 			ui.Column(c).Width(1).FillHeight().Background(withAlpha(pal.line, 0.8))
-			page.scroll = ui.ScrollAt(c, state.settingsScroll).Grow(1).Basis(0).Items(ui.Center)
+			// The page keeps the scroll area's offset between paints: that is
+			// what the wheel moves, and the paint reads the settled value back
+			// below. A move the app decides outside a paint — a jump to a
+			// search result, a category change, the window's own handler — is
+			// applied once with ScrollAt.
+			if view.applyScroll {
+				page.scroll = ui.ScrollAt(c, state.settingsScroll).Grow(1).Basis(0).Items(ui.Center)
+				view.applyScroll = false
+			} else {
+				page.scroll = ui.Scroll(c).Grow(1).Basis(0).Items(ui.Center)
+			}
 			page.scroll.Children(func() {
 				ui.Column(c).FillWidth().MaxWidth(settingsColumnMax).MarginSides(settingsPageTop, 32, settingsPageBottom, 32).Children(func() {
 					page.header(title, searching)
@@ -201,6 +209,7 @@ func (state *State) paintSettingsDetails(canvas *gfx.Canvas) {
 		// is laid out; one more paint shows the page there.
 		contentY := page.anchor.Rect().Y - page.scroll.Rect().Y + state.settingsScroll
 		state.settingsScroll = max(contentY-2*settingsPageTop-8-page.anchorShift, 0)
+		view.applyScroll = true
 		view.jumped = true
 	}
 	if view.jumped {
