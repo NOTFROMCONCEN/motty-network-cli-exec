@@ -33,7 +33,7 @@ const (
 	// the numbers themselves say which upstream release a build carries, and
 	// the counter moves on top of it until upstream publishes its next
 	// version, when the base moves and a new codename may take over.
-	ForkBase     = "0.3.9"
+	ForkBase     = "0.4.0"
 	ForkCodename = "Genshin"
 )
 
