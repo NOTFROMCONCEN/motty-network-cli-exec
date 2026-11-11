@@ -1089,6 +1089,7 @@ type ToolsMessages struct {
 	AlgoWeakFmt                     string
 	AlgoNegotiatedFmt               string
 	UpdateFailedFmt                 string
+	UpdateBlockedByIntranet         string
 	LoginFailedFmt                  string
 
 	// The file list's configurable columns and default download destination.
