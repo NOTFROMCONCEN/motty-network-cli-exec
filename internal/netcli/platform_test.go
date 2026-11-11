@@ -82,13 +82,56 @@ func TestPlatformTableAndNames(t *testing.T) {
 		t.Fatal("the generic table claimed a read command")
 	}
 	ids := IDs()
-	if ids[0] != GenericID || len(ids) != 5 {
+	if ids[0] != GenericID || len(ids) != 6 {
 		t.Fatalf("ids %v", ids)
 	}
 	for _, id := range ids {
 		if !slices.Contains(ids, Table(id).ID) && id != GenericID {
 			t.Fatalf("table %q not listed", id)
 		}
+	}
+}
+
+// MyPower uses the same prompt shape as IOS but its own pager, banner and
+// command words. The banner is what keeps it from being read as a Cisco.
+func TestMaipuMyPowerTable(t *testing.T) {
+	p, ok := Lookup("maipu_mypower")
+	if !ok || !p.Shaped() {
+		t.Fatal("maipu_mypower is missing or unshaped")
+	}
+	if got := Name("maipu_mypower"); got != "Maipu MyPower" {
+		t.Fatalf("name = %q", got)
+	}
+	if p.FactsCommand() != "show version" || p.InterfaceCommand() != "show ip interface brief" || p.ConfigCommand() != "show running-config" {
+		t.Fatal("a MyPower read command is wrong")
+	}
+	for _, line := range []string{"Hostname>", "Hostname#", "Hostname(config)#"} {
+		if host, ok := p.MatchPrompt(line); !ok || host != "Hostname" {
+			t.Errorf("MatchPrompt(%q) = (%q, %v)", line, host, ok)
+		}
+	}
+	for _, text := range []string{
+		"MyPower (R) Operating System Software",
+		"Copyright (C) 2014 Maipu Communication Technology Co., Ltd.",
+	} {
+		if _, ok := p.BannerMatch(text); !ok {
+			t.Errorf("the banner %q was not recognized", text)
+		}
+	}
+	for _, text := range []string{
+		"Cisco IOS Software, Version 15.2",
+		"Huawei Versatile Routing Platform Software",
+		"Ruijie RGOS Software",
+	} {
+		if _, ok := p.BannerMatch(text); ok {
+			t.Errorf("another vendor's banner %q was claimed", text)
+		}
+	}
+	if got := p.errFirst("% Invalid input detected at '^' marker."); got == "" {
+		t.Error("a MyPower syntax error was not recognized")
+	}
+	if got := p.errFirst("% Unrecognized host or address, or protocol not running."); got != "" {
+		t.Errorf("a failed ping was read as a command error: %q", got)
 	}
 }
 
@@ -101,6 +144,7 @@ func TestClassifyRefusesPipeWritesOnReadOnlyCommands(t *testing.T) {
 		{"cisco_ios", "show log > flash:log.txt"},
 		{"ruijie_rgos", "show running-config | include hostname | redirect tftp://1.1.1.1/c"},
 		{"huawei_vrp", "display version > vrf.txt"},
+		{"maipu_mypower", "show running-config | redirect ftp 1.2.3.4 a a config.txt"},
 		{"generic", "show version | redirect tftp://2.2.2.2/v"},
 	} {
 		assessment := Classify(test.platform, test.command)
@@ -113,6 +157,7 @@ func TestClassifyRefusesPipeWritesOnReadOnlyCommands(t *testing.T) {
 		{"cisco_ios", "show version | include Version"},
 		{"cisco_ios", "show version | section header"},
 		{"huawei_vrp", "display clock"},
+		{"maipu_mypower", "show version | include Software"},
 	} {
 		if assessment := Classify(test.platform, test.command); assessment.Level != risk.Low {
 			t.Errorf("%s %q = %v; want Low", test.platform, test.command, assessment.Level)
@@ -144,6 +189,16 @@ func TestClassify(t *testing.T) {
 		{"cisco reload", "cisco_ios", "reload", risk.Critical, ""},
 		{"ruijie show", "ruijie_rgos", "show clock", risk.Low, ""},
 		{"ruijie reboot", "ruijie_rgos", "reboot", risk.Critical, ""},
+		{"maipu show", "maipu_mypower", "show version", risk.Low, ""},
+		{"maipu ping", "maipu_mypower", "ping 10.0.0.1", risk.Low, ""},
+		{"maipu traceroute", "maipu_mypower", "traceroute ip 10.0.0.1", risk.Low, ""},
+		{"maipu config read", "maipu_mypower", "show running-config", risk.Medium, "credentials"},
+		{"maipu startup read", "maipu_mypower", "show startup-config", risk.Medium, ""},
+		{"maipu configure", "maipu_mypower", "configure terminal", risk.High, ""},
+		{"maipu sysupdate", "maipu_mypower", "sysupdate image 10.0.0.1 rp.pck ftp a a", risk.High, ""},
+		{"maipu more", "maipu_mypower", "more off", risk.High, ""},
+		{"maipu reboot", "maipu_mypower", "reboot", risk.Critical, ""},
+		{"maipu unknown", "maipu_mypower", "magic restart", risk.High, "not a recognized read-only"},
 		{"generic show", GenericID, "show version", risk.High, "not a recognized read-only"},
 		{"generic reboot", GenericID, "reboot", risk.Critical, ""},
 		{"empty", "huawei_vrp", "   ", risk.High, "empty"},
