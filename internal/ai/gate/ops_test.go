@@ -169,3 +169,59 @@ func TestGroupRunRefusesAShellOrGenericTarget(t *testing.T) {
 		}
 	}
 }
+
+// maipuOpsBackend keeps the MyPower session out of the other tests' session
+// list while still using the same output map and command recorder.
+type maipuOpsBackend struct{ opsBackend }
+
+func (b *maipuOpsBackend) Sessions(context.Context) ([]SessionInfo, error) {
+	return []SessionInfo{
+		{ID: "5", Title: "mp", Address: "mp:23", Ready: true, ExecMode: ExecModeNetworkCLI, Platform: "maipu_mypower"},
+	}, nil
+}
+
+// The read tools take their command straight from the platform table. A
+// MyPower session therefore runs MyPower's own words, and the read is rated
+// Low instead of asking the user as it would have on the generic table.
+func TestMaipuReadToolsUseMyPowerCommands(t *testing.T) {
+	backend := &maipuOpsBackend{opsBackend{outputs: map[string]string{
+		"show version": "MyPower (R) Operating System Software\n" +
+			"RM1800-35E-AC(V2) system image file (ge0: vmlinux), version 7.1.0.35(integrity)\n" +
+			"Hardware Model : RM1800-35E-AC(V2) with 512 MBytes SDRAM, 4096 MBytes flash\n" +
+			"Software Version : 7.1.0.35(integrity)\n" +
+			"System Uptime is 0 hour 6 minutes 23 seconds\n",
+		"show ip interface brief": "Interface IP-Address Status Protocol Description\n" +
+			"gigabitethernet0 130.255.20.29 up up\n" +
+			"gigabitethernet2 unassigned down down\n",
+	}}}
+	var asked atomic.Int32
+	g := opsGate(backend, &asked)
+
+	res := g.Run(context.Background(), tools.NameDeviceFacts, []byte(`{"session":"5"}`))
+	if res.IsError {
+		t.Fatalf("device_facts = %+v", res)
+	}
+	for _, want := range []string{
+		"platform: maipu_mypower", "Maipu MyPower",
+		"version: 7.1.0.35(integrity)", "model: RM1800-35E-AC(V2)",
+		"uptime: 0 hour 6 minutes 23 seconds",
+	} {
+		if !strings.Contains(res.Text, want) {
+			t.Fatalf("result missing %q:/n%s", want, res.Text)
+		}
+	}
+	if backend.lastCommand != "show version" || asked.Load() != 0 {
+		t.Fatalf("command = %q, asked = %d; want the version command with no approval", backend.lastCommand, asked.Load())
+	}
+
+	res = g.Run(context.Background(), tools.NameInterfaceStatus, []byte(`{"session":"5"}`))
+	if res.IsError {
+		t.Fatalf("interface_status = %+v", res)
+	}
+	if backend.lastCommand != "show ip interface brief" || asked.Load() != 0 {
+		t.Fatalf("command = %q, asked = %d; want the interface command with no approval", backend.lastCommand, asked.Load())
+	}
+	if !strings.Contains(res.Text, "gigabitethernet0") {
+		t.Fatalf("interface rows missing:/n%s", res.Text)
+	}
+}
