@@ -860,7 +860,7 @@ func TestAIBehaviourChoicesPersistAndSurviveANewWindow(t *testing.T) {
 	world := newSettingsWorld(t, newLister())
 	state := world.state
 	m := state.messages.AISettings
-	for _, label := range []string{m.RiskHigh, "120", "8 MiB", "300"} {
+	for _, label := range []string{m.RiskHigh, "120", "8 MiB", "300 s"} {
 		clickSettingsChoice(t, state, label)
 	}
 	setAISteps(t, state, 50)
@@ -897,7 +897,7 @@ func TestAIBehaviourChoicesPersistAndSurviveANewWindow(t *testing.T) {
 	setAISteps(t, again, 12)
 	clickSettingsChoice(t, again, m.ContextOff)
 	clickSettingsChoice(t, again, "4 MiB")
-	clickSettingsChoice(t, again, "60")
+	clickSettingsChoice(t, again, "60 s")
 	again.Click(hitAISetRedact)
 	again.Click(hitAISetHistory)
 	if got, want := again.ai.settings, (aiSettings{autoUpTo: risk.Low, maxSteps: 12, contextLines: 0, maxTextBytes: attach.MaxTextBytes, cliTimeoutSeconds: 60, redact: true, keepHistory: true, mcpMode: gate.ModeObserve, agentMode: gate.ModeObserve}); got != want {
