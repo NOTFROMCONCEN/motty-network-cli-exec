@@ -36,7 +36,7 @@ param(
     # v0.3.1-netcli-build.4-arknights. The counter is the version's own last
     # number, so the two move together. Both stay until upstream publishes its
     # next version, when the base moves and a new codename may take over.
-    [string]$Base = "0.3.9",
+    [string]$Base = "0.4.0",
     [string]$Codename = "Genshin",
     [string]$NotesPath = "",
     [string]$KeyPath = "",
