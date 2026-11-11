@@ -1274,10 +1274,12 @@ func (state *State) declareNavigation(c ui.C, height float32) {
 	}
 	ui.Column(c).Width(navigationWidth).Shrink(0).Children(func() {
 		// The logo with the name beside it, painted into this slot after
-		// layout. The intranet mode hides it; a small spacer keeps the first
-		// entry off the window's edge.
+		// layout. The intranet mode hides it; a fixed gap keeps the first
+		// entry off the window's edge. The gap must not be a Spacer: a Spacer
+		// grows, and this column's trailing one already takes what the entries
+		// leave, so two of them would push the entries to the middle.
 		if state.intranetMode {
-			ui.Spacer(c).Height(12)
+			ui.Slot(c).Height(12)
 		} else {
 			state.chrome.lockup = ui.Slot(c).Size(lockupWidth, lockupHeight).MarginSides(15, 0, logoGap, 0).Self(ui.Center)
 		}
@@ -2810,7 +2812,8 @@ func (state *State) declareHostDialog(c ui.C) {
 		Scope: dialogScope, CloseID: hitDialogClose, InitialFocusID: hitDialogLabel,
 	})
 	dialog.Body(func() { state.declareHostFormBody(c, title) })
-	dialog.Footer(func() { state.declareHostDialogFooter(c, m.Cancel, submit) })}
+	dialog.Footer(func() { state.declareHostDialogFooter(c, m.Cancel, submit) })
+}
 
 // declareHostDialogFooter declares the form's footer: the Test connection
 // button and what the last test found at the left, and the dialog's own
