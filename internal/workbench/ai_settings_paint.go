@@ -96,6 +96,11 @@ func (state *State) aiContextLabel(lines int) string {
 
 func aiTextLimitLabel(mib int) string { return strconv.Itoa(mib) + " MiB" }
 
+// aiCLITimeoutLabel names a timeout in seconds. As bare numbers these options
+// would read exactly like the context-line choices above them, leaving two
+// different controls in this page answering to the same name.
+func aiCLITimeoutLabel(seconds int) string { return strconv.Itoa(seconds) + " s" }
+
 func (state *State) aiMCPModeLabel(mode gate.Mode) string {
 	switch mode {
 	case gate.ModeAsk:
@@ -691,7 +696,7 @@ func (state *State) paintAIBehaviour(page *settingsPage) {
 		settingsChoiceRow(page, m.ContextLines, m.ContextLinesDesc, &lines, aiContextChoices[:], state.aiContextLabel,
 			func() { state.aiPut("ai.context_lines", strconv.Itoa(lines)) }, nil)
 		timeout := settings.cliTimeoutSeconds
-		settingsChoiceRow(page, m.CLITimeout, m.CLITimeoutDesc, &timeout, aiCLITimeoutChoices[:], strconv.Itoa,
+		settingsChoiceRow(page, m.CLITimeout, m.CLITimeoutDesc, &timeout, aiCLITimeoutChoices[:], aiCLITimeoutLabel,
 			func() { state.aiPut("ai.netcli_timeout", strconv.Itoa(timeout)) }, nil)
 		text := settings.maxTextBytes >> 20
 		settingsChoiceRow(page, m.AttachmentTextLimit, m.AttachmentTextLimitDesc, &text, aiTextLimitChoices[:], aiTextLimitLabel,
