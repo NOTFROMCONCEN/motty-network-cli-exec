@@ -2558,6 +2558,7 @@ var englishTools = ToolsMessages{
 	AlgoWeakFmt:                     "This connection negotiated weak algorithms: %s",
 	AlgoNegotiatedFmt:               "algorithms %s",
 	UpdateFailedFmt:                 "Could not check for updates: %v",
+	UpdateBlockedByIntranet:         "The intranet mode is on, so no update check leaves this network. Turn it off in Settings → Security.",
 	LoginFailedFmt:                  "Could not change starting at login: %v",
 }
 var englishAutofill = AutofillMessages{

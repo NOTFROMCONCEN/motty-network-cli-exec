@@ -2558,6 +2558,7 @@ var traditionalTools = ToolsMessages{
 	AlgoWeakFmt:                     "這條連線協商到了較弱的演算法：%s",
 	AlgoNegotiatedFmt:               "演算法 %s",
 	UpdateFailedFmt:                 "無法檢查更新：%v",
+	UpdateBlockedByIntranet:         "內網模式已開啟，不連線網際網路檢查更新。可在設定 → 安全中關閉內網模式。",
 	LoginFailedFmt:                  "無法更改開機時啟動：%v",
 }
 var traditionalAutofill = AutofillMessages{
