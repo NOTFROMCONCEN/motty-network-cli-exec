@@ -105,7 +105,6 @@ func (state *State) selectSettingsCategory(category settingsCategory) bool {
 	state.settingsCategory = category
 	state.schemeBrowserOpen = false
 	state.settingsScroll = 0
-	state.settings.applyScroll = true
 	state.settings.aboutCopied = false
 	state.revealSettingsCategory()
 	return true
@@ -122,14 +121,9 @@ func (page *settingsPage) nav(width float32, searching bool) {
 	ui.Column(c).Width(width).FillHeight().Children(func() {
 		ui.Text(c, m.SettingsTitle).FontSize(19).Bold().Color(pal.text).LineHeight(28).MarginSides(26, 8, 10, 22).Shrink(0)
 		page.add(settingsControl{kind: controlSearch, slot: ui.Slot(c).Height(38).MarginSides(0, 12, 12, 12).Shrink(0)})
-		// The list keeps its own offset between paints, so the wheel moves it;
-		// a reveal or a reset applies its choice once with ScrollAt.
-		if view.applyNavScroll {
-			page.navList = ui.ScrollAt(c, view.navScroll).FillWidth().Grow(1).Basis(0)
-			view.applyNavScroll = false
-		} else {
-			page.navList = ui.Scroll(c).FillWidth().Grow(1).Basis(0)
-		}
+		// The list keeps its own offset: the wheel in settings.go owns it, and
+		// the list is declared with it every paint.
+		page.navList = ui.ScrollAt(c, view.navScroll).FillWidth().Grow(1).Basis(0)
 		page.navList.Children(func() {
 			ui.Column(c).Gap(settingsNavEntryGap).MarginSides(0, 0, 8, 0).Shrink(0).Children(func() {
 				for category := settingsCategory(0); category < settingsCategoryCount; category++ {
@@ -156,9 +150,6 @@ func (state *State) revealSettingsCategory() {
 		view.navScroll = bottom - view.navView
 	}
 	view.navScroll = max(view.navScroll, 0)
-	// The list's offset lives in the page now; this move reaches it only when
-	// the next declaration applies it by hand.
-	view.applyNavScroll = true
 }
 
 // navEntry declares one entry of the list: it fills while it is the one shown or
