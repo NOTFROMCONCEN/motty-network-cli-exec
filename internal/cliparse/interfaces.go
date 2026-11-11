@@ -46,7 +46,8 @@ func ParseInterfaces(output string) Table {
 			}
 			continue
 		}
-		if isPromptLine(line) || strings.Contains(line, "---- More ----") || strings.Contains(line, "--More--") {
+		if isPromptLine(line) || strings.Contains(line, "---- More ----") ||
+			strings.Contains(line, "--More--") || strings.Contains(line, "---MORE---") {
 			break
 		}
 		var row []string
