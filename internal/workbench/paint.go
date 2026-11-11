@@ -515,6 +515,16 @@ func (state *State) scrollWindow(event gfx.ScrollEvent) gfx.EventResult {
 	if result, handled := state.aiPanelScroll(event); handled {
 		return result
 	}
+	// The scheme drawer keeps its own offsets in the page, and a wheel over it
+	// reaches them through the page. A wheel anywhere else on the settings must
+	// not scroll the page behind the drawer, as a modal panel keeps the rest of
+	// the window still.
+	if state.schemeBrowserOpen && state.modal == modalNone && state.activeSection == sectionSettings {
+		if pointInRect(event.X, event.Y, state.scheme.body) {
+			return state.windowPage().Wheel(event)
+		}
+		return gfx.EventResult{Handled: true}
+	}
 	return state.windowPage().Wheel(event)
 }
 
