@@ -105,6 +105,31 @@ func TestDetectionUsesTheBannerToSplitASharedPromptShape(t *testing.T) {
 	}
 }
 
+func TestDetectsMaipuFromItsBannerAndTheSharedHashPrompt(t *testing.T) {
+	state, shell, session, clock := detectTestSession(t)
+	feedDevice(t, state, shell, clock,
+		"MyPower (R) Operating System Software\r\n"+
+			"Copyright (C) 2014 Maipu Communication Technology Co., Ltd. All Rights Reserved.\r\n"+
+			"\r\nHostname#\r\n")
+	if session.host.CLIPlatform != "maipu_mypower" {
+		t.Fatalf("platform = %q; want maipu_mypower", session.host.CLIPlatform)
+	}
+	if !strings.Contains(state.status, "Maipu MyPower") {
+		t.Fatalf("status = %q; want the detected platform named", state.status)
+	}
+}
+
+// The new table must not claim an IOS session: both use a hash prompt, so a
+// banner that is too broad would silently change what a Cisco host is.
+func TestAMaipuTableDoesNotStealACiscoSession(t *testing.T) {
+	state, shell, session, clock := detectTestSession(t)
+	feedDevice(t, state, shell, clock,
+		"Cisco IOS Software, C2960X Software, Version 15.2(2)E9\r\nRouter#\r\n")
+	if session.host.CLIPlatform != "cisco_ios" {
+		t.Fatalf("platform = %q; want cisco_ios", session.host.CLIPlatform)
+	}
+}
+
 func TestDetectionKeepsATelnetHostsAutomaticMode(t *testing.T) {
 	state, shell, session, clock := detectTestSession(t)
 	session.host.Protocol = protocolTelnet
