@@ -22,7 +22,7 @@ import (
 )
 
 // Current is the version of this build. A test keeps it equal to viva.toml's.
-const Current = "0.3.9.2"
+const Current = "0.3.9.3"
 
 // Feed is the GitHub release the project publishes its builds to.
 const Feed = "https://api.github.com/repos/t8y2/motty/releases/latest"
