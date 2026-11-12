@@ -7,6 +7,7 @@ var ChineseMessages = Messages{
 	Monitor:        chineseMonitor,
 	Dashboard:      chineseDashboard,
 	SessionLogs:    chineseSessionLogs,
+	HTTPFile:       chineseHTTPFile,
 	SFTPWindow: SFTPWindowMessages{
 		LocalPlaces: "收藏与快捷位置", DirectoryFavorites: "目录收藏", CommonFolders: "常用目录", LocalDrives: "磁盘", FavoriteAdd: "收藏当前目录", FavoriteRemove: "取消收藏当前目录", FavoriteLimit: "目录收藏已达上限，请先移除不再使用的收藏。",
 		LocalHome: "主目录", LocalDesktop: "桌面", LocalDownloads: "下载", LocalDocuments: "文档", LocalPictures: "图片", LocalMusic: "音乐", LocalVideos: "视频", LocalMovies: "影片", LocalApplications: "应用程序",
@@ -87,6 +88,7 @@ var ChineseMessages = Messages{
 
 	NavHosts:                  "主机",
 	NavWorkspaces:             "工作区",
+	NavHTTPFile:               "文件服务器",
 	NavKeychain:               "密钥链",
 	NavProxies:                "跳板路由",
 	NavSnippets:               "快捷命令",

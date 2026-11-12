@@ -160,6 +160,7 @@ func (state *State) rebuildCommandPalette() {
 	}
 	palette.add(messages.NavHosts, hitHosts)
 	palette.add(messages.NavWorkspaces, hitWorkspaces)
+	palette.add(messages.NavHTTPFile, hitHTTPFile)
 	palette.add(messages.NavKeychain, hitKeychain)
 	palette.add(messages.NavPortForwarding, hitPortForwarding)
 	palette.add(messages.NavProxies, hitProxies)

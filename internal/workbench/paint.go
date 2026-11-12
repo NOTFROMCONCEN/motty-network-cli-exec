@@ -109,6 +109,8 @@ const (
 	iconProcess
 	iconDirectoryTree
 	iconClipboardPaste
+	// iconHTTPFile is the HTTP file-server page's glyph.
+	iconHTTPFile
 )
 
 // terminalPage reports whether the window shows the panes of a workspace rather
@@ -127,7 +129,7 @@ func (state *State) paintsHostsPage() bool {
 	}
 	switch state.activeSection {
 	case sectionWorkspaces, sectionDashboard, sectionKeys, sectionForwards, sectionProxies,
-		sectionSettings, sectionKnownHosts, sectionNotes, sectionSnippets, sectionSessionLogs, sectionDebug:
+		sectionSettings, sectionKnownHosts, sectionNotes, sectionSnippets, sectionSessionLogs, sectionDebug, sectionHTTPFile:
 		return false
 	}
 	return true
@@ -1273,6 +1275,7 @@ func (state *State) declareNavigation(c ui.C, height float32) {
 	}{
 		{hitHosts, iconHosts, m.NavHosts, state.activeSection == sectionHosts},
 		{hitWorkspaces, iconColumns2, m.NavWorkspaces, state.activeSection == sectionWorkspaces},
+		{hitHTTPFile, iconHTTPFile, m.NavHTTPFile, state.activeSection == sectionHTTPFile},
 		{hitDashboard, iconActivity, m.Dashboard.Title, state.activeSection == sectionDashboard},
 		{hitSessionLogs, iconFileClock, m.SessionLogs.Title, state.activeSection == sectionSessionLogs},
 		{hitKeychain, iconKey, m.NavKeychain, state.activeSection == sectionKeys},
@@ -2616,6 +2619,7 @@ var lucideIcons = [...]gfx.Icon{
 	iconSFTPProfiles:   icons.SftpProfiles,
 	iconFileClock:      icons.FileClock,
 	iconClock:          icons.Clock3,
+	iconHTTPFile:       icons.FileUp,
 }
 
 func paintIcon(canvas *gfx.Canvas, kind uint8, bounds gfx.Rect, foreground gfx.Color) {

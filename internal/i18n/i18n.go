@@ -96,6 +96,8 @@ type Messages struct {
 	History HistoryMessages
 	// SessionLogs holds the local session-log page's texts; see session_logs.go.
 	SessionLogs SessionLogsMessages
+	// HTTPFile holds the HTTP file-server page's texts; see http_file.go.
+	HTTPFile HTTPFileMessages
 	// Completion holds the command completion's texts; see completion.go.
 	Completion CompletionMessages
 	// SSHSync holds the texts of the sync with the OpenSSH config; see ssh_sync.go.
@@ -110,6 +112,7 @@ type Messages struct {
 	// Navigation.
 	NavHosts                  string
 	NavWorkspaces             string
+	NavHTTPFile               string
 	NavKeychain               string
 	NavProxies                string
 	NavSnippets               string
