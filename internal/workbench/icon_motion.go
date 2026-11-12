@@ -343,6 +343,28 @@ var (
 		},
 	}
 
+	// iconMotionRise lifts the arrow of a file-up glyph out of the page and lets
+	// it drop back: the page and its folded corner are contours 0 and 1, the
+	// shaft 2 and the head 3, and the two that make the arrow are the ones that
+	// move — a file on its way out of this machine.
+	iconMotionRise = iconMotion{
+		duration: 900 * time.Millisecond,
+		parts: []iconPartMotion{
+			part(2, iconMotionTrack{axis: iconAxisDown, stops: []iconMotionStop{
+				{at: 0, value: 0, ease: easeSink},
+				{at: 240, value: -2.6},
+				{at: 640, value: -2.6, ease: easeRockOut},
+				{at: 900, value: 0},
+			}}),
+			part(3, iconMotionTrack{axis: iconAxisDown, stops: []iconMotionStop{
+				{at: 0, value: 0, ease: easeSink},
+				{at: 240, value: -2.6},
+				{at: 640, value: -2.6, ease: easeRockOut},
+				{at: 900, value: 0},
+			}}),
+		},
+	}
+
 	// iconMotionPlug pushes a plug's prongs into the socket: contours 1 and 3 are
 	// the prongs and 2 is the body behind them.
 	iconMotionPlug = iconMotion{
@@ -526,6 +548,8 @@ func iconMotionFor(icon uint8) (iconMotion, bool) {
 		return iconMotionPlug, true
 	case iconColumns2, iconNote, iconNotebook, iconInfo, iconBug, iconFileClock:
 		return iconMotionSquash, true
+	case iconHTTPFile:
+		return iconMotionRise, true
 	}
 	return iconMotion{}, false
 }
@@ -567,7 +591,7 @@ func playsIconMotion(id gfx.ID) bool {
 		return true
 	}
 	switch id {
-	case hitHosts, hitWorkspaces, hitDashboard, hitSessionLogs, hitKeychain, hitProxies, hitPortForwarding,
+	case hitHosts, hitWorkspaces, hitHTTPFile, hitDashboard, hitSessionLogs, hitKeychain, hitProxies, hitPortForwarding,
 		hitKnownHosts, hitSnippets, hitNotes, hitLocalTerminal, hitSettings:
 		return true
 	}

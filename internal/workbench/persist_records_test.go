@@ -59,6 +59,10 @@ func TestEverySavedStateFieldIsSharedOrKeptOnThisDevice(t *testing.T) {
 		// So does the intranet mode: whether this machine keeps itself off the
 		// internet is a local decision, never a setting to carry to others.
 		"intranet_mode": true,
+		// The HTTP file server shares a folder of this machine, on a port of
+		// this machine: another device has its own folders and its own ports.
+		"http_file_root": true, "http_file_port": true, "http_file_upload": true,
+		"http_file_delete": true, "http_file_listing_off": true,
 	}
 	entity := map[string]bool{}
 	for _, field := range entityFields {
