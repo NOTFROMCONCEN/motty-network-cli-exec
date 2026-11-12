@@ -14,6 +14,7 @@ type navPage uint8
 const (
 	navPageHosts navPage = iota
 	navPageWorkspaces
+	navPageHTTPFile
 	navPageMonitor
 	navPageSessionLogs
 	navPageKeychain
@@ -52,6 +53,8 @@ func (page navPage) key() string {
 		return "hosts"
 	case navPageWorkspaces:
 		return "workspaces"
+	case navPageHTTPFile:
+		return "http-file"
 	case navPageMonitor:
 		return "dashboard"
 	case navPageSessionLogs:
@@ -123,6 +126,7 @@ type sidebarPage struct {
 var sidebarPages = [...]sidebarPage{
 	{navPageHosts, hitHosts, iconHosts, sectionHosts},
 	{navPageWorkspaces, hitWorkspaces, iconColumns2, sectionWorkspaces},
+	{navPageHTTPFile, hitHTTPFile, iconHTTPFile, sectionHTTPFile},
 	{navPageMonitor, hitDashboard, iconGauge, sectionDashboard},
 	{navPageSessionLogs, hitSessionLogs, iconFileClock, sectionSessionLogs},
 	{navPageKeychain, hitKeychain, iconKey, sectionKeys},
@@ -141,6 +145,8 @@ func (state *State) navPageLabel(page navPage) string {
 		return m.NavHosts
 	case navPageWorkspaces:
 		return m.NavWorkspaces
+	case navPageHTTPFile:
+		return m.NavHTTPFile
 	case navPageMonitor:
 		return m.Dashboard.Title
 	case navPageSessionLogs:

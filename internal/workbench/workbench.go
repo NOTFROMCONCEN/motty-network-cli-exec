@@ -21,6 +21,7 @@ import (
 	"motty/internal/buildinfo"
 	"motty/internal/configstore"
 	"motty/internal/highlight"
+	"motty/internal/httpfile"
 	"motty/internal/i18n"
 	"motty/internal/localshell"
 	"motty/internal/sessionlog"
@@ -34,6 +35,7 @@ var (
 	hitHosts                   = tree.ID(shellHits, "hosts")
 	hitHostListBar             = tree.ID(shellHits, "host-list-bar")
 	hitWorkspaces              = tree.ID(shellHits, "workspaces")
+	hitHTTPFile                = tree.ID(shellHits, "http-file")
 	hitKeychain                = tree.ID(shellHits, "keychain")
 	hitProxies                 = tree.ID(shellHits, "proxies")
 	hitSnippets                = tree.ID(shellHits, "snippets")
@@ -434,6 +436,10 @@ const (
 	// sectionWorkspaces is the saved-workspace library. It follows the existing
 	// section values so adding it does not renumber them.
 	sectionWorkspaces
+	// sectionHTTPFile is the HTTP file server: one local directory served over
+	// HTTP for other machines to download from and upload to. It comes last so
+	// the other sections keep their values.
+	sectionHTTPFile
 )
 
 // State owns the complete interactive state of the window.
@@ -449,6 +455,9 @@ type State struct {
 	afterProfileUnlock func()
 	protectedChildren  []*app.ContentWindow
 	dashboard          dashboardState
+	// httpFile is the HTTP file-server page: the folder it shares and the
+	// server that serves it.
+	httpFile httpFileState
 	// clipboardDirty says the system clipboard changed since the desktop
 	// sessions were last offered it. It is set from any goroutine
 	// (ClipboardChanged) and cleared on the window's thread (Wake).
@@ -1223,6 +1232,7 @@ func (state *State) Close() {
 	state.closeCompletionWorkers()
 	state.stopUpdateCheck()
 	state.closeLocalProxySessions()
+	state.closeHTTPServer()
 	if state.options.Group != nil {
 		state.options.Group.leave(state)
 	}
@@ -1319,6 +1329,7 @@ func New(options Options) *State {
 		terminalSchemes:       [2]string{defaultSchemeID, defaultSchemeID},
 		localProxyPort:        defaultLocalProxyPort,
 		lookupSystemProxy:     systemproxy.Lookup,
+		httpFile:              httpFileState{root: defaultHTTPFileRoot(), port: httpfile.DefaultPort, allowListing: true},
 		syncDelay:             syncDelayDefault,
 		syncRetryBase:         syncRetryBaseDefault,
 		update:                updateState{firstDelay: updateFirstDelayDefault, every: updateIntervalDefault},
@@ -1611,6 +1622,12 @@ func (state *State) EditorFor(hit gfx.ID) *text.Editor {
 				return &state.snippets.inline.groupPicker.Query
 			}
 		}
+		if hit == hitHTTPFileDir && state.activeSection == sectionHTTPFile {
+			return &state.httpFile.dirEditor
+		}
+		if hit == hitHTTPFilePort && state.activeSection == sectionHTTPFile {
+			return &state.httpFile.portEditor
+		}
 	case modalNewHost:
 		if hit == hitDialogTags {
 			return &state.hostTagPicker().control.Query
@@ -1870,6 +1887,9 @@ func (state *State) click(id gfx.ID, feedback bool) {
 		return
 	}
 	if state.clickSessionLogs(id) {
+		return
+	}
+	if state.clickHTTPServer(id) {
 		return
 	}
 	if state.fileNotices.click(id) {
@@ -2184,6 +2204,14 @@ func (state *State) click(id gfx.ID, feedback bool) {
 		}
 		state.clearBroadcast()
 		state.setActiveSection(sectionWorkspaces)
+		state.save()
+	case id == hitHTTPFile:
+		if session, ok := state.sessionByIDPointer(state.activeSessionID); ok {
+			state.releaseIdleSFTP(session)
+		}
+		state.clearBroadcast()
+		state.activeSection = sectionHTTPFile
+		state.httpFileEntered()
 		state.save()
 	case id == hitNewTab || id == hitVerticalTabsNew:
 		state.openConnectPicker()
@@ -3278,6 +3306,9 @@ func (state *State) key(event gfx.KeyEvent) gfx.EventResult {
 		return result
 	}
 	if result := state.dashboardKey(event); result.Handled {
+		return result
+	}
+	if result, handled := state.httpFileKey(event); handled {
 		return result
 	}
 	if result := state.agentHostsKey(event); result.Handled {
