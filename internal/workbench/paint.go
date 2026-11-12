@@ -116,6 +116,8 @@ const (
 	iconArrowUpDown
 	iconLocalProxy
 	iconClipboardPaste
+	// iconHTTPFile is the HTTP file-server page's glyph.
+	iconHTTPFile
 )
 
 // terminalPage reports whether the window shows the panes of a workspace rather
@@ -134,7 +136,7 @@ func (state *State) paintsHostsPage() bool {
 	}
 	switch state.activeSection {
 	case sectionWorkspaces, sectionDashboard, sectionKeys, sectionForwards, sectionProxies,
-		sectionSettings, sectionKnownHosts, sectionNotes, sectionSnippets, sectionSessionLogs, sectionDebug:
+		sectionSettings, sectionKnownHosts, sectionNotes, sectionSnippets, sectionSessionLogs, sectionDebug, sectionHTTPFile:
 		return false
 	}
 	return true
@@ -1366,6 +1368,7 @@ type hostToggleBoxes struct {
 // A page the user hid from Settings keeps everything but its row here.
 func (state *State) declareNavigation(c ui.C) {
 	m := state.messages
+
 	ui.Column(c).Width(navigationWidth).Shrink(0).Children(func() {
 		// The logo with the name beside it, painted into this slot after
 		// layout. The intranet mode hides it; a small spacer keeps the first
@@ -2786,6 +2789,7 @@ var lucideIcons = [...]gfx.Icon{
 	iconClock:            icons.Clock3,
 	iconFollowFolder:     icons.LocateFixed,
 	iconClipboardPaste:   icons.ClipboardPaste,
+	iconHTTPFile:        icons.FileUp,
 }
 
 func paintIcon(canvas *gfx.Canvas, kind uint8, bounds gfx.Rect, foreground gfx.Color) {

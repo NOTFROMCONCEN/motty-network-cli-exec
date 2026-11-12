@@ -54,6 +54,8 @@ func (state *State) declareCatalogSection(c ui.C) {
 		state.declareSnippetsWorkspace(c)
 	case sectionSessionLogs:
 		state.declareSessionLogsWorkspace(c)
+	case sectionHTTPFile:
+		state.declareHTTPServerWorkspace(c)
 	}
 }
 
