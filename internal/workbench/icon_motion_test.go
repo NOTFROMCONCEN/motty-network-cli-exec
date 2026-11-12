@@ -237,6 +237,7 @@ func TestIconMotionFollowsWhatTheGlyphStandsFor(t *testing.T) {
 		{"blink", []uint8{iconBot}, iconMotionBlink},
 		{"plug", []uint8{iconPlug}, iconMotionPlug},
 		{"squash", []uint8{iconColumns2, iconNote, iconNotebook, iconInfo, iconBug}, iconMotionSquash},
+		{"rise", []uint8{iconHTTPFile}, iconMotionRise},
 	} {
 		for _, icon := range c.icons {
 			got, ok := iconMotionFor(icon)
