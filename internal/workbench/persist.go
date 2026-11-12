@@ -16,6 +16,7 @@ import (
 	"github.com/vivaui/viva/keymap"
 	"github.com/vivaui/viva/text"
 	"motty/internal/configstore"
+	"motty/internal/httpfile"
 	"motty/internal/i18n"
 	"motty/internal/monitoring"
 	"motty/internal/sshconn"
@@ -38,23 +39,31 @@ type savedState struct {
 	// Local Terminal row once the user has opened it there.
 	LocalShellsExpanded bool `json:"local_shells_expanded,omitempty"`
 
-	MonitorPanels              []monitoring.Panel      `json:"monitor_panels,omitempty"`
-	MonitorActive              string                  `json:"monitor_active,omitempty"`
-	Version                    int                     `json:"version"`
-	Language                   string                  `json:"language,omitempty"`
-	Theme                      string                  `json:"theme,omitempty"`
-	BackgroundOutputAlerts     bool                    `json:"background_output_alerts,omitempty"`
-	TabOrientation             string                  `json:"tab_orientation,omitempty"`
-	TabNumbers                 bool                    `json:"tab_numbers,omitempty"`
-	HiddenNav                  []string                `json:"hidden_nav,omitempty"`
-	VerticalTabsAutoHide       bool                    `json:"vertical_tabs_auto_hide,omitempty"`
-	VerticalTabsGrouping       bool                    `json:"vertical_tabs_grouping,omitempty"`
-	NetworkProxy               string                  `json:"network_proxy,omitempty"`
-	TerminalOption             string                  `json:"terminalOption,omitempty"`
-	LocalShell                 string                  `json:"local_shell,omitempty"`
-	HiddenShells               []string                `json:"hidden_shells,omitempty"`
-	LocalStart                 string                  `json:"local_start,omitempty"`
-	LastLocalDirectory         string                  `json:"last_local_directory,omitempty"`
+	MonitorPanels          []monitoring.Panel `json:"monitor_panels,omitempty"`
+	MonitorActive          string             `json:"monitor_active,omitempty"`
+	Version                int                `json:"version"`
+	Language               string             `json:"language,omitempty"`
+	Theme                  string             `json:"theme,omitempty"`
+	BackgroundOutputAlerts bool               `json:"background_output_alerts,omitempty"`
+	TabOrientation         string             `json:"tab_orientation,omitempty"`
+	TabNumbers             bool               `json:"tab_numbers,omitempty"`
+	HiddenNav              []string           `json:"hidden_nav,omitempty"`
+	VerticalTabsAutoHide   bool               `json:"vertical_tabs_auto_hide,omitempty"`
+	VerticalTabsGrouping   bool               `json:"vertical_tabs_grouping,omitempty"`
+	NetworkProxy           string             `json:"network_proxy,omitempty"`
+	TerminalOption         string             `json:"terminalOption,omitempty"`
+	LocalShell             string             `json:"local_shell,omitempty"`
+	HiddenShells           []string           `json:"hidden_shells,omitempty"`
+	LocalStart             string             `json:"local_start,omitempty"`
+	LastLocalDirectory     string             `json:"last_local_directory,omitempty"`
+	// HTTPFile is the HTTP file server's shared folder, its port and the
+	// switches a visitor's rights hang on. The listener itself is run-local:
+	// it never survives a restart.
+	HTTPFileRoot               string                  `json:"http_file_root,omitempty"`
+	HTTPFilePort               int                     `json:"http_file_port,omitempty"`
+	HTTPFileUpload             bool                    `json:"http_file_upload,omitempty"`
+	HTTPFileDelete             bool                    `json:"http_file_delete,omitempty"`
+	HTTPFileListingOff         bool                    `json:"http_file_listing_off,omitempty"`
 	SSHAgent                   string                  `json:"ssh_agent,omitempty"`
 	SSHAgentPath               string                  `json:"ssh_agent_path,omitempty"`
 	TerminalFontSize           int                     `json:"terminal_font_size,omitempty"`
@@ -637,6 +646,23 @@ func (state *State) snapshot() savedState {
 	if state.localProxyPortSet {
 		saved.LocalProxyPort = int(state.localProxyPort)
 	}
+	// The file server's choices are written whenever they differ from a fresh
+	// window's, so a user who never opened the page keeps the file clean.
+	if state.httpFile.root != defaultHTTPFileRoot() || state.httpFile.root == "" {
+		saved.HTTPFileRoot = state.httpFile.root
+	}
+	if state.httpFile.port != httpfile.DefaultPort {
+		saved.HTTPFilePort = int(state.httpFile.port)
+	}
+	if state.httpFile.allowUpload {
+		saved.HTTPFileUpload = true
+	}
+	if state.httpFile.allowDelete {
+		saved.HTTPFileDelete = true
+	}
+	if !state.httpFile.allowListing {
+		saved.HTTPFileListingOff = true
+	}
 	if frame, ok := state.savedWindowFrame(); ok {
 		saved.WindowX = int(math.Round(float64(frame.X)))
 		saved.WindowY = int(math.Round(float64(frame.Y)))
@@ -1070,6 +1096,22 @@ func (state *State) restoreLocal(saved savedState) {
 		state.localProxyPort = uint16(saved.LocalProxyPort)
 		state.localProxyPortSet = true
 	}
+	// The file server's choices, over a fresh window's: the folder it shares,
+	// the port and the switches. A saved folder that has since gone keeps its
+	// place in the field; the start is what finds out it is not there.
+	state.httpFile.root = defaultHTTPFileRoot()
+	state.httpFile.port = httpfile.DefaultPort
+	state.httpFile.allowListing = true
+	if saved.HTTPFileRoot != "" {
+		state.httpFile.root = saved.HTTPFileRoot
+	}
+	if saved.HTTPFilePort >= 1 && saved.HTTPFilePort <= 65535 {
+		state.httpFile.port = uint16(saved.HTTPFilePort)
+	}
+	state.httpFile.allowUpload = saved.HTTPFileUpload
+	state.httpFile.allowDelete = saved.HTTPFileDelete
+	state.httpFile.allowListing = !saved.HTTPFileListingOff
+	state.httpFile.fieldsSynced = false
 	// The saved editor is read as it is: a value this build does not know stays
 	// unknown rather than becoming another editor.
 	state.defaultEditor = ExternalEditor(strings.TrimSpace(saved.DefaultEditor))
@@ -1313,6 +1355,8 @@ func (state *State) workspaceName() string {
 		return "monitor"
 	case sectionSessionLogs:
 		return "session-logs"
+	case sectionHTTPFile:
+		return "http-file"
 	case sectionTerminal:
 		return "terminal"
 	case sectionKeys:
@@ -1385,6 +1429,8 @@ func (state *State) restoreWorkspace(workspace string) {
 		state.activeSection = sectionDashboard
 	case "session-logs":
 		state.activeSection = sectionSessionLogs
+	case "http-file":
+		state.activeSection = sectionHTTPFile
 	case "terminal":
 		if state.activeSessionID != 0 {
 			state.activeSection = sectionTerminal
