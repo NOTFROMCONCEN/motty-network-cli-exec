@@ -32,6 +32,13 @@ type hostCatalog struct {
 	connectionKeepAlive time.Duration
 	// systemUser is the login used for a host that names none.
 	systemUser string
+	// defaultJump is the jump mode's configured hop: when on names a saved SSH
+	// host by catalog id, a connection to a host without its own route leaves
+	// through that host. See defaultJumpFor.
+	defaultJump struct {
+		on        bool
+		catalogID string
+	}
 	// agentHosts holds the catalog ids of the hosts an agent may use without a
 	// window (see savedState.AgentHosts).
 	agentHosts map[string]bool
@@ -355,12 +362,33 @@ func (catalog *hostCatalog) proxyForHost(host Host, env connectEnv) *sshconn.Pro
 	return catalog.proxyWithPassword(*host.Proxy, hostProxyPasswordSecret(host.CatalogID, host.Proxy), env)
 }
 
+// defaultJumpFor resolves the jump mode's hop for a target: the saved host the
+// mode names, when the mode is on, the target is not that host itself, and no
+// route of its own already says how the target is reached. A host whose route
+// is stopped counts as one that says so: stopping a route is how a single host
+// stays direct while the mode is on. ok is false when the target keeps its own
+// dialing — direct, or through its route.
+func (catalog *hostCatalog) defaultJumpFor(target Host) (jump Host, ok bool) {
+	if !catalog.defaultJump.on || catalog.defaultJump.catalogID == "" {
+		return Host{}, false
+	}
+	resolved, ok := catalog.hostByRouteEnd(catalog.defaultJump.catalogID, "", "", 0)
+	if !ok || resolved.ID == target.ID {
+		return Host{}, false
+	}
+	if _, routed, _ := catalog.proxyJump(target.ID, false); routed {
+		return Host{}, false
+	}
+	return resolved, true
+}
+
 // sshConfigFor is how to connect to an SSH host: its endpoint, identities and
 // keep-alive, and the jump chain its route names, which it also reports as the
-// route. valid is false when the route is broken, and the config then has no
-// host to dial. The outbound proxy is the policy of proxyHost, which is host
-// itself except for the gateway of a tunneled desktop host: that connection
-// leaves by the desktop host's proxy.
+// route. A host whose route names nothing leaves through the jump mode's host
+// when that mode is on. valid is false when the route is broken, and the
+// config then has no host to dial. The outbound proxy is the policy of
+// proxyHost, which is host itself except for the gateway of a tunneled desktop
+// host: that connection leaves by the desktop host's proxy.
 func (catalog *hostCatalog) sshConfigFor(host, proxyHost Host, env connectEnv) (config sshconn.Config, route connectionRoute, valid bool) {
 	proxy := catalog.proxyForHost(proxyHost, env)
 	route.proxyKey = proxyRouteKey(proxy)
@@ -383,6 +411,11 @@ func (catalog *hostCatalog) sshConfigFor(host, proxyHost Host, env connectEnv) (
 	config.Authentication[targetEndpoint] = catalog.authenticationFor(host)
 	config.KeepAlive = catalog.keepAliveFor(host)
 	chain, valid := catalog.proxyChainFor(host)
+	if valid && len(chain) == 0 {
+		if jump, ok := catalog.defaultJumpFor(host); ok {
+			chain = []Host{jump}
+		}
+	}
 	config.Algorithms = catalog.algorithmsFor(host, chain)
 	disableKeepAliveForTunnel(host, &config)
 	if !valid {
@@ -685,6 +718,11 @@ func catalogFromSaved(saved savedState, systemUser string, messages keyMessages)
 	}
 	catalog.connectionTimeout, catalog.connectionKeepAlive = connectionTimes(saved)
 	catalog.sshAgent = agentChoiceFromSaved(saved.SSHAgent, saved.SSHAgentPath)
+	// The jump mode is this computer's policy, and the headless server answers
+	// to it the same way the window does: unrouted hosts leave through the
+	// chosen bastion, so an agent's connections match the user's.
+	catalog.defaultJump.on = saved.JumpMode
+	catalog.defaultJump.catalogID = saved.JumpHost
 	return catalog
 }
 

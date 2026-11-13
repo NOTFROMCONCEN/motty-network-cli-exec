@@ -206,6 +206,10 @@ func (state *State) eachSettingsEntry(add func(settingsEntry)) {
 	row(settingsConnection, m.SettingsConnectionReconnect, m.SettingsConnectionReconnectDescription)
 	row(settingsConnection, m.SettingsShare, m.SettingsShareDescription)
 	row(settingsConnection, m.SettingsRestore, m.SettingsRestoreDescription)
+	row(settingsConnection, m.SettingsJumpMode, m.SettingsJumpModeDescription)
+	if state.jumpMode {
+		row(settingsConnection, m.SettingsJumpHostRow, m.SettingsJumpHostDescription)
+	}
 	row(settingsConnection, m.SettingsSSHAgent, m.SettingsSSHAgentDescription)
 	row(settingsConnection, m.SettingsNetworkProxy, m.SettingsNetworkProxyDescription)
 	row(settingsConnection, tools.ProxyRow, tools.ProxyDescriptionNone)
@@ -236,6 +240,7 @@ func (state *State) eachSettingsEntry(add func(settingsEntry)) {
 	row(settingsSecurity, m.SessionLogs.SettingsStorageRow, m.SessionLogs.SettingsStorageDescription)
 	row(settingsSecurity, m.SessionLogs.ClearUnfavorited, m.SessionLogs.ClearUnfavoritedPrompt)
 	row(settingsSecurity, m.SessionLogs.ClearAll, m.SessionLogs.ClearAllPrompt)
+	row(settingsSecurity, m.SettingsIntranetMode, m.SettingsIntranetModeDescription)
 	row(settingsSecurity, m.SettingsVault, m.SettingsVaultEmpty)
 
 	row(settingsBackup, tools.BackupExportRow, tools.BackupExportDescription)

@@ -280,6 +280,11 @@ type Messages struct {
 	SettingsOutputAlertsDescription        string
 	SettingsIntranetMode                   string
 	SettingsIntranetModeDescription        string
+	SettingsJumpMode                       string
+	SettingsJumpModeDescription            string
+	SettingsJumpHostRow                    string
+	SettingsJumpHostDescription            string
+	SettingsJumpHostNone                   string
 	SettingsTabOrientation                 string
 	SettingsTabOrientationDescription      string
 	SettingsTabsHorizontal                 string

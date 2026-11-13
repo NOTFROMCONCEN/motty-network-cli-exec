@@ -379,7 +379,7 @@ func (state *State) clickSettings(id gfx.ID) bool {
 	if state.modal != modalNone || state.activeSection != sectionSettings {
 		return false
 	}
-	if state.clickLocalShell(id) || state.clickEditorSelect(id) || state.clickStartupHosts(id) {
+	if state.clickLocalShell(id) || state.clickEditorSelect(id) || state.clickStartupHosts(id) || state.clickJumpHost(id) {
 		return true
 	}
 	for group, hit := range hitToolbarSettingsOpen {
@@ -416,6 +416,8 @@ func (state *State) clickSettings(id gfx.ID) bool {
 		changed = state.setIntranetMode(!state.intranetMode)
 	case hitSettingsStartupHosts, hitSettingsStartupLocal, hitSettingsStartupDismiss:
 		state.clickStartupHosts(id)
+	case hitSettingsJumpMode, hitSettingsJumpHosts, hitSettingsJumpDismiss:
+		state.clickJumpHost(id)
 	case hitSettingsSSHSyncToggle, hitSettingsSSHSyncFile, hitSettingsSSHSyncReset, hitSettingsSSHSyncNow:
 		state.clickSSHSync(id)
 	case hitSessionLogsSettingsToggle:

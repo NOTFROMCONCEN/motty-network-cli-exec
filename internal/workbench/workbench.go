@@ -227,6 +227,10 @@ var (
 	hitSettingsIntranetMode    = tree.ID(settingsHits, "settings-intranet-mode")
 	hitSettingsVaultForget     = tree.ID(settingsHits, "settings-vault-forget")
 	hitSettingsVaultConvert    = tree.ID(settingsHits, "settings-vault-convert")
+	hitSettingsJumpMode        = tree.ID(settingsHits, "settings-jump-mode")
+	hitSettingsJumpHosts       = tree.ID(settingsHits, "settings-jump-hosts")
+	hitSettingsJumpDismiss     = tree.ID(settingsHits, "settings-jump-dismiss")
+	hitSettingsJumpHostList    = tree.Sub(settingsHits, tree.Name("settings-jump-host-item"))
 )
 
 // Jump-host routing: its page and dialog.
@@ -491,7 +495,17 @@ type State struct {
 	// that call out on their own — update checks, cloud sync, the assistant —
 	// reach only local and private hosts, and the logo stays hidden. It is
 	// this computer's choice, never synced.
-	intranetMode       bool
+	intranetMode bool
+	// jumpMode routes every host that has no jump route of its own through the
+	// saved SSH host jumpHost names (by catalog id): this machine sits behind a
+	// bastion, and connections leave through it unless a host says otherwise.
+	// Like the intranet mode it is this computer's choice, never synced.
+	jumpMode   bool
+	jumpHost   string
+	jumpPicker struct {
+		open   bool
+		bounds gfx.Rect // the chooser's place on the settings page
+	}
 	verticalTabs       verticalTabs
 	tabMenu            tabMenu
 	hostMenu           hostMenu
