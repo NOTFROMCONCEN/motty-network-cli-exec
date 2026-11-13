@@ -258,6 +258,11 @@ var TraditionalMessages = Messages{
 	SettingsOutputAlertsDescription:        "透過分頁標題提示未檢視的輸出：藍色表示輸出中，綠色表示輸出結束或靜默，黃色表示指令報告失敗。",
 	SettingsIntranetMode:                   "內網模式",
 	SettingsIntranetModeDescription:        "僅允許存取本機與內網位址：檢查更新、雲同步、AI 助手等不再連線網際網路，Logo 也將隱藏。SSH、TELNET 等工作階段不受影響。",
+	SettingsJumpMode:                       "跳板模式",
+	SettingsJumpModeDescription:            "開啟後，沒有設定跳板路由的主機預設經由所選跳板主機連線：本機在內網、目標在外網時不必逐台設定路由。已有活動路由的主機照其路由連線，已停用路由的主機保持直連，跳板主機自身直連。僅對新連線生效。",
+	SettingsJumpHostRow:                    "跳板主機",
+	SettingsJumpHostDescription:            "跳板模式所經由的已儲存 SSH 主機。",
+	SettingsJumpHostNone:                   "未選擇跳板主機",
 	SettingsTabOrientation:                 "分頁方向",
 	SettingsTabOrientationDescription:      "將工作階段分頁顯示在頂部，或垂直排列在左側邊欄。",
 	SettingsTabsHorizontal:                 "水平",
@@ -3385,6 +3390,8 @@ var traditionalSSHSync = SSHSyncMessages{
 
 var traditionalHostsPanel = HostsPanelMessages{
 	Toggle: "工作階段管理", Close: "關閉工作階段管理", Resize: "調整工作階段管理寬度", Manage: "管理主機",
+}
+
 var traditionalHTTPFile = HTTPFileMessages{
 	Title:       "HTTP 檔案伺服器",
 	Description: "在本機建立 HTTP 檔案伺服器，供內外網機器連線後上傳、下載檔案。伺服器運行期間請勿關閉 Motty。",
