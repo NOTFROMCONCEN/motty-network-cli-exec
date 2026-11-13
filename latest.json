@@ -1,0 +1,26 @@
+{
+  "version": "0.4.5.2",
+  "tag": "v0.4.5-netcli-build.2-genshin",
+  "source": "https://github.com/NOTFROMCONCEN/motty-network-cli-exec/releases/tag/v0.4.5-netcli-build.2-genshin",
+  "notes": "基于上游 t8y2/motty **v0.4.5**（`3a1cb5f4`）的 Genshin 系列版本（0.4.5.2）。基线不变，本版是功能版：**新增跳板模式**。\n\n## 新增：跳板模式\n\n设置 → 连接 →「跳板模式」。开启并选定一台已保存的 SSH 跳板主机后，**没有自己跳板路由的主机默认经该跳板连接**，不再直连——本机坐在堡垒机后面时，不必逐台主机配置路由。\n\n规则：\n\n- 有**活动路由**的主机照自己的路由走，多跳链照常叠加\n- 路由**已停用**的主机保持直连——停用某台的路由就是这台机退出跳板模式的手柄\n- 跳板主机自身永远直连（不自环）；没选主机或主机被删时全体回退直连\n- 只影响新连接，已打开的标签不受打扰\n- 凭据提示归属跳板主机、会话栏显示跳板路径（`目标 ← 跳板`），与手工路由的表现完全一致\n- AI 助手 / MCP 无头后端的连接走同一策略，与用户手点一致\n- 与内网模式同理，这是**本机的网络拓扑**：开关和所选主机留在本机，永不跨设备同步\n\n## 本版另修\n\n- 侧栏在最小窗口高度下的行序排布：fork 比上游多一条「文件服务器」导航行，按上游契约把最小高度升到 640（升最小而非压头部间距）\n- 设置搜索直达补齐内网模式行（此前缺失）\n\n## 分发\n\n- 四资产照旧：Windows 安装包 `-setup.exe`、**Windows 便携版 `.zip`**、Linux `tar.gz`、签名 manifest `latest.json`\n- 便携版解压后是 `motty.exe` 与 `motty-data/`，配置与凭据全部留在文件夹内\n\n## 已知限制\n\n- 跳板模式的首选跳板走标准 SSH 通道，**不支持 ViaShell 中继**（堡垒机只有 shell、要先切账号再中转的那种，请继续用手工路由的 ViaShell 选项）\n- 主机表单的跳板行不显示模式合成的默认跳板（仅拨号层生效；会话栏会显示跳板路径）\n- 三段号旧版本（0.3.1~0.3.4）无法解析四段号，收不到自动更新，需手动装一次四段版\n- 本版仅发布 Windows 与 Linux（amd64）两个平台\n\n\u003e 0.4.5.1 可应用内自动更新到本版。内网环境请开启「设置 → 安全 → 内网模式」。\n",
+  "files": [
+    {
+      "name": "motty-0.4.5.2-windows-amd64-setup.exe",
+      "size": 12547010,
+      "sha256": "330dde9d3cdc35388e2c83fbff623d57332eac0e3eab287276e0472a808f9031",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2dTFMeXphcTYvcG52YlBoWXAxUnFYR20wZ3R3R0hMTkE2Uzg5VTZMZ2Z4bUpFZENvbUFkTnIxRldFWEZ2YnBBY0lCaEFGVTk5c2VHb0pWSkJpKzl6QXc9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTQ1NjM4MDIJZmlsZTptb3R0eS0wLjQuNS4yLXdpbmRvd3MtYW1kNjQtc2V0dXAuZXhlCXZlcnNpb246MC40LjUuMgpYdUhKQmVqWHlLV1d5TnB1MVVtWEhmK3lrelRScU1GQWkzYUZiblRFcVMzRDhpMFVXYzZSVTlxS2NYWWkrbTlrN3k2SDRvdHliSkk3ckdaZWRCdjBCdz09Cg=="
+    },
+    {
+      "name": "motty-0.4.5.2-windows-amd64.zip",
+      "size": 17191231,
+      "sha256": "aa3873174954e9084fd2c2905a36b279b667a42dfcdd0c1567a6138443f9a017",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2akpydE1HbkU1eDNvemJXMlorSWsxMUhDd0RxSm0wa3JMQ3NjZ0RQUm9WalZBenk0ZFJEcnBQeHVRdWgrZE9GMitvYTV3aE03MlpqRXZrYWJUaVpoUUk9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTQ1NjM4MDIJZmlsZTptb3R0eS0wLjQuNS4yLXdpbmRvd3MtYW1kNjQuemlwCXZlcnNpb246MC40LjUuMgpnMnZVRjJOTTlGL3o2MnE0OTBuUEFNSGVBejBQZGhBSFRockIyN0ZTRThXL29iK2VabDY0VVVOeHVwaGlwNmtTSWc4UVNjdWt5MjNFTXZSd1BsQldEUT09Cg=="
+    },
+    {
+      "name": "motty-0.4.5.2-linux-amd64.tar.gz",
+      "size": 17113528,
+      "sha256": "a54e386d14f4e5acfa80733806edfe392094b8e159bb1782dd23a25945f24017",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2cXpsMEw3dkxWVGJwVkNsZHJDei9jZm1WemFRN01GTStWSk9wQ2RJRWxBeTlJTy9KSk14cjRSS1k0ZjZ2d1ZDRE1TdmpOUmhsRTB0UDlZZFBjQ1hVd3c9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTQ1NjM4MDIJZmlsZTptb3R0eS0wLjQuNS4yLWxpbnV4LWFtZDY0LnRhci5negl2ZXJzaW9uOjAuNC41LjIKRGw1dExBZDlFa1IxNjJKT3FyU0Q3RkRHYVhHeERhRjl0eFhIdHdYY3hJK1oyamRjWFJKOVlHVmE1R0FtTmVaVEIrUksxdGlETHF5b3krQm1ETlJjRGc9PQo="
+    }
+  ]
+}
