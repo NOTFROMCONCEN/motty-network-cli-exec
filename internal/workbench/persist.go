@@ -182,7 +182,12 @@ type savedState struct {
 	SessionLogsOff bool `json:"session_logs_off,omitempty"`
 	// IntranetMode keeps the machine off the internet's back. Like the session
 	// journal it belongs to this computer and is never synced.
-	IntranetMode            bool                  `json:"intranet_mode,omitempty"`
+	IntranetMode bool `json:"intranet_mode,omitempty"`
+	// JumpMode routes hosts without their own jump route through the saved SSH
+	// host JumpHost names, by catalog id: this machine sits behind a bastion.
+	// Like the intranet mode it belongs to this computer and is never synced.
+	JumpMode                bool                  `json:"jump_mode,omitempty"`
+	JumpHost                string                `json:"jump_host,omitempty"`
 	SessionLogsView         *savedSessionLogsView `json:"session_logs_view,omitempty"`
 	CommandInlineSuggestOff bool                  `json:"command_inline_suggest_off,omitempty"`
 	LocalProxyPort          int                   `json:"local_proxy_port,omitempty"`
@@ -606,6 +611,8 @@ func (state *State) snapshot() savedState {
 		CommandAcceptHintOff:       state.history.acceptHintOff,
 		SessionLogsOff:             state.sessionLogsOff,
 		IntranetMode:               state.intranetMode,
+		JumpMode:                   state.jumpMode,
+		JumpHost:                   state.jumpHost,
 		SessionLogsView:            state.snapshotSessionLogsView(),
 		CommandInlineSuggestOff:    state.history.inlineOff,
 		SFTPParallel:               state.sftpParallel,
@@ -1068,6 +1075,9 @@ func (state *State) restoreLocal(saved savedState) {
 	state.setTabNumbers(saved.TabNumbers)
 	state.hiddenNav = hiddenNavPages(saved.HiddenNav)
 	state.setIntranetMode(saved.IntranetMode)
+	state.jumpMode = saved.JumpMode
+	state.jumpHost = saved.JumpHost
+	state.syncDefaultJump()
 	state.setVerticalTabsAutoHide(saved.VerticalTabsAutoHide)
 	state.setVerticalTabsGrouping(saved.VerticalTabsGrouping)
 	state.restoreSFTPLocalFavorites(saved.SFTPLocalBookmarks)

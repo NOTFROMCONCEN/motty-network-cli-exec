@@ -42,6 +42,7 @@ const (
 	controlLocalShellSelect // detected Windows shells
 	controlEditorSelect     // installed editors
 	controlStartupHosts     // the hosts a launch connects
+	controlJumpHost         // the host the jump mode connects through
 )
 
 // settingsControl is one control of the page, recorded while the page is
@@ -253,6 +254,8 @@ func (state *State) paintSettingsControls(canvas *gfx.Canvas) {
 			state.editorMenu.bounds = rect
 		case controlStartupHosts:
 			state.startupPicker.bounds = rect
+		case controlJumpHost:
+			state.jumpPicker.bounds = rect
 		case controlSwitch:
 			state.aiSwitch(canvas, control.id, rect, control.on, control.disabled, control.label)
 		case controlButtons:
@@ -482,6 +485,7 @@ func (state *State) paintConnectionSettings(page *settingsPage) {
 			settingsChoiceRow(page, messages.SettingsRestore, messages.SettingsRestoreDescription, &state.restoreConnect, settingsRestoreChoices[:], state.settingsRestoreLabel,
 				func() { state.save() }, nil)
 			state.paintStartupSettings(page)
+			state.paintJumpSettings(page)
 			state.paintSSHAgentRow(page)
 			settingsChoiceRow(page, messages.SettingsNetworkProxy, messages.SettingsNetworkProxyDescription, &state.networkProxy, settingsNetworkProxyChoices[:], state.settingsNetworkProxyLabel,
 				func() { state.save() }, nil)

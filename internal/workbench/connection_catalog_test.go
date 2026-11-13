@@ -206,3 +206,73 @@ func TestHeadlessServerReadsWhatTheWindowSaved(t *testing.T) {
 		t.Fatalf("hosts %d, opened %+v", len(catalog.hosts), allowed)
 	}
 }
+
+// The jump mode gives every host without a route of its own the chosen jump
+// host. A host with a running route keeps it; a host whose route is stopped
+// stays direct, because stopping a route is how one host opts out; the jump
+// host itself never routes through itself; and a choice that names no saved
+// host leaves everything direct.
+func TestTheJumpModeRoutesUnroutedHostsThroughTheChosenHost(t *testing.T) {
+	saved := savedState{
+		Hosts: []savedHost{
+			{ID: "bastion", Label: "Bastion", Address: "bastion.example.com", User: "ops", Port: 22},
+			{ID: "plain", Label: "Plain", Address: "plain.example.com", User: "root", Port: 22},
+			{ID: "hop", Label: "Hop", Address: "10.0.0.5", Port: 22},
+			{ID: "routed", Label: "Routed", Address: "10.0.0.9", Port: 22},
+			{ID: "stopped", Label: "Stopped", Address: "10.0.0.10", Port: 22},
+		},
+		Proxies: []savedProxy{
+			{TargetAddress: "10.0.0.9", TargetPort: 22, JumpAddress: "10.0.0.5", JumpPort: 22},
+			{TargetAddress: "10.0.0.10", TargetPort: 22, JumpAddress: "10.0.0.5", JumpPort: 22, Stopped: true},
+		},
+	}
+	catalog := catalogFromSaved(saved, systemLogin(), keyMessagesIn(i18n.For(i18n.English)))
+	env := connectEnv{}
+	routeOf := func(address, user string) (sshconn.Config, connectionRoute, bool) {
+		host, ok := catalog.hostByConnection(address, user, 22)
+		if !ok {
+			t.Fatalf("the catalog lacks %s", address)
+		}
+		return catalog.sshConfigFor(host, host, env)
+	}
+
+	// Off: everything keeps its own dialing.
+	config, _, valid := routeOf("plain.example.com", "root")
+	if !valid || len(config.ProxyJumps) != 0 {
+		t.Fatalf("with the mode off Plain dials %+v", config.ProxyJumps)
+	}
+
+	// On: the unrouted host leaves through the bastion.
+	catalog.defaultJump.on = true
+	catalog.defaultJump.catalogID = "bastion"
+	config, route, valid := routeOf("plain.example.com", "root")
+	if !valid || len(config.ProxyJumps) != 1 || config.ProxyJumps[0].Host != "bastion.example.com" || config.ProxyJumps[0].User != "ops" {
+		t.Fatalf("with the mode on Plain leaves through %+v", config.ProxyJumps)
+	}
+	if route.jumpPath == "" {
+		t.Fatal("a jump-mode connection must report its path")
+	}
+
+	// A host with a running route keeps it, and a stopped route stays direct.
+	config, _, _ = routeOf("10.0.0.9", "")
+	if len(config.ProxyJumps) != 1 || config.ProxyJumps[0].Host != "10.0.0.5" {
+		t.Fatalf("Routed keeps its own route, got %+v", config.ProxyJumps)
+	}
+	config, route, valid = routeOf("10.0.0.10", "")
+	if !valid || len(config.ProxyJumps) != 0 || route.jumpPath != "" {
+		t.Fatalf("a stopped route keeps the host direct, got jumps %+v path %q", config.ProxyJumps, route.jumpPath)
+	}
+
+	// The jump host itself connects directly.
+	config, _, _ = routeOf("bastion.example.com", "ops")
+	if len(config.ProxyJumps) != 0 {
+		t.Fatalf("the jump host must not route through itself, got %+v", config.ProxyJumps)
+	}
+
+	// A choice that names no saved host leaves everything direct.
+	catalog.defaultJump.catalogID = "gone"
+	config, _, valid = routeOf("plain.example.com", "root")
+	if !valid || len(config.ProxyJumps) != 0 {
+		t.Fatalf("a missing jump host must fall back to direct, got %+v valid %t", config.ProxyJumps, valid)
+	}
+}
