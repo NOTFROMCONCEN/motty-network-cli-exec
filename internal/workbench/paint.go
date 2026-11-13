@@ -611,7 +611,7 @@ func (state *State) declareShell(c ui.C) {
 		}
 		ui.Row(c).Grow(1).Shrink(1).MarginSides(0, 0, state.toolbarDockBottomReserve(false), 0).Children(func() {
 			ui.Slot(c).Width(state.toolbarDockSideReserveFor(true, false)).Shrink(0)
-			state.declareNavigation(c)
+			state.declareNavigation(c, chrome.shellHeight)
 			workspace := ui.Slot(c).Grow(1).MarginSides(0, chrome.shellCardRight, sectionCardMargin, 0).
 				Radius(radius.surface).Border(workspaceBorder, pal.windowStroke).Background(pal.workspace)
 			// The hosts page is part of this page like the panes: its header is a
@@ -1304,7 +1304,7 @@ type hostToggleBoxes struct {
 
 // declareNavigation declares the sidebar: the name of the application over the
 // pages, and the way to a shell on this computer and to the settings at the bottom.
-func (state *State) declareNavigation(c ui.C) {
+func (state *State) declareNavigation(c ui.C, height float32) {
 	m := state.messages
 
 	items := [...]struct {
@@ -1327,14 +1327,20 @@ func (state *State) declareNavigation(c ui.C) {
 	}
 	ui.Column(c).Width(navigationWidth).Shrink(0).Children(func() {
 		// The logo with the name beside it, painted into this slot after
-		// layout. The intranet mode hides it; a fixed gap keeps the first
-		// entry off the window's edge. The gap must not be a Spacer: a Spacer
-		// grows, and this column's trailing one already takes what the entries
-		// leave, so two of them would push the entries to the middle.
+		// layout. The intranet mode hides it; a gap keeps the first entry off
+		// the window's edge, and a short window drops it: this sidebar has one
+		// more entry than upstream's, and the entries below must stay on
+		// screen. The gap must not be a Spacer: a Spacer grows, and this
+		// column's trailing one already takes what the entries leave, so two
+		// of them would push the entries to the middle.
+		logoGap := float32(20)
+		if height < 640 {
+			logoGap = 0
+		}
 		if state.intranetMode {
 			ui.Slot(c).Height(12)
 		} else {
-			state.chrome.lockup = ui.Slot(c).Size(lockupWidth, lockupHeight).MarginSides(15, 0, 20, 0).Self(ui.Center)
+			state.chrome.lockup = ui.Slot(c).Size(lockupWidth, lockupHeight).MarginSides(15, 0, logoGap, 0).Self(ui.Center)
 		}
 		for _, item := range items {
 			state.navigationItem(c, item.id, item.icon, item.label, item.active, 4)
