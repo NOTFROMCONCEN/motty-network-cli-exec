@@ -344,6 +344,7 @@ func (state *State) Paint(canvas *gfx.Canvas, size gfx.Size) {
 	state.paintFindPreferences(canvas)
 	state.paintEditorSelect(canvas)
 	state.paintStartupHostSelect(canvas)
+	state.paintJumpHostSelect(canvas)
 	state.paintMonitorIntervalMenu(canvas)
 	state.paintDashboardMenu(canvas)
 	state.paintSessionLogFilters(canvas)
