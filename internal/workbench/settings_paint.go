@@ -491,6 +491,7 @@ func (state *State) paintConnectionSettings(page *settingsPage) {
 			settingsChoiceRow(page, messages.SettingsRestore, messages.SettingsRestoreDescription, &state.restoreConnect, settingsRestoreChoices[:], state.settingsRestoreLabel,
 				func() { state.save() }, nil)
 			state.paintStartupSettings(page)
+			state.paintJumpSettings(page)
 			state.paintSSHAgentRow(page)
 			settingsChoiceRow(page, messages.SettingsNetworkProxy, messages.SettingsNetworkProxyDescription, &state.networkProxy, settingsNetworkProxyChoices[:], state.settingsNetworkProxyLabel,
 				func() { state.save() }, nil)

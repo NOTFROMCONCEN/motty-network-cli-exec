@@ -56,7 +56,6 @@ var EnglishMessages = Messages{
 	Monitor:        englishMonitor,
 	Dashboard:      englishDashboard,
 	SessionLogs:    englishSessionLogs,
-	HTTPFile:       englishHTTPFile,
 	SFTPWindow: SFTPWindowMessages{
 		LocalPlaces: "Favorites and places", DirectoryFavorites: "Folder favorites", CommonFolders: "Quick access", LocalDrives: "Drives", FavoriteAdd: "Bookmark current folder", FavoriteRemove: "Remove current folder bookmark", FavoriteLimit: "The folder bookmark limit has been reached. Remove an unused bookmark first.",
 		LocalHome: "Home", LocalDesktop: "Desktop", LocalDownloads: "Downloads", LocalDocuments: "Documents", LocalPictures: "Pictures", LocalMusic: "Music", LocalVideos: "Videos", LocalMovies: "Movies", LocalApplications: "Applications",
@@ -153,7 +152,6 @@ var EnglishMessages = Messages{
 
 	NavHosts:                  "Hosts",
 	NavWorkspaces:             "Workspaces",
-	NavHTTPFile:               "File Server",
 	NavKeychain:               "Keychain",
 	NavProxies:                "Jump Routes",
 	NavSnippets:               "Snippets",

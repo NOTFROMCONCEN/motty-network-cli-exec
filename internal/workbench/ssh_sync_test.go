@@ -377,10 +377,12 @@ func TestSSHSyncToggleThroughSettings(t *testing.T) {
 	addSyncHost(t, state, "web", "web.example", "", 22)
 	state.openSettings()
 	state.selectSettingsCategory(settingsConnection)
-	// The connection page is longer than the default window; measure it, then
-	// scroll to its last group so the sync switch is on screen and has a hit.
-	paintedTexts(state)
-	state.scrollSettings(gfx.ScrollEvent{DeltaY: state.settingsContent, Precise: true})
+	// The fork's jump-mode row makes the connection page taller, so the sync
+	// group can sit under the fold: reveal it the way opening a search result
+	// does, then check what the revealed page paints.
+	state.settings.jump = state.messages.SSHSync.Group
+	var reveal gfx.Canvas
+	state.Paint(&reveal, gfx.Size{Width: 1400, Height: 900})
 	canvas, texts := paintedTexts(state)
 	if !contains(texts, state.messages.SSHSync.ToggleRow) || !hasHit(canvas, hitSettingsSSHSyncToggle) {
 		t.Fatalf("setting is not shown: %v", texts)
