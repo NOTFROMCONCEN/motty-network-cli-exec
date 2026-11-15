@@ -121,6 +121,13 @@ func (state *State) applyLinkChange() {
 		// The reason a retry was waiting out a backoff is gone.
 		state.restartReconnects()
 	}
+	// The file server offers this machine's addresses, and its run keeps that
+	// walk cached: when the interfaces moved, re-walk in the background — the
+	// page must never pay a full enumeration on a repaint, and a new address
+	// should still show up without a restart of the listener.
+	if server := state.httpFileServer(); server != nil && server.Running() {
+		go server.RefreshAddresses()
+	}
 	for index := range state.sessions {
 		state.verifyLink(&state.sessions[index])
 	}
