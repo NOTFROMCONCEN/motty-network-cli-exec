@@ -62,6 +62,9 @@ func TestEverySavedStateFieldIsSharedOrKeptOnThisDevice(t *testing.T) {
 		// this machine, not a preference to carry across devices.
 		"startup_disabled": true, "startup_local": true, "startup_shell": true, "startup_hosts": true, "startup_no_reuse": true,
 		"window_x": true, "window_y": true, "window_width": true, "window_height": true,
+		// Which way the settings's local-shell group is opened is this
+		// computer's own view: another device has its own shells to show.
+		"local_shells_expanded": true,
 		// The session journal switch belongs to this computer: another device
 		// keeps its own choice, and an older build must not silently drop it.
 		"session_logs_off": true, "session_logs_view": true,
