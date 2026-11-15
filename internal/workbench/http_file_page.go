@@ -131,7 +131,7 @@ func (state *State) declareHTTPFileStatus(c ui.C, m i18n.HTTPFileMessages, pal *
 		// done with it, then the rest of this machine's addresses quietly.
 		ui.Row(c).Height(36).Gap(8).Items(ui.Center).Children(func() {
 			ui.Text(c, m.AddressLabel).FontSize(metrics.FontSizeS).Color(pal.muted).Shrink(0)
-			address := state.httpFilePrimaryAddress()
+			address := httpFilePrimaryAddress(snapshot.Addresses)
 			if address == "" {
 				address = "—"
 			}
