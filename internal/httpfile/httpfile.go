@@ -113,6 +113,12 @@ type Server struct {
 	running  bool
 	started  time.Time
 	err      error
+	// addresses is the run's cached interface walk: enumerating the machine's
+	// adapters costs a fifth of a second on a box carrying many of them, and
+	// the settings page reads a Snapshot on every frame while the server runs.
+	// It is taken on Start and refreshed by RefreshAddresses when the
+	// interfaces change; a snapshot never walks again.
+	addresses []string
 
 	requests   atomic.Uint64
 	uploaded   atomic.Uint64
@@ -155,12 +161,25 @@ func (server *Server) SetSwitches(allowUpload, allowDelete, allowListing bool) {
 // Start takes the port on every interface and serves until Stop. A port that
 // is taken is reported as the error and leaves the server stopped.
 func (server *Server) Start() error {
+	// The interface walk for the run's addresses is slow on a box carrying
+	// many adapters, so it happens outside the mutex and before the listener
+	// exists: neither a repaint nor a first request queues behind it. The
+	// port is read first, and a run that appeared while the walk ran is
+	// refused by the second check below.
+	server.mu.Lock()
+	if server.running {
+		server.mu.Unlock()
+		return ErrRunning
+	}
+	port := server.config.Port
+	server.mu.Unlock()
+	urls := Addresses(port)
 	server.mu.Lock()
 	defer server.mu.Unlock()
 	if server.running {
 		return ErrRunning
 	}
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(server.config.Port)))
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
 	if err != nil {
 		server.err = err
 		return err
@@ -174,6 +193,7 @@ func (server *Server) Start() error {
 	}
 	server.running = true
 	server.started = time.Now()
+	server.addresses = urls
 	server.err = nil
 	server.requests.Store(0)
 	server.uploaded.Store(0)
@@ -194,6 +214,7 @@ func (server *Server) Stop() error {
 	httpServer := server.http
 	server.running = false
 	server.http, server.listener = nil, nil
+	server.addresses = nil
 	server.mu.Unlock()
 
 	// Shutdown closes the listener itself and waits for the requests in
@@ -214,6 +235,28 @@ func (server *Server) Stop() error {
 	return nil
 }
 
+// RefreshAddresses re-walks this machine's interfaces and replaces the run's
+// cached addresses while the server is up: a new interface, a VPN address or
+// another IP on an existing one then reaches a snapshot without a restart.
+// The walk is slow on a box carrying many adapters, so it happens outside the
+// mutex, off the window's thread; the store checks that this run still holds
+// (a restart takes fresh addresses of its own).
+func (server *Server) RefreshAddresses() {
+	server.mu.Lock()
+	if !server.running {
+		server.mu.Unlock()
+		return
+	}
+	port := server.config.Port
+	server.mu.Unlock()
+	urls := Addresses(port)
+	server.mu.Lock()
+	if server.running {
+		server.addresses = urls
+	}
+	server.mu.Unlock()
+}
+
 // Running reports whether the server is up.
 func (server *Server) Running() bool {
 	server.mu.Lock()
@@ -222,9 +265,13 @@ func (server *Server) Running() bool {
 }
 
 // Snapshot is the server's state and counters, safe to read from any thread.
+// While the run is up it reports the cached addresses; it never walks the
+// machine's interfaces, so a repaint of the file-server page costs a few
+// mutex passes and atomic loads, not a network round of system calls.
 func (server *Server) Snapshot() Snapshot {
 	server.mu.Lock()
 	config, running, started, err := server.config, server.running, server.started, server.err
+	addresses := server.addresses
 	server.mu.Unlock()
 	snapshot := Snapshot{
 		Running:    running,
@@ -238,7 +285,7 @@ func (server *Server) Snapshot() Snapshot {
 		Err:        err,
 	}
 	if running {
-		snapshot.Addresses = Addresses(config.Port)
+		snapshot.Addresses = addresses
 	}
 	return snapshot
 }

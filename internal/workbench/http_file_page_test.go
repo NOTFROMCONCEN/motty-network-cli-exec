@@ -70,7 +70,7 @@ func TestHTTPFileStartServesTheFolderAndStopClosesIt(t *testing.T) {
 		t.Fatalf("notice = %q bad=%v, want the started line", state.httpFile.notice, state.httpFile.noticeBad)
 	}
 	// The folder is served: a file comes back and the counters move.
-	address := state.httpFilePrimaryAddress()
+	address := httpFilePrimaryAddress(state.httpFileSnapshot().Addresses)
 	response, err := http.Get(address + "/note.txt")
 	if err != nil {
 		t.Fatalf("GET %s: %v", address, err)
@@ -136,7 +136,7 @@ func TestHTTPFileSwitchesApplyToTheRunningServer(t *testing.T) {
 	if !state.httpFileRunning() {
 		t.Fatalf("the server did not start: %q", state.httpFile.notice)
 	}
-	address := state.httpFilePrimaryAddress()
+	address := httpFilePrimaryAddress(state.httpFileSnapshot().Addresses)
 	put := func() int {
 		request, _ := http.NewRequest(http.MethodPut, address+"/incoming.txt", stringReader("x"))
 		response, err := http.DefaultClient.Do(request)
