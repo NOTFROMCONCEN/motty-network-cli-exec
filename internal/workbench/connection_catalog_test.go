@@ -230,6 +230,9 @@ func TestKeepAliveUsesCountMaxByDefault(t *testing.T) {
 	interactive := catalog.keepAliveFor(Host{Address: "example.com", Port: 22, InteractiveOnly: true})
 	if !interactive.UseTCP || interactive.CountMax == nil || *interactive.CountMax != 3 {
 		t.Fatalf("interactive keepalive = %+v, want TCP with CountMax 3", interactive)
+	}
+}
+
 // The jump mode gives every host without a route of its own the chosen jump
 // host. A host with a running route keeps it; a host whose route is stopped
 // stays direct, because stopping a route is how one host opts out; the jump
