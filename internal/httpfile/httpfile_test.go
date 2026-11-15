@@ -510,3 +510,46 @@ func TestRootReachedThroughASymlinkServes(t *testing.T) {
 		}
 	}
 }
+
+// The snapshot reports the run's cached addresses and never re-walks the
+// machine: on a box carrying many adapters that walk costs a fifth of a
+// second, and the file-server page reads a snapshot on every frame while the
+// server runs. The cache is taken by Start, replaced by RefreshAddresses when
+// the interfaces move, and dropped with the run.
+func TestTheSnapshotReportsTheCachedAddresses(t *testing.T) {
+	port := freePort(t)
+	server, err := New(Config{Root: startRoot(t), Port: port})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if got := server.Snapshot().Addresses; len(got) == 0 || got[0] != fmt.Sprintf("http://127.0.0.1:%d", port) {
+		t.Fatalf("Start cached %v, want loopback first with the port", got)
+	}
+	// A sentinel in the cache proves a snapshot reads the cache: a fresh
+	// walk of this machine could never answer with it.
+	server.mu.Lock()
+	server.addresses = []string{"http://cached.test:9"}
+	server.mu.Unlock()
+	if got := server.Snapshot().Addresses; len(got) != 1 || got[0] != "http://cached.test:9" {
+		t.Fatalf("the snapshot re-walked instead of reporting the cache: %v", got)
+	}
+	// A refresh replaces the cache with the machine's real addresses.
+	server.RefreshAddresses()
+	if got := server.Snapshot().Addresses; len(got) == 0 || !strings.HasPrefix(got[0], "http://127.0.0.1:") {
+		t.Fatalf("the refresh did not replace the cache with a live walk: %v", got)
+	}
+	// Stopped, a snapshot carries no addresses, and a refresh is a no-op.
+	if err := server.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	if got := server.Snapshot().Addresses; len(got) != 0 {
+		t.Fatalf("a stopped server still reports addresses: %v", got)
+	}
+	server.RefreshAddresses()
+	if got := server.Snapshot().Addresses; len(got) != 0 {
+		t.Fatalf("a refresh on a stopped server made addresses: %v", got)
+	}
+}

@@ -166,7 +166,7 @@ func (state *State) startHTTPServer() {
 	}
 	state.httpFile.startedAt = time.Now()
 	state.httpFile.fieldsSynced = false
-	state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StartedFmt, state.httpFilePrimaryAddress()), false)
+	state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StartedFmt, httpFilePrimaryAddress(state.httpFileSnapshot().Addresses)), false)
 	state.save()
 }
 
@@ -194,24 +194,26 @@ func (state *State) httpFileApplySwitches() {
 	state.save()
 }
 
-// httpFilePrimaryAddress is the address the page shows first: loopback when
-// that is all there is, otherwise the first address of a real interface.
-func (state *State) httpFilePrimaryAddress() string {
-	snapshot := state.httpFileSnapshot()
-	if len(snapshot.Addresses) == 0 {
+// httpFilePrimaryAddress is the address to show first: loopback when that is
+// all there is, otherwise the first address of a real interface. It reads the
+// addresses a snapshot already carries — the walk behind them is the run's
+// cache, taken once on Start and refreshed when the interfaces change, so a
+// repaint of the page never pays for it again.
+func httpFilePrimaryAddress(addresses []string) string {
+	if len(addresses) == 0 {
 		return ""
 	}
-	for _, address := range snapshot.Addresses {
+	for _, address := range addresses {
 		if !strings.HasPrefix(address, "http://127.0.0.1") {
 			return address
 		}
 	}
-	return snapshot.Addresses[0]
+	return addresses[0]
 }
 
 // httpFileCopyAddress puts the primary address on the clipboard.
 func (state *State) httpFileCopyAddress() {
-	address := state.httpFilePrimaryAddress()
+	address := httpFilePrimaryAddress(state.httpFileSnapshot().Addresses)
 	if address == "" {
 		return
 	}
@@ -224,7 +226,7 @@ func (state *State) httpFileCopyAddress() {
 
 // httpFileOpenAddress opens the primary address in the system browser.
 func (state *State) httpFileOpenAddress() {
-	address := state.httpFilePrimaryAddress()
+	address := httpFilePrimaryAddress(state.httpFileSnapshot().Addresses)
 	if address == "" {
 		return
 	}
