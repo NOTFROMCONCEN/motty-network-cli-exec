@@ -3435,6 +3435,7 @@ var traditionalHTTPFile = HTTPFileMessages{
 	Stop:           "停止伺服器",
 	StartedFmt:     "伺服器已啟動：%s",
 	Stopped:        "伺服器已停止",
+	Stopping:       "正在等待進行中的請求結束，伺服器即將停止…",
 	StartFailedFmt: "啟動失敗：%s",
 	StopFailedFmt:  "停止失敗：%s",
 	InvalidPort:    "連接埠必須是 1 到 65535 之間的數字",

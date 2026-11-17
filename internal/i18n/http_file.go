@@ -50,6 +50,7 @@ type HTTPFileMessages struct {
 	Stop           string
 	StartedFmt     string
 	Stopped        string
+	Stopping       string
 	StartFailedFmt string
 	StopFailedFmt  string
 	InvalidPort    string
@@ -99,6 +100,7 @@ var chineseHTTPFile = HTTPFileMessages{
 	Stop:           "停止服务器",
 	StartedFmt:     "服务器已启动：%s",
 	Stopped:        "服务器已停止",
+	Stopping:       "正在等待在途请求结束，服务器即将停止…",
 	StartFailedFmt: "启动失败：%s",
 	StopFailedFmt:  "停止失败：%s",
 	InvalidPort:    "端口必须是 1 到 65535 之间的数字",
@@ -148,6 +150,7 @@ var englishHTTPFile = HTTPFileMessages{
 	Stop:           "Stop server",
 	StartedFmt:     "Server started: %s",
 	Stopped:        "Server stopped",
+	Stopping:       "Waiting for the requests in flight; the server is stopping…",
 	StartFailedFmt: "The server could not start: %s",
 	StopFailedFmt:  "The server could not stop: %s",
 	InvalidPort:    "The port must be a number between 1 and 65535",

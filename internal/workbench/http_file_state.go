@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/vivaui/viva/app"
 	"github.com/vivaui/viva/text"
@@ -45,9 +44,15 @@ type httpFileState struct {
 	noticeBad bool
 
 	// server is made on first use and keeps the listener across repaints.
-	server    *httpfile.Server
-	serverMu  sync.Mutex
-	startedAt time.Time
+	// stopping says a stop is running in the background: Stop waits for the
+	// requests in flight, and while it waits neither another stop nor a start
+	// on the same server makes sense.
+	server   *httpfile.Server
+	serverMu sync.Mutex
+	stopping bool
+	// newErr is why no server could be made from the stored configuration;
+	// the page's status line shows it instead of a bare "stopped".
+	newErr error
 }
 
 // defaultHTTPFileRoot is where a fresh window points the shared folder: the
@@ -67,9 +72,20 @@ func (state *State) httpFileServer() *httpfile.Server {
 	state.httpFile.serverMu.Lock()
 	defer state.httpFile.serverMu.Unlock()
 	if state.httpFile.server == nil {
-		state.httpFile.server, _ = httpfile.New(state.httpFileConfig())
+		state.httpFile.server, state.httpFile.newErr = httpfile.New(state.httpFileConfig())
 	}
 	return state.httpFile.server
+}
+
+// httpFileNewError is why no server exists yet — a stored configuration that
+// cannot describe one, an empty root say — or nil once a server is made.
+func (state *State) httpFileNewError() error {
+	state.httpFile.serverMu.Lock()
+	defer state.httpFile.serverMu.Unlock()
+	if state.httpFile.server != nil {
+		return nil
+	}
+	return state.httpFile.newErr
 }
 
 // httpFileConfig is the configuration the page's current choices describe.
@@ -144,14 +160,37 @@ func (state *State) startHTTPServer() {
 	state.httpFile.root = root
 	state.httpFile.port = port
 	state.httpFileNotice("", false)
-	// A server that is already up is stopped first: its root or port may be
-	// exactly what changed.
 	server := state.httpFileServer()
-	if server.Running() {
-		if err := server.Stop(); err != nil {
-			state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StartFailedFmt, err), true)
-			return
-		}
+	state.httpFile.serverMu.Lock()
+	stopping := state.httpFile.stopping
+	state.httpFile.serverMu.Unlock()
+	if stopping {
+		state.httpFileNotice(state.messages.HTTPFile.Stopping, true)
+		return
+	}
+	if server != nil && server.Running() {
+		// A server that is already up is stopped first: its root or port may
+		// be exactly what changed. Stop waits for the requests in flight —
+		// work for the background, not for the window thread — and the start
+		// continues on the window loop once the listener is free.
+		state.httpFile.serverMu.Lock()
+		state.httpFile.stopping = true
+		state.httpFile.serverMu.Unlock()
+		state.httpFileNotice(state.messages.HTTPFile.Stopping, false)
+		go func() {
+			err := server.Stop()
+			state.aiPost(func(state *State) {
+				state.httpFile.serverMu.Lock()
+				state.httpFile.stopping = false
+				state.httpFile.serverMu.Unlock()
+				if err != nil {
+					state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StartFailedFmt, err), true)
+					return
+				}
+				state.startHTTPServer()
+			})
+		}()
+		return
 	}
 	state.httpFile.serverMu.Lock()
 	state.httpFile.server, err = httpfile.New(state.httpFileConfig())
@@ -164,24 +203,42 @@ func (state *State) startHTTPServer() {
 		state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StartFailedFmt, httpFileError(err)), true)
 		return
 	}
-	state.httpFile.startedAt = time.Now()
 	state.httpFile.fieldsSynced = false
 	state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StartedFmt, httpFilePrimaryAddress(state.httpFileSnapshot().Addresses)), false)
 	state.save()
 }
 
 // stopHTTPServer closes the listener and keeps the choices for the next start.
+// Stop waits for the requests in flight, up to five seconds, and a visitor
+// mid-download would hold the window thread that long — so the wait happens in
+// the background, and the answer comes back through the window loop.
 func (state *State) stopHTTPServer() {
 	server := state.httpFileServer()
 	if server == nil || !server.Running() {
 		return
 	}
-	if err := server.Stop(); err != nil {
-		state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StopFailedFmt, err), true)
+	state.httpFile.serverMu.Lock()
+	if state.httpFile.stopping {
+		state.httpFile.serverMu.Unlock()
 		return
 	}
-	state.httpFileNotice(state.messages.HTTPFile.Stopped, false)
-	state.save()
+	state.httpFile.stopping = true
+	state.httpFile.serverMu.Unlock()
+	state.httpFileNotice(state.messages.HTTPFile.Stopping, false)
+	go func() {
+		err := server.Stop()
+		state.aiPost(func(state *State) {
+			state.httpFile.serverMu.Lock()
+			state.httpFile.stopping = false
+			state.httpFile.serverMu.Unlock()
+			if err != nil {
+				state.httpFileNotice(fmt.Sprintf(state.messages.HTTPFile.StopFailedFmt, err), true)
+				return
+			}
+			state.httpFileNotice(state.messages.HTTPFile.Stopped, false)
+			state.save()
+		})
+	}()
 }
 
 // httpFileApplySwitches pushes the page's switches into the running server, so
