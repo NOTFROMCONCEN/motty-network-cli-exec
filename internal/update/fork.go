@@ -120,14 +120,21 @@ func checkFork(ctx context.Context, client *http.Client, goos, goarch string, pk
 	var lastErr error
 	release, tag, manifestURL, err := forkRelease(ctx, client, forkFeedURL)
 	if err == nil {
-		full, manifestErr := manifestRelease(ctx, client, manifestURL, tag, release.Version, release.Notes, ForkRepo, goos, goarch, pkg)
-		if manifestErr == nil {
-			return full, nil
+		if manifestURL == "" {
+			// The feed named a release but attached no manifest: the release's
+			// own page is the worst-case answer, and a mirror may still hold
+			// the manifest the feed did not.
+			fallback, haveFallback = release, true
+		} else {
+			full, manifestErr := manifestRelease(ctx, client, manifestURL, tag, release.Version, release.Notes, ForkRepo, goos, goarch, pkg)
+			if manifestErr == nil {
+				return full, nil
+			}
+			// The feed named a release whose manifest did not arrive. Keep it
+			// for the worst case and see whether a mirror has the manifest.
+			fallback, haveFallback = release, true
+			lastErr = manifestErr
 		}
-		// The feed named a release whose manifest did not arrive. Keep it for
-		// the worst case and see whether a mirror has the manifest.
-		fallback, haveFallback = release, true
-		lastErr = manifestErr
 	} else {
 		lastErr = err
 	}
@@ -144,7 +151,11 @@ func checkFork(ctx context.Context, client *http.Client, goos, goarch string, pk
 			}
 			return full, nil
 		}
-		lastErr = mirrorErr
+		// A feed that said "no release" keeps saying it: a mirror failing for
+		// its own reasons must not turn that answer into a network error.
+		if !errors.Is(lastErr, ErrNoRelease) {
+			lastErr = mirrorErr
+		}
 	}
 	if haveFallback {
 		return fallback, nil
