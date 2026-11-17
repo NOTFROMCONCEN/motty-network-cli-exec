@@ -491,6 +491,19 @@ func TestAddresses(t *testing.T) {
 	if len(addresses) == 0 || addresses[0] != "http://127.0.0.1:8080" {
 		t.Fatalf("addresses = %v", addresses)
 	}
+	// The listener is dual-stack: every IPv6 the machine answers on is listed
+	// bracketed, and a link-local address a browser cannot be handed is left
+	// out.
+	for _, address := range addresses[1:] {
+		rest := strings.TrimPrefix(address, "http://")
+		host := rest[:strings.LastIndex(rest, ":")]
+		if strings.Contains(host, ":") != strings.HasPrefix(host, "[") {
+			t.Fatalf("address %q is neither a bare IPv4 nor a bracketed IPv6", address)
+		}
+		if strings.Contains(address, "fe80:") {
+			t.Fatalf("a link-local address was listed: %q", address)
+		}
+	}
 }
 
 func TestHumanSize(t *testing.T) {
