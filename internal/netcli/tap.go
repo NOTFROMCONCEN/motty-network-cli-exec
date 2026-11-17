@@ -121,10 +121,15 @@ type Tap struct {
 	pending   bool
 	pages     int
 	pagerSeen bool
-	cliErr    string
-	status    Status
-	done      bool
-	aborted   bool
+	// pagerServed says the pager text now sitting in the line has already been
+	// answered: the erasing backspaces never change the line, so without the
+	// latch every quiet window would read the same text as a fresh question.
+	// A new visible byte, a line redraw or a commit clears it.
+	pagerServed bool
+	cliErr      string
+	status      Status
+	done        bool
+	aborted     bool
 
 	// Bounded output text, head and tail kept.
 	head, tail       []byte
@@ -297,17 +302,20 @@ func (t *Tap) ground(b byte) {
 			t.col = 0
 			t.erased = true
 			t.pendingCR = false
+			t.pagerServed = false
 		}
 		switch {
 		case t.col < len(t.line):
 			t.line[t.col] = b
 			t.col++
+			t.pagerServed = false
 		case len(t.line) >= maxLineBytes:
 			t.lineOver = true
 			t.outTruncated = true
 		default:
 			t.line = append(t.line, b)
 			t.col++
+			t.pagerServed = false
 		}
 	}
 }
@@ -320,6 +328,7 @@ func (t *Tap) commit() {
 	t.col = 0
 	t.erased = false
 	t.lineOver = false
+	t.pagerServed = false
 	t.pending = false
 	if line == "" {
 		return
@@ -388,6 +397,14 @@ func (t *Tap) isPager(line string) bool {
 		return false
 	}
 	t.pagerSeen = true
+	if t.pagerServed {
+		// This pager line has been answered already. What sits in the buffer is
+		// the text the device is still erasing with backspaces after the key it
+		// earned — and backspaces never change the line — so the quiet window
+		// that follows must not read the same text as a fresh question.
+		return true
+	}
+	t.pagerServed = true
 	t.pages++
 	if t.send != nil && t.plat.pagerKey != nil && t.pages <= maxPages {
 		// The key comes from the platform table: a verified page-continue is
