@@ -2056,7 +2056,7 @@ var englishTools = ToolsMessages{
 	ImportHostSaveFailedFmt:      "Could not save the imported hosts: %v. No hosts were imported.",
 	ImportHostSaveRollbackFailed: "The saved passwords could not be rolled back. Retry the import to recover them.",
 
-	ImportXshellDirectory:   "Xshell session folder (folders become groups)…",
+	ImportXshellDirectory:   "Xshell session folder…",
 	ImportXshellDirPicker:   "Choose an Xshell session folder",
 	ImportXshellDirTitle:    "Import Xshell Sessions from a Folder",
 	ImportXshellDirDescFmt:  "Found %2$d sessions in %1$s; each goes to the group of its subfolder.",
