@@ -118,6 +118,10 @@ func (state *State) declareHTTPFileStatus(c ui.C, m i18n.HTTPFileMessages, pal *
 			dot, stateText := pal.faint, m.StatusStopped
 			if running {
 				dot, stateText = pal.success, m.StatusRunning
+			} else if err := state.httpFileNewError(); err != nil {
+				// No server could be made from the stored configuration; say
+				// why instead of a bare "stopped".
+				stateText = err.Error()
 			}
 			ui.Text(c, "●").FontSize(13).Color(dot)
 			ui.Text(c, stateText).FontSize(metrics.FontSizeM).Weight(gfx.WeightSemibold).Color(pal.text)
