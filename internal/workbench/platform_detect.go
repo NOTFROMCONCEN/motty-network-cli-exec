@@ -96,6 +96,10 @@ func platformPromptCandidate(session *Session) bool {
 	screen := t.screen
 	_, rows := screen.Size()
 	cursor := screen.Cursor()
+	// One copy of the tables serves every row this call looks at: Platforms
+	// copies under the read lock each time, and this runs once per chunk on a
+	// session streaming large output.
+	tables := netcli.Platforms()
 	for offset := 0; offset < 4; offset++ {
 		row := cursor.Y - offset
 		if row < 0 || row >= rows {
@@ -108,7 +112,7 @@ func platformPromptCandidate(session *Session) bool {
 		if netcli.LooksLikeLoginPrompt(line) {
 			return false
 		}
-		for _, table := range netcli.Platforms() {
+		for _, table := range tables {
 			if !table.Shaped() {
 				continue
 			}
