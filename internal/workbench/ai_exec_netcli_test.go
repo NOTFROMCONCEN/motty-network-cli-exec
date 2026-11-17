@@ -181,6 +181,54 @@ func TestTerminalExecCLIMarksItsBlockNotTheScrollbackAboveIt(t *testing.T) {
 	}
 }
 
+// A quiet window armed for one candidate must complete nothing once the
+// command has ended another way: the timer's answer comes back through the
+// window loop after the fact, and the loop runs it only to watch the guards
+// refuse it. state.post is held so the test fires the stale window itself.
+func TestAQuietWindowThatOutlivedItsCommandCompletesNothing(t *testing.T) {
+	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
+	seedPrompt(t, state, shell, "<Huawei>")
+	var posted []func()
+	state.post = func(f func()) { posted = append(posted, f) }
+	exec, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "display version"})
+	if err != nil {
+		t.Fatalf("beginExec: %v", err)
+	}
+	// An answer that ends in what looks like the prompt: the quiet window
+	// arms, and its answer posts into the held queue instead of running.
+	shell.say("<Huawei>display version\r\nVRP (R) software\r\n<Huawei>")
+	state.Wake()
+	deadline := time.Now().Add(cliQuiet + time.Second)
+	for len(posted) == 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if len(posted) == 0 {
+		t.Fatal("the quiet window never posted")
+	}
+	// The device goes on talking — the window was already stale — and the
+	// wait ends through a disconnect instead.
+	shell.say("sysname Huawei\r\nmore output\r\n")
+	state.Wake()
+	shell.end(nil)
+	state.Wake()
+	result := waitExec(t, state, exec)
+	if result.Status != "disconnected" {
+		t.Fatalf("result %+v", result)
+	}
+	// Now the stale window fires: nothing may complete, nothing may send.
+	for _, f := range posted {
+		f()
+	}
+	select {
+	case <-exec.done:
+		t.Fatal("a stale quiet window completed the ended command")
+	default:
+	}
+	if session.term.exec != nil {
+		t.Fatal("the stale window left an exec behind")
+	}
+}
+
 func TestTerminalExecCLIPagerContinues(t *testing.T) {
 	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
 	seedPrompt(t, state, shell, "<Huawei>")

@@ -268,6 +268,7 @@ type checkServers struct {
 	manifestOn   bool
 	manifestName string // the one asset the manifest lists; "" is the Windows setup
 	mirrorOn     bool
+	mirrorStale  bool // the mirror serves an older release, whole and coherent
 	mirrorBad    bool // the mirror serves a manifest that contradicts itself
 }
 
@@ -303,6 +304,10 @@ func (s *checkServers) start(t *testing.T) (*http.Client, func()) {
 			}
 			if s.mirrorBad {
 				fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.2-arknights", s.manifestAsset(), 42, goodHash))
+				return
+			}
+			if s.mirrorStale {
+				fmt.Fprint(w, manifestFor("0.3.1.2", "v0.3.1-netcli-build.2-arknights", s.manifestAsset(), 42, goodHash))
 				return
 			}
 			fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.3-arknights", s.manifestAsset(), 42, goodHash))
@@ -349,6 +354,15 @@ func TestCheckPrefersGitHubAndFallsBackInOrder(t *testing.T) {
 			name:    "nothing anywhere",
 			servers: checkServers{feedStatus: http.StatusInternalServerError},
 			want:    "",
+		},
+		{
+			// A stale mirror pinning every client to the previous version is
+			// worse than the feed's page-only answer, which at least tells the
+			// truth about what was released.
+			name:     "feed answers, a mirror is stale",
+			servers:  checkServers{feedStatus: 200, mirrorOn: true, mirrorStale: true},
+			want:     "0.3.1.3",
+			wantPage: true,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

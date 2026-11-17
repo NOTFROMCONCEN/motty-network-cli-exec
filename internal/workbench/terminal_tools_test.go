@@ -1,6 +1,7 @@
 package workbench
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -398,6 +399,24 @@ func TestTheSettingsMasterSwitchTurnsLogColoringOnAndOff(t *testing.T) {
 	}
 	if restarted := newTestState(t, options); !restarted.highlights.Empty() {
 		t.Fatal("the choice to stay off was not kept")
+	}
+}
+
+// The restore cap is the older, larger one: a saved set written before the
+// built-in logcolor pack shrank the compile budget keeps every rule it can,
+// instead of silently dropping a user's rules to the new, smaller cap.
+func TestARestoredRuleSetKeepsUpToTheOlderCap(t *testing.T) {
+	_, options := newWorld(t)
+	saved := savedState{Hosts: sampleHosts}
+	for i := 0; i < 60; i++ {
+		saved.Highlights = append(saved.Highlights, savedHighlight{Pattern: fmt.Sprintf("pattern-%02d", i), Color: "red"})
+	}
+	if err := saveState(options.StatePath, saved); err != nil {
+		t.Fatal(err)
+	}
+	state := newTestState(t, options)
+	if len(state.highlighting.rules) != maxRestoredHighlightRules {
+		t.Fatalf("restored %d rules, want the older cap %d", len(state.highlighting.rules), maxRestoredHighlightRules)
 	}
 }
 
