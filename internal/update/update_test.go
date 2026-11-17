@@ -24,6 +24,9 @@ func TestNewer(t *testing.T) {
 		// them.
 		{"1.0.0", "1.0.0.1", true}, {"1.0.0.1", "1.0.0", false}, {"1.0.0.1", "1.0.0.2", true},
 		{"1.0.2", "1.0.1.9", false}, {"1.0", "1.0.0.1", true},
+		// A leading zero is not a spelling this project publishes: the read
+		// side refuses it the way the release side does.
+		{"0.03.1", "0.3.2", false}, {"0.3.1", "0.03.2", false},
 	} {
 		if got := Newer(test.current, test.latest); got != test.want {
 			t.Errorf("Newer(%q, %q) = %v", test.current, test.latest, got)
