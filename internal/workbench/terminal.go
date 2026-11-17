@@ -261,8 +261,7 @@ type terminal struct {
 	// aiRows holds the screen line IDs whose command was started by the
 	// assistant. The line ID survives scrolling and resizing, so its gutter mark
 	// stays with the command in scrollback.
-	aiRows    map[uint64]struct{}
-	aiStartID uint64
+	aiRows map[uint64]struct{}
 	// aiFront is the first line the open AI block has not marked yet, and
 	// aiGeneration the buffer generation it was counted in. Lines are marked by
 	// number rather than by what is on screen, so output that scrolled past
