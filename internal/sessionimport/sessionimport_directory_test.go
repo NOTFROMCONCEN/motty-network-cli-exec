@@ -1,6 +1,7 @@
 package sessionimport
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -63,5 +64,31 @@ func TestParseXshellDirectoryOnAnEmptyAndAMissingFolder(t *testing.T) {
 	}
 	if _, err := ParseXshellDirectory(filepath.Join(t.TempDir(), "absent")); err == nil {
 		t.Fatal("a missing folder was accepted")
+	}
+}
+
+// A mispicked directory must not read a whole disk: the walk stops at the
+// entry budget the SecureCRT folder path has, and says so.
+func TestParseXshellDirectoryStopsAtTheEntryBudget(t *testing.T) {
+	root := t.TempDir()
+	const content = "[CONNECTION]\nHost=h.example.test\nProtocol=SSH\n"
+	for i := 0; i < MaxEntries+10; i++ {
+		dir := filepath.Join(root, fmt.Sprintf("group%d", i%4))
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("s%d.xsh", i)), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := ParseXshellDirectory(root)
+	if err != nil {
+		t.Fatalf("the folder was refused: %v", err)
+	}
+	if len(result.Entries) != MaxEntries {
+		t.Fatalf("entries = %d, want the budget %d", len(result.Entries), MaxEntries)
+	}
+	if !slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.Contains(w, "more than") }) {
+		t.Fatalf("the budget was silent: %v", result.Warnings)
 	}
 }

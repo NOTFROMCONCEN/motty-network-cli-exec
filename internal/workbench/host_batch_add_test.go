@@ -101,6 +101,25 @@ func TestABadLineKeepsThePasteFormOpen(t *testing.T) {
 	}
 }
 
+// A pasted group field passes through the same validation the group picker
+// applies: a control character riding in on the clipboard must not reach the
+// catalog as a group name.
+func TestBatchAddingRefusesAGroupThatCannotBeOne(t *testing.T) {
+	_, options := newWorld(t)
+	state := newTestState(t, options)
+	state.Click(hitImportMenu)
+	state.Click(hitBatchAddPaste)
+	state.form.set(0, "web@10.9.0.1")
+	state.form.set(1, "lab\x07floor")
+	state.Click(hitFormSubmit)
+	if state.modal != modalForm || state.form.dialogError == "" {
+		t.Fatalf("modal = %d, error = %q", state.modal, state.form.dialogError)
+	}
+	if len(state.hosts) != len(sampleHosts) {
+		t.Fatalf("hosts = %d, want the sample catalog untouched", len(state.hosts))
+	}
+}
+
 func TestTheGroupMenuPrefillsTheBatchGroup(t *testing.T) {
 	_, options := newWorld(t)
 	state := newTestState(t, options)

@@ -1346,6 +1346,7 @@ var traditionalAIPanel = AIPanelMessages{
 	ToolConfigDiff:       "比較設定",
 	ToolGroupRun:         "在多台裝置上執行",
 	OpsTargetsFmt:        "%d 個目標",
+	OpsDiffDetail:        "改前 → 改後",
 	OpsExample1:          "檢查這台裝置的介面，找出 down 的介面並解釋可能原因。",
 	OpsExample2:          "讀取目前設定，標出有風險或缺失的基礎設定項。",
 	OpsExample3:          "做一次基礎巡檢：版本、uptime、CPU/記憶體和介面狀態，並列出異常項。",

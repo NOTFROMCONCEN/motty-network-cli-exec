@@ -223,7 +223,7 @@ func aiToolDetail(item *aiItem, m i18n.AIPanelMessages) string {
 		case len(parsed.Targets) > 0:
 			return fmt.Sprintf(m.OpsTargetsFmt, len(parsed.Targets))
 		case parsed.Before != nil && parsed.After != nil:
-			return "before → after"
+			return m.OpsDiffDetail
 		}
 	}
 	if len(arguments) > 300 {
