@@ -742,10 +742,12 @@ func parseXshellArchive(path string) (Result, error) {
 // its subfolders. Each session's subfolder path, relative to the picked folder
 // and joined with "/", becomes its group, so the folder tree of the Sessions
 // directory carries over. A file that cannot be read is a warning, not a
-// failure of the whole folder.
+// failure of the whole folder. The same budgets hold as for the SecureCRT
+// folder: a mispicked directory must not read a whole disk.
 func ParseXshellDirectory(root string) (Result, error) {
 	var result Result
 	var files []string
+	var total int
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			if path == root {
@@ -755,6 +757,10 @@ func ParseXshellDirectory(root string) (Result, error) {
 			return filepath.SkipDir
 		}
 		if !entry.IsDir() && strings.EqualFold(filepath.Ext(entry.Name()), ".xsh") {
+			if len(files) >= MaxEntries {
+				result.warn("%s: more than %d sessions; the rest were not read", filepath.ToSlash(root), MaxEntries)
+				return filepath.SkipAll
+			}
 			files = append(files, path)
 		}
 		return nil
@@ -763,6 +769,10 @@ func ParseXshellDirectory(root string) (Result, error) {
 		return Result{}, err
 	}
 	for _, path := range files {
+		if total >= maxArchiveSize {
+			result.warn("%s: more than %d MB of sessions; the rest were not read", filepath.ToSlash(root), maxArchiveSize>>20)
+			break
+		}
 		relative, err := filepath.Rel(root, path)
 		if err != nil {
 			relative = filepath.Base(path)
@@ -773,6 +783,7 @@ func ParseXshellDirectory(root string) (Result, error) {
 			result.warn("%s: %v", source, err)
 			continue
 		}
+		total += len(text)
 		group := filepath.ToSlash(filepath.Dir(relative))
 		if group == "." {
 			group = ""

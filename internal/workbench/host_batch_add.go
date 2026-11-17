@@ -36,6 +36,11 @@ func (state *State) openBatchHostForm(group string) {
 // the form open with everything the user typed, naming the line that failed.
 func (state *State) submitBatchHosts(form *formDialog) string {
 	group := normalizeHostGroupPath(strings.TrimSpace(form.value(1)))
+	if group != "" && !validHostGroup(group) {
+		// A paste can carry control characters the picker's own validation
+		// would have refused; the same rule holds here.
+		return state.messages.ErrHostGroupInvalid
+	}
 	list := strings.ReplaceAll(form.value(0), "\r\n", "\n")
 	lines := strings.Split(list, "\n")
 	var hosts []Host
