@@ -92,12 +92,11 @@ func TestHTTPFileStartServesTheFolderAndStopClosesIt(t *testing.T) {
 	}
 
 	state.Click(hitHTTPFileStop)
-	if state.httpFileRunning() {
-		t.Fatal("the server is still running")
-	}
-	if state.httpFile.notice != state.messages.HTTPFile.Stopped {
-		t.Fatalf("notice = %q, want the stopped line", state.httpFile.notice)
-	}
+	// The stop waits for the requests in flight in the background and reports
+	// back through the window loop.
+	pumpUntil(t, state, "the stop to settle", func() bool {
+		return !state.httpFileRunning() && state.httpFile.notice == state.messages.HTTPFile.Stopped
+	})
 }
 
 func TestHTTPFileStartReportsABadPort(t *testing.T) {
