@@ -77,6 +77,13 @@ if ($KeyPath -eq "") {
 if (-not (Test-Path $KeyPath)) {
     throw "no signing key at $KeyPath; run 'go run ./tools/forkrelease keygen -private <path>' once"
 }
+# A key inside the repository is one careless `git add -A` away from being
+# published; the default lives one directory above on purpose.
+$keyFull = [IO.Path]::GetFullPath($KeyPath).TrimEnd('\', '/')
+$repoFull = [IO.Path]::GetFullPath($repo).TrimEnd('\', '/') + '/'
+if ($keyFull -like "$repoFull*") {
+    throw "the signing key must live outside the repository, not at $KeyPath"
+}
 if ($GoBinary -eq "") {
     # The build machine may have Go only beside the repository.
     $candidate = Join-Path (Split-Path $repo -Parent) ".tools/go/bin/go.exe"
@@ -139,19 +146,25 @@ try {
     }
 
     # The app reports its version from update.Current, and a test keeps it equal
-    # to viva.toml's, so both move together.
+    # to viva.toml's, so both move together. Replace exactly one occurrence:
+    # the static [regex]::Replace has no count parameter — its fourth argument
+    # is RegexOptions — so the replacement goes through an instance, and the
+    # count is asserted first so a second matching line fails the release
+    # instead of being rewritten in silence.
     $utf8 = [System.Text.UTF8Encoding]::new($false)
     $manifest = "viva.toml"
     $text = [IO.File]::ReadAllText((Join-Path $repo $manifest))
     $pattern = '(?m)^version\s*=\s*"[^"]+"'
-    if (-not [regex]::IsMatch($text, $pattern)) { throw "no version line was found in viva.toml" }
-    [IO.File]::WriteAllText((Join-Path $repo $manifest), [regex]::Replace($text, $pattern, "version = `"$Version`"", 1), $utf8)
+    $found = [regex]::Matches($text, $pattern)
+    if ($found.Count -ne 1) { throw "expected exactly one version line in viva.toml, found $($found.Count)" }
+    [IO.File]::WriteAllText((Join-Path $repo $manifest), [regex]::new($pattern).Replace($text, "version = `"$Version`"", 1), $utf8)
 
     $current = "internal/update/update.go"
     $text = [IO.File]::ReadAllText((Join-Path $repo $current))
     $pattern = 'const Current = "[^"]+"'
-    if (-not [regex]::IsMatch($text, $pattern)) { throw "no Current line was found in internal/update/update.go" }
-    [IO.File]::WriteAllText((Join-Path $repo $current), [regex]::Replace($text, $pattern, "const Current = `"$Version`"", 1), $utf8)
+    $found = [regex]::Matches($text, $pattern)
+    if ($found.Count -ne 1) { throw "expected exactly one Current line in internal/update/update.go, found $($found.Count)" }
+    [IO.File]::WriteAllText((Join-Path $repo $current), [regex]::new($pattern).Replace($text, "const Current = `"$Version`"", 1), $utf8)
 
     Write-Host "==> packaging Motty $Version" -ForegroundColor Cyan
 
@@ -250,7 +263,16 @@ try {
     $releaseArgs = @("release", "create", $tag, "--repo", $forkRepo, "--target", $Branch, "--title", "Motty NetCLI $tag")
     $releaseArgs += if ($NotesPath -ne "") { @("--notes-file", $NotesPath) } else { @("--generate-notes") }
     $releaseArgs += @($setup, $portable, $tarball, $out)
-    Invoke-WithRetry "gh release create $tag" { gh @releaseArgs }
+    gh release view $tag --repo $forkRepo 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        # A release left behind by a failed attempt is completed, not
+        # duplicated: the assets go over the existing ones.
+        Write-Host "    release $tag already exists; uploading the assets over it" -ForegroundColor Yellow
+        Invoke-WithRetry "gh release upload $tag" { gh release upload $tag --repo $forkRepo --clobber $setup $portable $tarball $out }
+    }
+    else {
+        Invoke-WithRetry "gh release create $tag" { gh @releaseArgs }
+    }
 
     # The manifest is mirrored on the feed branch — one branch, one file — so
     # CDNs can serve it where github.com refuses connections. The branch is a
@@ -279,6 +301,26 @@ try {
     }
     $feedCommit = git commit-tree $tree -m "feed: $tag"
     Invoke-WithRetry "git push -f fork feed" { git push -f fork "${feedCommit}:refs/heads/feed" }
+
+    Write-Host "==> verifying the feed" -ForegroundColor Cyan
+    # The feed branch is what the CDN mirrors serve, and a push the proxy
+    # swallowed has already left a release live on stale answers once — it
+    # went out through the API by hand. Purge the CDN's copy, read the
+    # manifest back, and refuse to declare the release while the mirrors
+    # still serve something else.
+    $feedURL = "https://cdn.jsdelivr.net/gh/$forkRepo@feed/latest.json"
+    try { Invoke-RestMethod -Uri "https://purge.jsdelivr.net/gh/$forkRepo@feed/latest.json" -TimeoutSec 30 | Out-Null } catch {}
+    $served = $null
+    foreach ($attempt in 1..5) {
+        if ($attempt -gt 1) { Start-Sleep -Seconds 20 }
+        try { $served = Invoke-RestMethod -Uri $feedURL -TimeoutSec 30 } catch { continue }
+        if ($served.version -eq $Version -and $served.tag -eq $tag) { break }
+        $served = $null
+    }
+    if ($null -eq $served) {
+        throw "the feed did not publish ${tag}: $feedURL still serves something else; push the feed branch by hand or wait for the CDN"
+    }
+    Write-Host "    $feedURL serves $tag"
 
     Write-Host ""
     Write-Host "released $tag" -ForegroundColor Green
