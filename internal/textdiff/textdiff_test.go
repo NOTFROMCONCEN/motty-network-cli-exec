@@ -1,6 +1,7 @@
 package textdiff
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -49,5 +50,26 @@ func TestCompareLargeMiddleIsCoarse(t *testing.T) {
 	}
 	if result.Added != 2500 || result.Removed != 2500 {
 		t.Fatalf("stats = +%d -%d", result.Added, result.Removed)
+	}
+}
+
+// A diff that would outrun the byte budget comes back bounded, with the
+// truncation reported in both the flag and the text: a model reading an
+// unbounded diff would take the budget for the whole change.
+func TestCompareTruncatesABudgetBreakingDiff(t *testing.T) {
+	before := strings.Repeat("same line\n", 500)
+	var after strings.Builder
+	for index := 0; index < 6000; index++ {
+		fmt.Fprintf(&after, "changed line %d\n", index)
+	}
+	result := Compare(before, after.String(), 3)
+	if !result.Truncated {
+		t.Fatal("a budget-breaking diff did not report truncation")
+	}
+	if !strings.Contains(result.Unified, "[diff truncated]") {
+		t.Fatal("the truncated diff carries no marker")
+	}
+	if len(result.Unified) > maxUnifiedBytes+100 {
+		t.Fatalf("the diff is %d bytes past its budget", len(result.Unified))
 	}
 }
