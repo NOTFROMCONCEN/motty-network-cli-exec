@@ -1,6 +1,7 @@
 package netcli
 
 import (
+	"bytes"
 	"math/rand"
 	"strings"
 	"testing"
@@ -210,6 +211,38 @@ func TestTapPagerContinuesAndCompletes(t *testing.T) {
 	}
 	if !strings.Contains(r.Output, "config line") || !strings.Contains(r.Output, "sysname Huawei") {
 		t.Fatalf("output lost pages: %q", r.Output)
+	}
+}
+
+// The pager earns one key per page: the backspaces the device sends to erase
+// the pager text arrive as a chunk of their own, leave the line unchanged, and
+// the quiet window that follows must not read the same text as a fresh
+// question and press the key again.
+func TestTapPagerAnswersOncePerErasedPage(t *testing.T) {
+	tap := newVRPTap("<Huawei>", "display current-configuration")
+	var sent []byte
+	tap.SetSend(func(p []byte) bool { sent = append(sent, p...); return true })
+	page := strings.Repeat("config line\r\n", 24)
+	if done := tap.Feed([]byte("<Huawei>display current-configuration\r\n" + page + "  ---- More ----")); done {
+		t.Fatal("completed while paging")
+	}
+	if string(sent) != " " {
+		t.Fatalf("sent %q, want exactly one page key", sent)
+	}
+	// The device erases the pager text with backspaces, in a chunk of its own.
+	if done := tap.Feed(bytes.Repeat([]byte{'\b'}, 16)); done {
+		t.Fatal("completed while erasing the pager")
+	}
+	if string(sent) != " " {
+		t.Fatalf("the erasing backspaces earned a second key: %q", sent)
+	}
+	// The device goes on with a newline that commits the pager line itself.
+	r := complete(tap, "\r\n"+strings.Repeat("more line\r\n", 24)+"---- More ----sysname Huawei\r\n"+"<Huawei>")
+	if !r.Done {
+		t.Fatal("never completed after paging")
+	}
+	if r.Pages != 2 {
+		t.Fatalf("pages %d", r.Pages)
 	}
 }
 
