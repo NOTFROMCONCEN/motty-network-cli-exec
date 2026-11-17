@@ -276,7 +276,12 @@ func (g Gate) groupRun(ctx context.Context, raw []byte) Result {
 		for _, target := range targets {
 			ready := false
 			for _, session := range current {
-				ready = ready || session.ID == target.id && session.Ready
+				// Every command in the batch was classified by the platform the
+				// session had when it was approved. A session whose mode or
+				// platform changed while the question sat open would run the
+				// batch under a classification it never had.
+				ready = ready || session.ID == target.id && session.Ready &&
+					session.ExecMode == ExecModeNetworkCLI && session.Platform == target.platform
 			}
 			if !ready {
 				return Result{Text: "nothing was run: target " + target.id + " changed or disconnected while awaiting approval", IsError: true}
@@ -353,8 +358,10 @@ func boundedLines(text string, maxLines int) string {
 	return strings.Join(lines, "\n")
 }
 
-// appendExecEnding adds the one line formatExec would add for a device command:
-// how the wait ended, without repeating the output.
+// appendExecEnding adds the lines formatExec would add for a device command:
+// how the wait ended, and whether the answer is whole — without repeating the
+// output. A page the tap could not continue leaves the rest of the answer
+// unknown, and a count read off a paged screen is a wrong full answer.
 func appendExecEnding(text *strings.Builder, result ExecResult) {
 	switch {
 	case result.TimedOut && !result.ExitKnown:
@@ -363,5 +370,11 @@ func appendExecEnding(text *strings.Builder, result ExecResult) {
 		fmt.Fprintf(text, "[device CLI error: %s]\n", result.CLIError)
 	case !result.ExitKnown && result.Status == "prompt_restored":
 		text.WriteString("[device prompt restored; the command finished]\n")
+	}
+	if result.PagerSeen {
+		text.WriteString("[the device paged its output and this platform has no key to continue it; run the command again with paging off (screen-length 0 temporary or terminal length 0) for the whole output]\n")
+	}
+	if !result.ExitKnown && result.Truncated {
+		text.WriteString("[output truncated]\n")
 	}
 }
