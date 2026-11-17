@@ -123,7 +123,9 @@ func parseBatchEndpoint(spec string) (address, user string, port uint16, ok bool
 	switch colons := strings.Count(spec, ":"); {
 	case colons == 1:
 		host, portText, found := strings.Cut(spec, ":")
-		if !found || parseBatchPort(portText, &port) != nil {
+		if host == "" || !found || parseBatchPort(portText, &port) != nil {
+			// ":22" names a port and no address; an empty host would sit in the
+			// catalog as a row that cannot connect.
 			return "", "", 0, false
 		}
 		return host, user, port, true
