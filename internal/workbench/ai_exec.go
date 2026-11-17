@@ -192,6 +192,12 @@ func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 	if t.aiRows == nil {
 		t.aiRows = map[uint64]struct{}{}
 	}
+	// The block starts at the command's line: everything above it is the
+	// user's own output, on the screen before the assistant ran, and none of
+	// it carries the mark. markAIBlock counts from aiFront within the buffer
+	// generation the command began in.
+	t.aiFront = t.cursorLine()
+	t.aiGeneration = t.screen.BufferGeneration()
 	// The prompt row is where the assistant's command will be shown, so mark it
 	// before the shell echoes anything. A line ID survives scrolling.
 	line := t.screen.Row(t.screen.Cursor().Y).ID
