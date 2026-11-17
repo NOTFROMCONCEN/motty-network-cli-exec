@@ -2798,7 +2798,7 @@ var lucideIcons = [...]gfx.Icon{
 	iconClock:            icons.Clock3,
 	iconFollowFolder:     icons.LocateFixed,
 	iconClipboardPaste:   icons.ClipboardPaste,
-	iconHTTPFile:        icons.FileUp,
+	iconHTTPFile:         icons.FileUp,
 }
 
 func paintIcon(canvas *gfx.Canvas, kind uint8, bounds gfx.Rect, foreground gfx.Color) {
@@ -3019,7 +3019,8 @@ func (state *State) declareHostDialog(c ui.C) {
 		Scope: dialogScope, CloseID: hitDialogClose, InitialFocusID: hitDialogLabel,
 	})
 	dialog.Body(func() { state.declareHostFormBody(c, title) })
-	dialog.Footer(func() { state.declareHostDialogFooter(c, m.Cancel, submit) })}
+	dialog.Footer(func() { state.declareHostDialogFooter(c, m.Cancel, submit) })
+}
 
 // declareHostDialogFooter declares the form's footer: the Test connection
 // button and what the last test found at the left, and the dialog's own

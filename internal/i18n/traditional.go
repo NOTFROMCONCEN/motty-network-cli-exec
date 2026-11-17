@@ -3383,6 +3383,8 @@ var traditionalSSHSync = SSHSyncMessages{
 
 var traditionalHostsPanel = HostsPanelMessages{
 	Toggle: "工作階段管理", Close: "關閉工作階段管理", Resize: "調整工作階段管理寬度", Manage: "管理主機",
+}
+
 var traditionalHTTPFile = HTTPFileMessages{
 	Title:       "HTTP 檔案伺服器",
 	Description: "在本機建立 HTTP 檔案伺服器，供內外網機器連線後上傳、下載檔案。伺服器運行期間請勿關閉 Motty。",
