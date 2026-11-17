@@ -330,17 +330,30 @@ func Addresses(port uint16) []string {
 func (server *Server) resolve(requestPath string) (string, error) {
 	cleaned := filepath.Clean("/" + filepath.FromSlash(requestPath))
 	full := filepath.Join(server.rootReal, cleaned)
-	if full != server.rootReal && !strings.HasPrefix(full, server.rootReal+string(filepath.Separator)) {
+	rooted := server.rootReal + string(filepath.Separator)
+	if full != server.rootReal && !strings.HasPrefix(full, rooted) {
 		return "", errEscapes
 	}
 	// A symlink inside the root may point anywhere; the check above is on the
-	// lexical path only. Refuse a link that leaves the root rather than follow it.
-	if resolved, err := filepath.EvalSymlinks(full); err == nil {
-		if resolved != server.rootReal && !strings.HasPrefix(resolved, server.rootReal+string(filepath.Separator)) {
-			return "", errEscapes
+	// lexical path only. Refuse a link that leaves the root rather than follow
+	// it. The tail of a fresh upload does not exist yet and EvalSymlinks needs
+	// an existing path, so walk up to the nearest ancestor that exists: a name
+	// that does not exist cannot be a link, but the folders before it can, and
+	// an upload through such a folder would land wherever the link points.
+	for probe := full; ; {
+		resolved, err := filepath.EvalSymlinks(probe)
+		if err == nil {
+			if resolved != server.rootReal && !strings.HasPrefix(resolved, rooted) {
+				return "", errEscapes
+			}
+			return full, nil
 		}
+		parent := filepath.Dir(probe)
+		if parent == probe {
+			return full, nil
+		}
+		probe = parent
 	}
-	return full, nil
 }
 
 // errEscapes is a request whose path leaves the shared directory.
