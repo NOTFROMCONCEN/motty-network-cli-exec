@@ -357,6 +357,32 @@ func TestTheBuiltInHighlightsCanBeTurnedOffAndStayOff(t *testing.T) {
 	}
 }
 
+// The settings page paints its own master switch for log coloring, and a
+// painted switch nobody clicks is a lie on the screen: it must turn the
+// engine on and off exactly like the window-bar eye does, and keep the choice.
+func TestTheSettingsMasterSwitchTurnsLogColoringOnAndOff(t *testing.T) {
+	_, options := newWorld(t)
+	state := newTestState(t, options)
+	if !state.highlights.Empty() {
+		t.Fatal("coloring is on although it ships off")
+	}
+	state.Click(hitSettings)
+	state.Click(hitSettingsHighlightMaster)
+	if state.highlights.Empty() {
+		t.Fatal("the settings master switch did not turn coloring on")
+	}
+	if restarted := newTestState(t, options); restarted.highlights.Empty() {
+		t.Fatal("the choice was not kept")
+	}
+	state.Click(hitSettingsHighlightMaster)
+	if !state.highlights.Empty() {
+		t.Fatal("the settings master switch did not turn coloring off")
+	}
+	if restarted := newTestState(t, options); !restarted.highlights.Empty() {
+		t.Fatal("the choice to stay off was not kept")
+	}
+}
+
 func TestADamagedStateFileCannotInstallAnUnusableRuleOrSnippet(t *testing.T) {
 	_, options := newWorld(t)
 	saved := savedState{
