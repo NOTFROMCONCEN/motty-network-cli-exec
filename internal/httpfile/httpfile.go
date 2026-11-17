@@ -291,14 +291,18 @@ func (server *Server) Snapshot() Snapshot {
 }
 
 // Addresses is every http://host:port this machine answers on right now:
-// loopback first, then one per non-loopback interface address. A machine with
-// no network still answers on loopback, so the list is never empty.
+// loopback first, then one per non-loopback interface address, IPv4 before
+// IPv6. The listener is dual-stack — one wildcard socket answers both — so
+// the list has to name both families, or the page would hide half of what
+// the share is exposed on. A machine with no network still answers on
+// loopback, so the list is never empty.
 func Addresses(port uint16) []string {
 	urls := []string{fmt.Sprintf("http://127.0.0.1:%d", port)}
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return urls
 	}
+	var six []string
 	for _, iface := range interfaces {
 		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
 			continue
@@ -315,13 +319,23 @@ func Addresses(port uint16) []string {
 			case *net.IPAddr:
 				ip = value.IP
 			}
-			if ip == nil || ip.IsLoopback() || ip.To4() == nil {
+			if ip == nil || ip.IsLoopback() {
 				continue
 			}
-			urls = append(urls, fmt.Sprintf("http://%s:%d", ip.String(), port))
+			if ip.To4() != nil {
+				urls = append(urls, fmt.Sprintf("http://%s:%d", ip.String(), port))
+				continue
+			}
+			// A literal IPv6 carries brackets, or the port would read as part
+			// of the address. A link-local one is dialable only through its
+			// zone, which a browser cannot be handed, so it is noise here.
+			if ip.IsLinkLocalUnicast() {
+				continue
+			}
+			six = append(six, fmt.Sprintf("http://[%s]:%d", ip.String(), port))
 		}
 	}
-	return urls
+	return append(urls, six...)
 }
 
 // resolve maps a request path to a file under the root. It refuses anything
