@@ -43,3 +43,13 @@ func TestRebindingAShortcutRebuildsTheMenuBar(t *testing.T) {
 		t.Fatalf("the rebuilt menu does not carry the new Settings chord %v", chord)
 	}
 }
+
+// A native menu runs the entry outside the window's event handlers: the
+// action's own effect is the observable, so Find opening the bar is the test.
+func TestMenuBarFindOpensTheSearch(t *testing.T) {
+	state, _, _, _ := liveSession(t)
+	state.MenuBar()[1].Items[3].OnSelect()
+	if session := &state.sessions[0]; !session.term.find.open {
+		t.Fatal("the menu action did not open the bar")
+	}
+}
