@@ -106,6 +106,10 @@ func TestVersionFromTagReadsBothShapes(t *testing.T) {
 		{tag: "v0.3.1-netcli-build.9-arknights-evil", ok: false},
 		{tag: "v0.3.1-rc1", ok: false},
 		{tag: "nightly", ok: false},
+		// A leading zero reads as its number only by convention; a feed that
+		// spells versions this way is not one this fork publishes.
+		{tag: "v0.03.2", ok: false},
+		{tag: "v0.3.01", ok: false},
 	} {
 		got, ok := VersionFromTag(test.tag)
 		if ok != test.ok || (ok && got != test.want) {
