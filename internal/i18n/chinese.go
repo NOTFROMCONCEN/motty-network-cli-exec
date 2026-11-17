@@ -1353,6 +1353,7 @@ var chineseAIPanel = AIPanelMessages{
 	ToolConfigDiff:       "比较配置",
 	ToolGroupRun:         "在多台设备上执行",
 	OpsTargetsFmt:        "%d 个目标",
+	OpsDiffDetail:        "改前 → 改后",
 	OpsExample1:          "检查这台设备的接口，找出 down 的接口并解释可能原因。",
 	OpsExample2:          "读取当前配置，标出有风险或缺失的基础配置项。",
 	OpsExample3:          "做一次基础巡检：版本、uptime、CPU/内存和接口状态，并列出异常项。",

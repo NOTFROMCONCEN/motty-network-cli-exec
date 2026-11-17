@@ -1353,6 +1353,7 @@ var englishAIPanel = AIPanelMessages{
 	ToolConfigDiff:       "Compare configs",
 	ToolGroupRun:         "Run on several devices",
 	OpsTargetsFmt:        "%d targets",
+	OpsDiffDetail:        "before → after",
 	OpsExample1:          "Check the interfaces on this device and explain anything that is down.",
 	OpsExample2:          "Read the running configuration and flag risky or missing baseline settings.",
 	OpsExample3:          "Run a basic inspection: version, uptime, CPU/memory and interface state, then list anomalies.",
