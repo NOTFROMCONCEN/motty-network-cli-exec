@@ -165,6 +165,29 @@ func TestClassifyRefusesPipeWritesOnReadOnlyCommands(t *testing.T) {
 	}
 }
 
+// A control character the device's line editor acts on can turn a classified
+// read-only prefix into a write before the parser sees it, so any command
+// carrying one must at least ask.
+func TestClassifyRefusesControlCharacterEdits(t *testing.T) {
+	for _, test := range []struct{ platform, command string }{
+		{"cisco_ios", "show clock\x15undo ssh-server all"},
+		{"huawei_vrp", "display clock\x7fundo ssh-server all"},
+		{"ruijie_rgos", "show version\x08reload"},
+		{"maipu_mypower", "show version\x1bundo all"},
+		{"generic", "display clock\x15undo ssh-server all"},
+	} {
+		if assessment := Classify(test.platform, test.command); assessment.Level < risk.High {
+			t.Errorf("%s %q = %v; want at least High", test.platform, test.command, assessment.Level)
+		}
+	}
+	// Printable text stays untouched.
+	for _, command := range []string{"display clock", "display version | include Version"} {
+		if assessment := Classify("huawei_vrp", command); assessment.Level != risk.Low {
+			t.Errorf("%q = %v; want Low", command, assessment.Level)
+		}
+	}
+}
+
 func TestClassify(t *testing.T) {
 	tests := []struct {
 		name       string

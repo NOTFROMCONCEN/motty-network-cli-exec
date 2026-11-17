@@ -13,7 +13,10 @@ import (
 //
 // A command the tables do not recognize as a read-only check is never rated
 // for automatic execution — it asks. A command that cannot be a single CLI
-// line (newlines, tabs) is rated High so it never runs unattended either.
+// line (newlines, tabs) is rated High so it never runs unattended either, and
+// so is one carrying any other control byte: a device's line editor reads
+// those as editing keys, so the line that reaches the parser can differ from
+// the line that was classified.
 func Classify(platformID, command string) risk.Assessment {
 	p := Table(platformID)
 	line := strings.TrimSpace(command)
@@ -23,6 +26,10 @@ func Classify(platformID, command string) risk.Assessment {
 	if strings.ContainsAny(line, "\n\r\t") || strings.IndexByte(line, 0) >= 0 {
 		return risk.Assessment{Level: risk.High, Reasons: []string{
 			"a network CLI takes one command line; send each line as its own call"}}
+	}
+	if HasEditingKeys(line) {
+		return risk.Assessment{Level: risk.High, Reasons: []string{
+			"the command carries control characters a device would read as editing keys, so it would not run as classified"}}
 	}
 	word := firstWord(line)
 	if _, ok := longestPrefix(line, p.criticalPrefix); ok {
@@ -63,6 +70,22 @@ func Classify(platformID, command string) risk.Assessment {
 	}
 	return risk.Assessment{Level: risk.High, Reasons: []string{
 		"is not a recognized read-only command of this device platform"}}
+}
+
+// HasEditingKeys reports whether a command carries control characters other
+// than the line breaks a device CLI already refuses: erase-line, backspace,
+// escape and their kin. A device's line editor acts on them as they stream in,
+// so the command the parser finally sees can differ from the one a classifier
+// judged by its first word — "display clock" followed by an erase-line and
+// "undo ssh-server all" is a write wearing a read-only prefix.
+func HasEditingKeys(command string) bool {
+	for i := 0; i < len(command); i++ {
+		c := command[i]
+		if (c < 0x20 && c != '\n' && c != '\r' && c != '\t') || c == 0x7f {
+			return true
+		}
+	}
+	return false
 }
 
 // pipeWrite reports whether a command that reads the device also sends its

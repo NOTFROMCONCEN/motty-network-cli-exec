@@ -121,6 +121,23 @@ func TestTerminalExecCLIRefusesMultiline(t *testing.T) {
 	}
 }
 
+// An erase-line byte after a read-only prefix would let a write reach the
+// device wearing a Low rating; the executor refuses the bytes outright, even
+// when a human approved the request.
+func TestTerminalExecCLIRefusesEditingKeys(t *testing.T) {
+	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
+	seedPrompt(t, state, shell, "<Huawei>")
+	if _, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "display clock\x15undo ssh-server all"}); err != errCLIEditingKeys {
+		t.Fatalf("erase-line in command: %v", err)
+	}
+	if _, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "display clock\x7fundo ssh-server all"}); err != errCLIEditingKeys {
+		t.Fatalf("DEL in command: %v", err)
+	}
+	if shell.typed() != "" {
+		t.Fatalf("a refused command was typed: %q", shell.typed())
+	}
+}
+
 func TestTerminalExecCLIRefusesWithoutPrompt(t *testing.T) {
 	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
 	// The terminal shows a login prompt, not a ready device CLI prompt.

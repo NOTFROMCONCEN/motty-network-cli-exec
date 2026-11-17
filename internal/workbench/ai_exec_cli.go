@@ -18,9 +18,10 @@ import (
 // device's answer stay visible like any user's session.
 
 var (
-	errCLIOneLine  = errors.New("a network CLI session takes one command line; send each line as its own terminal_exec call")
-	errCLINoPrompt = errors.New("no device prompt is visible in this terminal yet; wait until the device shows one (for example after its login banner) before running commands")
-	errCLINoJobs   = errors.New("a network CLI session has no background jobs; run the command with terminal_exec and wait for its answer")
+	errCLIOneLine     = errors.New("a network CLI session takes one command line; send each line as its own terminal_exec call")
+	errCLIEditingKeys = errors.New("the command carries control characters a device would read as editing keys; send plain printable text")
+	errCLINoPrompt    = errors.New("no device prompt is visible in this terminal yet; wait until the device shows one (for example after its login banner) before running commands")
+	errCLINoJobs      = errors.New("a network CLI session has no background jobs; run the command with terminal_exec and wait for its answer")
 )
 
 // cliWaitFloor is the smallest wait a network CLI command gets, from the
@@ -59,6 +60,11 @@ func beginCLIExec(session *Session, t *terminal, args tools.TerminalExecArgs, fl
 	command := strings.TrimSpace(args.Command)
 	if command == "" || strings.ContainsAny(command, "\n\r\t") || strings.IndexByte(command, 0) >= 0 {
 		return nil, nil, errCLIOneLine
+	}
+	if netcli.HasEditingKeys(command) {
+		// The gate already asks for these; this refusal keeps the device from
+		// ever seeing the bytes even when a human approves the request anyway.
+		return nil, nil, errCLIEditingKeys
 	}
 	// The prompt is what the cursor's line holds up to the cursor, not the
 	// whole row: a command whose output is still arriving leaves the cursor
