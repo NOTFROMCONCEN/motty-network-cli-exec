@@ -11,6 +11,7 @@ import (
 	"motty/internal/ai/capture"
 	"motty/internal/ai/gate"
 	"motty/internal/ai/tools"
+	"motty/internal/charset"
 	"motty/internal/netcli"
 	"motty/internal/shellkind"
 )
@@ -436,7 +437,9 @@ func (t *terminal) endConfirmed(exec *aiExec) {
 	// The shell path finishes inside the pump, which marks the block right
 	// after; this path ends on a timer, so it closes the mark itself.
 	t.markAIBlock(true)
-	exec.done <- exec.tap.Result()
+	result := exec.tap.Result()
+	result.Output = t.utf8ExecOutput(result.Output)
+	exec.done <- result
 }
 
 // finishExec ends the running command: normally when its marker arrived, or
@@ -482,6 +485,7 @@ func (t *terminal) endExecAt(end execEnd, cliStatus netcli.Status, timedOut, int
 		t.writeRemote(rest, t.recordingNow())
 	}
 	result := exec.tap.Result()
+	result.Output = t.utf8ExecOutput(result.Output)
 	result.TimedOut = result.TimedOut || timedOut
 	if interrupt && exec.cli == nil && t.shell != nil {
 		t.sendProtocol([]byte{3})
@@ -495,6 +499,17 @@ func (t *terminal) endExecAt(end execEnd, cliStatus netcli.Status, timedOut, int
 		exec.job.finish(end, result.ExitCode)
 	}
 	exec.done <- result
+}
+
+// utf8ExecOutput turns the tap's cleaned bytes into UTF-8 with the session's
+// charset: the screen shows the device through this decoder, and the answer
+// the model reads has to be the same text. The tap watches raw bytes so it can
+// recognize prompts and pagers, so the conversion happens once, at the end.
+func (t *terminal) utf8ExecOutput(output string) string {
+	if t.encoding == "" || t.encoding == charset.UTF8 {
+		return output
+	}
+	return string(charset.NewDecoder(t.encoding).Append(nil, []byte(output)))
 }
 
 // userInterrupts reports whether keyboard input contains Ctrl-C, which ends the
