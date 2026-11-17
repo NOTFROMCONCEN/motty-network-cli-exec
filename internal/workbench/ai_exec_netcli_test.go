@@ -150,6 +150,37 @@ func TestTerminalExecCLIRefusesWithoutPrompt(t *testing.T) {
 	}
 }
 
+// The AI block starts at the command's line: the user's own output above it
+// was on the screen before the assistant ran, and none of it carries the mark.
+func TestTerminalExecCLIMarksItsBlockNotTheScrollbackAboveIt(t *testing.T) {
+	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
+	seedPrompt(t, state, shell, "<Huawei>")
+	shell.say("user line one\r\nuser line two\r\n<Huawei>")
+	state.Wake()
+	term := session.term
+	_, rows := term.screen.Size()
+	above := map[uint64]bool{}
+	for row := 0; row < rows; row++ {
+		if term.screen.LineNumber(row) < term.cursorLine() {
+			above[term.screen.Row(row).ID] = true
+		}
+	}
+	exec, err := state.beginExec(tools.TerminalExecArgs{Session: sessionHandle(session.ID), Command: "display version"})
+	if err != nil {
+		t.Fatalf("beginExec: %v", err)
+	}
+	shell.say("<Huawei>display version\r\nVRP (R) software, Version 8.180\r\n<Huawei>")
+	waitExec(t, state, exec)
+	if len(term.aiRows) == 0 {
+		t.Fatal("the command's own block was not marked at all")
+	}
+	for id := range above {
+		if _, ok := term.aiRows[id]; ok {
+			t.Fatalf("scrollback above the command carries the AI mark (row id %d)", id)
+		}
+	}
+}
+
 func TestTerminalExecCLIPagerContinues(t *testing.T) {
 	state, shell, session := cliTestSession(t, "network_cli", "huawei_vrp")
 	seedPrompt(t, state, shell, "<Huawei>")
