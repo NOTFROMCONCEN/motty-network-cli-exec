@@ -20,6 +20,9 @@ func httpFileTestState(t *testing.T) *State {
 	state.activeSection = sectionHTTPFile
 	state.httpFile.root = t.TempDir()
 	state.httpFile.port = httpfile.DefaultPort
+	// The loopback bind keeps the firewall out of every test run: a fresh
+	// test binary listening on every interface earns a fresh prompt.
+	state.httpFile.host = "127.0.0.1"
 	state.httpFileEntered()
 	t.Cleanup(func() { state.closeHTTPServer() })
 	return state

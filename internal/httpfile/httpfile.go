@@ -47,6 +47,10 @@ type Config struct {
 	Root string
 	// Port is the TCP port the listener takes on every interface.
 	Port uint16
+	// Host is the one address the listener binds, "" for every interface.
+	// A loopback bind never reaches the firewall, so a fresh test binary does
+	// not earn a fresh network prompt on every run.
+	Host string
 	// AllowUpload lets a PUT or a multipart POST write a file under Root.
 	AllowUpload bool
 	// AllowDelete lets a DELETE remove a file under Root.
@@ -172,14 +176,15 @@ func (server *Server) Start() error {
 		return ErrRunning
 	}
 	port := server.config.Port
+	host := server.config.Host
 	server.mu.Unlock()
-	urls := Addresses(port)
+	urls := runAddresses(host, port)
 	server.mu.Lock()
 	defer server.mu.Unlock()
 	if server.running {
 		return ErrRunning
 	}
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
+	listener, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(int(port))))
 	if err != nil {
 		server.err = err
 		return err
@@ -248,13 +253,23 @@ func (server *Server) RefreshAddresses() {
 		return
 	}
 	port := server.config.Port
+	host := server.config.Host
 	server.mu.Unlock()
-	urls := Addresses(port)
+	urls := runAddresses(host, port)
 	server.mu.Lock()
 	if server.running {
 		server.addresses = urls
 	}
 	server.mu.Unlock()
+}
+
+// runAddresses is the address list a run answers on: the walk of every
+// interface for a wildcard listener, the one pinned address otherwise.
+func runAddresses(host string, port uint16) []string {
+	if host != "" {
+		return []string{"http://" + net.JoinHostPort(host, strconv.Itoa(int(port)))}
+	}
+	return Addresses(port)
 }
 
 // Running reports whether the server is up.
