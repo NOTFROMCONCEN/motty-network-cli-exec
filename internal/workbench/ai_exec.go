@@ -199,10 +199,13 @@ func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 	t.aiFront = t.cursorLine()
 	t.aiGeneration = t.screen.BufferGeneration()
 	// The prompt row is where the assistant's command will be shown, so mark it
-	// before the shell echoes anything. A line ID survives scrolling.
+	// before the shell echoes anything. A line ID survives scrolling. A row
+	// never written to has no ID yet; marking the zero ID would claim every
+	// empty line on the screen.
 	line := t.screen.Row(t.screen.Cursor().Y).ID
-	t.aiStartID = line
-	t.aiRows[line] = struct{}{}
+	if line != 0 {
+		t.aiRows[line] = struct{}{}
+	}
 	// A CLI command is typed as the device expects it and the terminal shows
 	// exactly that, so it goes into the session's recording like a user's own
 	// input; the shell wrapper never does.
@@ -211,16 +214,15 @@ func (state *State) beginExec(args tools.TerminalExecArgs) (*aiExec, error) {
 		sender = t.sendCLI
 	}
 	if !sender(send) {
-		delete(t.aiRows, line)
+		if line != 0 {
+			delete(t.aiRows, line)
+		}
 		t.exec = nil
 		return nil, errExecRefuse
 	}
 	return t.exec, nil
 }
 
-// beginShellExec builds the shell capture for one command, exactly as before:
-// the wrapped bytes are typed into the shell, and the tap hides the wrapper's
-// echo and waits for the marker.
 // beginShellExec builds the shell capture for one command, typed for the
 // shell's family: the wrapped bytes are typed into the shell, and the tap
 // hides the wrapper's echo and waits for the marker.
