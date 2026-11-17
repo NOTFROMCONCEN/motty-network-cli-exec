@@ -252,10 +252,12 @@ const cnbReleases = "https://cnb.cool/dbxio.com/motty/-/releases/download/"
 // This fork publishes no system packages, so a DEB installation has nothing
 // to update to from this feed: it answers with the release and no asset,
 // which the caller reports as "no package for this installation" instead of
-// downloading an archive the installer would only refuse.
+// downloading an archive the installer would only refuse. Every other kind
+// travels with the request: a portable install must be offered the portable
+// zip, not the NSIS setup its installer cannot unpack.
 func CheckPackage(ctx context.Context, client *http.Client, goos, goarch string, pkg Package) (Release, error) {
 	if pkg == PackageDeb {
-		release, err := checkFork(ctx, client, goos, goarch)
+		release, err := checkFork(ctx, client, goos, goarch, pkg)
 		if err != nil {
 			return Release{}, err
 		}
@@ -263,7 +265,7 @@ func CheckPackage(ctx context.Context, client *http.Client, goos, goarch string,
 		release.PlatformPackageChecked = true
 		return release, nil
 	}
-	return checkFork(ctx, client, goos, goarch)
+	return checkFork(ctx, client, goos, goarch, pkg)
 }
 
 // CheckPackageFrom asks the source the user selected. The CNB source reads the

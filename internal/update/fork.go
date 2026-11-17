@@ -108,17 +108,19 @@ func VersionFromTag(tag string) (string, bool) {
 	return version, true
 }
 
-// checkFork is Check's implementation: GitHub's feed and manifest first, then
-// the CDN mirrors of the feed branch, then — worst case — the release the feed
-// itself described, with its page and no package.
-func checkFork(ctx context.Context, client *http.Client, goos, goarch string) (Release, error) {
+// checkFork is CheckPackage's implementation for this fork's own feeds:
+// GitHub's feed and manifest first, then the CDN mirrors of the feed branch,
+// then — worst case — the release the feed itself described, with its page
+// and no package. The package kind travels with the request so a portable
+// install is offered the archive its installer can unpack.
+func checkFork(ctx context.Context, client *http.Client, goos, goarch string, pkg Package) (Release, error) {
 	client = feedClient(client)
 	var fallback Release
 	var haveFallback bool
 	var lastErr error
 	release, tag, manifestURL, err := forkRelease(ctx, client, forkFeedURL)
 	if err == nil {
-		full, manifestErr := manifestRelease(ctx, client, manifestURL, tag, release.Version, release.Notes, ForkRepo, goos, goarch)
+		full, manifestErr := manifestRelease(ctx, client, manifestURL, tag, release.Version, release.Notes, ForkRepo, goos, goarch, pkg)
 		if manifestErr == nil {
 			return full, nil
 		}
@@ -130,7 +132,7 @@ func checkFork(ctx context.Context, client *http.Client, goos, goarch string) (R
 		lastErr = err
 	}
 	for _, mirror := range feedMirrors {
-		full, mirrorErr := mirrorRelease(ctx, client, mirror, ForkRepo, goos, goarch)
+		full, mirrorErr := mirrorRelease(ctx, client, mirror, ForkRepo, goos, goarch, pkg)
 		if mirrorErr == nil {
 			// A mirror is only a copy. When the feed itself already named a
 			// release, a mirror's answer must not be older than that: a stale
@@ -181,7 +183,7 @@ type manifestFile struct {
 // manifestRelease reads a manifest that describes a known release: the feed
 // already said which version and tag it belongs to, so a manifest that names
 // another one is a stale copy, not this release.
-func manifestRelease(ctx context.Context, client *http.Client, manifestURL, tag, version, feedNotes, repo, goos, goarch string) (Release, error) {
+func manifestRelease(ctx context.Context, client *http.Client, manifestURL, tag, version, feedNotes, repo, goos, goarch string, pkg Package) (Release, error) {
 	var manifest manifestFile
 	if err := readJSON(ctx, client, manifestURL, &manifest); err != nil {
 		return Release{}, err
@@ -189,7 +191,7 @@ func manifestRelease(ctx context.Context, client *http.Client, manifestURL, tag,
 	if manifest.Version != version || manifest.Tag != tag {
 		return Release{}, errors.New("update: the release manifest does not describe this release")
 	}
-	release, err := releaseFromManifest(version, tag, &manifest, repo, goos, goarch)
+	release, err := releaseFromManifest(version, tag, &manifest, repo, goos, goarch, pkg)
 	if err != nil {
 		return Release{}, err
 	}
@@ -209,7 +211,7 @@ func manifestRelease(ctx context.Context, client *http.Client, manifestURL, tag,
 // must not be able to put its own address or its own markdown in front of the
 // update dialog. Both are pinned to the repository the manifest belongs to;
 // notes only come from the release feed itself.
-func mirrorRelease(ctx context.Context, client *http.Client, manifestURL, repo, goos, goarch string) (Release, error) {
+func mirrorRelease(ctx context.Context, client *http.Client, manifestURL, repo, goos, goarch string, pkg Package) (Release, error) {
 	var manifest manifestFile
 	if err := readJSON(ctx, client, manifestURL, &manifest); err != nil {
 		return Release{}, err
@@ -218,7 +220,7 @@ func mirrorRelease(ctx context.Context, client *http.Client, manifestURL, repo, 
 	if !ok || manifest.Version != version {
 		return Release{}, errors.New("update: the mirrored manifest has no usable version")
 	}
-	release, err := releaseFromManifest(version, strings.TrimSpace(manifest.Tag), &manifest, repo, goos, goarch)
+	release, err := releaseFromManifest(version, strings.TrimSpace(manifest.Tag), &manifest, repo, goos, goarch, pkg)
 	if err != nil {
 		return Release{}, err
 	}
@@ -231,7 +233,7 @@ func mirrorRelease(ctx context.Context, client *http.Client, manifestURL, repo, 
 // download address is built from repo and the tag, never taken from the
 // manifest itself, so a tampered feed cannot send the download to another
 // host; the checksum and the release signature still hold the bytes.
-func releaseFromManifest(version, tag string, manifest *manifestFile, repo, goos, goarch string) (Release, error) {
+func releaseFromManifest(version, tag string, manifest *manifestFile, repo, goos, goarch string, pkg Package) (Release, error) {
 	if !strings.HasPrefix(manifest.Source, "https://") {
 		return Release{}, errors.New("update: the release page is not an https address")
 	}
@@ -241,7 +243,7 @@ func releaseFromManifest(version, tag string, manifest *manifestFile, repo, goos
 	// held to is the one unknown: claiming the release package-less would be
 	// as wrong as a page-only answer claiming it.
 	release := Release{Version: version, URL: manifest.Source, Notes: cutUTF8(manifest.Notes, maxNotesBytes), PlatformPackageChecked: true}
-	stable := StableName(goos, goarch)
+	stable := StableNamePackage(goos, goarch, pkg)
 	if stable == "" {
 		return release, nil
 	}
@@ -285,7 +287,7 @@ func LatestFork(ctx context.Context, client *http.Client, feed, repo, goos, goar
 	if manifest.Version != release.Version || manifest.Tag != tag {
 		return Release{}, errors.New("update: the release manifest does not describe this release")
 	}
-	return releaseFromManifest(release.Version, tag, &manifest, repo, goos, goarch)
+	return releaseFromManifest(release.Version, tag, &manifest, repo, goos, goarch, PackageArchive)
 }
 
 // forkRelease reads the release feed and returns what it says: the release, its

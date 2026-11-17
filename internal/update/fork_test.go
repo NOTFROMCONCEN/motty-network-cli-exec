@@ -122,7 +122,7 @@ func TestAMirrorAnswerNeverCarriesTheMirrorsPageOrNotes(t *testing.T) {
 	evil := fmt.Sprintf(`{"version":"0.3.1.2","tag":%q,"source":"https://evil.example/phish","notes":"[click here](https://evil.example)","files":[{"name":"motty-0.3.1.2-windows-amd64-setup.exe","size":42,"sha256":"%s","signature":%q}]}`,
 		tag, goodHash, goodSignature)
 	server := forkServer(t, nil, evil)
-	release, err := mirrorRelease(context.Background(), server.Client(), server.URL+"/manifest.json", forkRepo, "windows", "amd64")
+	release, err := mirrorRelease(context.Background(), server.Client(), server.URL+"/manifest.json", forkRepo, "windows", "amd64", PackageArchive)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,11 +259,19 @@ func TestLatestForkRefusesAPlainHTTPFeed(t *testing.T) {
 // the GitHub feed at /latest, GitHub's manifest at /manifest, and the CDN
 // mirrors at /mirror. Which of them answer is the test's choice.
 type checkServers struct {
-	feedStatus int
-	feedBody   string
-	manifestOn bool
-	mirrorOn   bool
-	mirrorBad  bool // the mirror serves a manifest that contradicts itself
+	feedStatus   int
+	feedBody     string
+	manifestOn   bool
+	manifestName string // the one asset the manifest lists; "" is the Windows setup
+	mirrorOn     bool
+	mirrorBad    bool // the mirror serves a manifest that contradicts itself
+}
+
+func (s *checkServers) manifestAsset() string {
+	if s.manifestName == "" {
+		return "motty-0.3.1.3-windows-amd64-setup.exe"
+	}
+	return s.manifestName
 }
 
 func (s *checkServers) start(t *testing.T) (*http.Client, func()) {
@@ -283,17 +291,17 @@ func (s *checkServers) start(t *testing.T) (*http.Client, func()) {
 				http.NotFound(w, r)
 				return
 			}
-			fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.3-arknights", "motty-0.3.1.3-windows-amd64-setup.exe", 42, goodHash))
+			fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.3-arknights", s.manifestAsset(), 42, goodHash))
 		case "/mirror":
 			if !s.mirrorOn {
 				http.NotFound(w, r)
 				return
 			}
 			if s.mirrorBad {
-				fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.2-arknights", "motty-0.3.1.3-windows-amd64-setup.exe", 42, goodHash))
+				fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.2-arknights", s.manifestAsset(), 42, goodHash))
 				return
 			}
-			fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.3-arknights", "motty-0.3.1.3-windows-amd64-setup.exe", 42, goodHash))
+			fmt.Fprint(w, manifestFor("0.3.1.3", "v0.3.1-netcli-build.3-arknights", s.manifestAsset(), 42, goodHash))
 		default:
 			http.NotFound(w, r)
 		}
@@ -371,5 +379,36 @@ func TestCheckRejectsAMirrorServingAnotherRelease(t *testing.T) {
 	defer restore()
 	if _, err := Check(context.Background(), client, "windows", "amd64"); err == nil {
 		t.Fatal("an incoherent mirror manifest was accepted")
+	}
+}
+
+// A portable install must be offered the portable zip: its installer unpacks
+// an archive, and an NSIS setup it cannot open turns the whole in-app update
+// into a download that fails at the last step. A manifest that lists no zip
+// answers package-less rather than offering the setup.
+func TestCheckPackageHandsAPortableInstallItsZip(t *testing.T) {
+	servers := checkServers{feedStatus: 200, manifestOn: true, manifestName: "motty-0.3.1.3-windows-amd64.zip"}
+	client, restore := servers.start(t)
+	defer restore()
+	release, err := CheckPackage(context.Background(), client, "windows", "amd64", PackagePortable)
+	if err != nil {
+		t.Fatalf("CheckPackage: %v", err)
+	}
+	if release.Asset.Name != "motty-0.3.1.3-windows-amd64.zip" {
+		t.Fatalf("a portable install was offered %q", release.Asset.Name)
+	}
+
+	servers = checkServers{feedStatus: 200, manifestOn: true}
+	client, restore = servers.start(t)
+	defer restore()
+	release, err = CheckPackage(context.Background(), client, "windows", "amd64", PackagePortable)
+	if err != nil {
+		t.Fatalf("CheckPackage: %v", err)
+	}
+	if release.Asset.Has() {
+		t.Fatalf("a portable install was offered the setup %q", release.Asset.Name)
+	}
+	if !release.PlatformPackageChecked {
+		t.Fatal("the answer did not check the platform's package")
 	}
 }
