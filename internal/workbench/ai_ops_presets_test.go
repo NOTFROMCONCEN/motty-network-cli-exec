@@ -1,6 +1,7 @@
 package workbench
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -55,5 +56,22 @@ func TestToolRiskBadgeUsesTheDeviceTable(t *testing.T) {
 				t.Fatalf("got (%v, %v); want (%v, %v)", level, ok, tc.want, tc.ok)
 			}
 		})
+	}
+}
+
+// The gate grades a batch by the riskiest session in it, so the badge has to
+// read the whole list: on a Huawei-first pair the Cisco member is the one that
+// does not recognize the command, and the badge must say so.
+func TestToolRiskBadgeGradesABatchByItsRiskiestSession(t *testing.T) {
+	state, _, first := cliTestSession(t, "network_cli", "huawei_vrp")
+	second := *first
+	second.ID = first.ID + 1
+	second.host = first.host
+	second.host.CLIPlatform = "cisco_ios"
+	state.sessions = append(state.sessions, second)
+	batch := fmt.Sprintf(`{"sessions":["%s","%s"],"command":"display version"}`,
+		sessionHandle(first.ID), sessionHandle(second.ID))
+	if level, ok := state.aiToolRisk(llm.ToolCall{Name: "terminal_exec_many", Arguments: batch}); !ok || level != risk.High {
+		t.Fatalf("a mixed batch graded (%v, %v); want High", level, ok)
 	}
 }
