@@ -488,6 +488,32 @@ func TestSymlinkEscapeRefused(t *testing.T) {
 	}
 }
 
+// TestUploadThroughAnEscapingParentIsRefused covers the hole a finished-path
+// check leaves open: a PUT's new file does not exist yet, so judging only the
+// finished path skips the very check that matters when a folder on the way is
+// a link out of the root.
+func TestUploadThroughAnEscapingParentIsRefused(t *testing.T) {
+	root := startRoot(t)
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "out")); err != nil {
+		t.Skipf("symlinks are not available here: %v", err)
+	}
+	port := freePort(t)
+	_, base := runningServer(t, Config{Root: root, Port: port, AllowUpload: true})
+	request, _ := http.NewRequest(http.MethodPut, base+"/out/escaped.txt", strings.NewReader("escaped"))
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode/100 == 2 {
+		t.Fatalf("an upload through a parent link out of the root succeeded with %d", response.StatusCode)
+	}
+	if _, err := os.Stat(filepath.Join(outside, "escaped.txt")); !os.IsNotExist(err) {
+		t.Fatal("the upload landed outside the root through the parent link")
+	}
+}
+
 // TestRootReachedThroughASymlinkServes is the other side of the same rule: a
 // folder the user shares by a path that goes through a symlink is served all
 // the same, because the root itself is resolved before anything is compared.
