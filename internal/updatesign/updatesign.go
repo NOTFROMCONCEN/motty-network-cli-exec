@@ -19,9 +19,10 @@ import (
 )
 
 // releaseKeyText is the public half of this fork's release signing key. The
-// private half lives outside the repository (tools/.tools/motty-fork-signing.key
-// on the build machine) and in its owner's backup, never here. Releases this
-// build installs are signed with it; upstream's key would not match.
+// private half lives outside the repository (.tools/motty-fork-signing.key
+// beside the repository checkout on the build machine) and in its owner's
+// backup, never here. Releases this build installs are signed with it;
+// upstream's key would not match.
 const releaseKeyText = `untrusted comment: minisign public key: EA3DE85C3EACBF2A
 RWQqv6w+XOg96pbm2bMQ4GFK6xJZAR34ZURkxhEIxb+cR4AjCAyawoeI`
 
