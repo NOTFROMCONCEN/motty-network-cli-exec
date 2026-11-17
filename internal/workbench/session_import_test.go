@@ -635,6 +635,29 @@ func TestSessionImportDialogsReadTheirButtonsInThePage(t *testing.T) {
 	}
 }
 
+// The chooser must actually paint the Xshell session-folder entry: a control
+// only the tests can press by identity is invisible to the person in front
+// of the screen.
+func TestSessionImportChooserPaintsTheXshellFolderEntry(t *testing.T) {
+	options := testOptions(t)
+	options.OpenDirectory = func(app.OpenDirectoryOptions) (string, error) { return "", app.ErrCanceled }
+	state := newTestState(t, options)
+	state.modal = modalImportSessions
+	view := func(c ui.C) { state.declareImportSessions(c) }
+	page, canvas := drawDialogPage(t, state, view)
+	hit := pageHitByLabel(t, canvas, state.messages.Tools.ImportXshellDirectory)
+	if hit.ID.IsZero() {
+		t.Fatal("the Xshell session-folder entry is not painted in the chooser")
+	}
+	clickPageHit(t, state, page, canvas, view, hit)
+	if state.modal != modalNone {
+		t.Fatalf("pressing the entry left the chooser open as modal %d", state.modal)
+	}
+	if state.status != state.messages.Tools.ImportCanceled {
+		t.Fatalf("pressing the entry did not ask for a folder: status %q", state.status)
+	}
+}
+
 func TestImportingSecureCRTSessionsAsksForItsSessionsFolder(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "Sessions")
 	session := filepath.Join(root, "Clients", "Acme", "prod.ini")
