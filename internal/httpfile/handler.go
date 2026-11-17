@@ -1,6 +1,7 @@
 package httpfile
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"html"
@@ -56,7 +57,11 @@ func (server *Server) authorized(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	gotUser, gotPassword, ok := r.BasicAuth()
-	if !ok || gotUser != user || gotPassword != password {
+	// Compared in constant time: the LAN this server faces is trusted, but
+	// the comparison costs nothing and gives a guesser nothing to time.
+	userOK := subtle.ConstantTimeCompare([]byte(gotUser), []byte(user)) == 1
+	passOK := subtle.ConstantTimeCompare([]byte(gotPassword), []byte(password)) == 1
+	if !ok || !userOK || !passOK {
 		w.Header().Set("WWW-Authenticate", `Basic realm="motty file server"`)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return false

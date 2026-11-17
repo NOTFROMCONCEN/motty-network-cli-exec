@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/netip"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 )
@@ -97,6 +98,13 @@ func Allowed(host string) bool {
 	if addr, err := netip.ParseAddr(host); err == nil {
 		return allowedAddr(addr.Unmap())
 	}
+	// Windows' resolver reads more than dotted quads: a dotless decimal count
+	// of the four bytes or its "0x" hexadecimal form names the same address,
+	// and it has no dot to stop the single-label rule. "3689902465" is a
+	// public address, not a local name.
+	if addr, ok := numericHost(host); ok {
+		return allowedAddr(addr)
+	}
 	// A name with no dot is this machine or a name the local resolver's search
 	// domains complete; it cannot be a public host.
 	if host == "localhost" || !strings.Contains(host, ".") {
@@ -118,4 +126,25 @@ func allowedAddr(addr netip.Addr) bool {
 	}
 	return addr.IsLoopback() || addr.IsUnspecified() ||
 		addr.IsLinkLocalUnicast() || addr.IsPrivate()
+}
+
+// numericHost reads the dotless numeric forms a resolver may accept as
+// addresses: a decimal count of the four bytes ("3689902465") or a "0x"
+// hexadecimal one. A form it cannot read is not an address, and the caller
+// judges it as a name.
+func numericHost(host string) (netip.Addr, bool) {
+	var value uint64
+	var err error
+	if strings.HasPrefix(host, "0x") {
+		value, err = strconv.ParseUint(host[2:], 16, 32)
+	} else {
+		if host == "" || strings.IndexFunc(host, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
+			return netip.Addr{}, false
+		}
+		value, err = strconv.ParseUint(host, 10, 32)
+	}
+	if err != nil {
+		return netip.Addr{}, false
+	}
+	return netip.AddrFrom4([4]byte{byte(value >> 24), byte(value >> 16), byte(value >> 8), byte(value)}), true
 }
