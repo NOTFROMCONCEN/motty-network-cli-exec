@@ -2028,7 +2028,7 @@ var chineseTools = ToolsMessages{
 	ImportHostSaveFailedFmt:      "无法保存导入的主机：%v。未导入主机。",
 	ImportHostSaveRollbackFailed: "已保存密码的回滚也失败；请重试导入以恢复。",
 
-	ImportXshellDirectory:   "Xshell 会话目录(按文件夹建组)…",
+	ImportXshellDirectory:   "Xshell 会话目录…",
 	ImportXshellDirPicker:   "选择 Xshell 会话目录",
 	ImportXshellDirTitle:    "从目录导入 Xshell 会话",
 	ImportXshellDirDescFmt:  "在 %1$s 找到 %2$d 个会话;各会话按其所在子文件夹归入分组。",

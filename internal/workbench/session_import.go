@@ -373,8 +373,9 @@ func (state *State) clickMobaEncoding(id gfx.ID) {
 }
 
 // declareImportSessions declares the client chooser in the window page: one
-// large outline button per client, the guide link at the footer's left and
-// Cancel at its right.
+// large outline button per client plus the entry that imports a folder of
+// Xshell sessions, the guide link at the footer's left and Cancel at its
+// right.
 func (state *State) declareImportSessions(c ui.C) {
 	if state.modal != modalImportSessions {
 		return
@@ -387,6 +388,7 @@ func (state *State) declareImportSessions(c ui.C) {
 	}{
 		{hitImportPuTTY, "PuTTY"},
 		{hitImportXshell, "Xshell"},
+		{hitImportXshellDirectory, m.ImportXshellDirectory},
 		{hitImportMobaXterm, "MobaXterm"},
 		{hitImportWindTerm, "WindTerm"},
 		{hitImportElecterm, "Electerm"},

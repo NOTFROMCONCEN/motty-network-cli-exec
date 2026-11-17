@@ -2028,7 +2028,7 @@ var traditionalTools = ToolsMessages{
 	ImportHostSaveFailedFmt:      "無法儲存匯入的主機：%v。未匯入主機。",
 	ImportHostSaveRollbackFailed: "已儲存密碼的回捲也失敗；請重試匯入以恢復。",
 
-	ImportXshellDirectory:   "Xshell 工作階段目錄(按資料夾建組)…",
+	ImportXshellDirectory:   "Xshell 工作階段目錄…",
 	ImportXshellDirPicker:   "選擇 Xshell 工作階段目錄",
 	ImportXshellDirTitle:    "從目錄匯入 Xshell 工作階段",
 	ImportXshellDirDescFmt:  "在 %1$s 找到 %2$d 個工作階段；各工作階段按其所在子資料夾歸入群組。",
