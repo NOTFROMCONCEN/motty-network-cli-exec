@@ -699,8 +699,9 @@ func Newer(current, latest string) bool {
 // parse reads one to four dot-separated numbers into a fixed-width version:
 // a version with fewer parts than four is padded with zeros, so 0.3.2 and
 // 0.3.2.0 are the same version and 0.3.1.4 is newer than both. Each part is
-// plain digits — a "+3" or a "03" is not a version this project publishes,
-// and taking it would let a tampered feed invent spellings of its own.
+// plain digits without a leading zero — a "+3" or a "03" is not a version
+// this project publishes, and taking it would let a tampered feed invent
+// spellings of its own.
 func parse(version string) (parts [4]int, ok bool) {
 	fields := strings.Split(version, ".")
 	if len(fields) == 0 || len(fields) > 4 {
@@ -708,6 +709,9 @@ func parse(version string) (parts [4]int, ok bool) {
 	}
 	for index, field := range fields {
 		if field == "" || strings.IndexFunc(field, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
+			return parts, false
+		}
+		if len(field) > 1 && field[0] == '0' {
 			return parts, false
 		}
 		number, err := strconv.Atoi(field)
