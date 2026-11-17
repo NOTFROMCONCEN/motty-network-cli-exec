@@ -39,7 +39,7 @@ func TestParsingBatchHostLines(t *testing.T) {
 }
 
 func TestParsingBatchHostLineRejectsNonsense(t *testing.T) {
-	for _, line := range []string{"admin@", "host:", "host:0", "host:70000", "[::1", "[example]", "a::b::c"} {
+	for _, line := range []string{"admin@", "host:", "host:0", "host:70000", "[::1", "[example]", "a::b::c", ":22", "user@:22"} {
 		if _, err := parseBatchHostLine(line); err == nil {
 			t.Fatalf("%q was accepted", line)
 		}
