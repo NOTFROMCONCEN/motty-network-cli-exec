@@ -68,6 +68,13 @@ func TestCheckPassesLocalAndPrivateHosts(t *testing.T) {
 		"2606:4700:4700::1111",
 		"[2001:4860::1]",
 		"[2001:4860::1]:443",
+		// The numeric forms a resolver may read as addresses: dotless, so the
+		// single-label rule would call them local names. 3689902465 and its
+		// hexadecimal spelling are 217.236.0.1; the all-ones count is a
+		// broadcast address no LAN hands out.
+		"3689902465",
+		"0xD9EC0001",
+		"4294967295",
 	}
 	for _, host := range blocking {
 		if err := CheckAddress(host); err == nil {
