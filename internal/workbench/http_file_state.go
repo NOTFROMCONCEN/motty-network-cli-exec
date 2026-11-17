@@ -20,8 +20,12 @@ import (
 // The root, the port and the switches survive a restart; everything else is
 // view state of one window.
 type httpFileState struct {
-	root         string
-	port         uint16
+	root string
+	port uint16
+	// host pins the listener to one address; "" is every interface. Production
+	// leaves it empty — the share faces the network — and the tests pin the
+	// loopback, so a fresh test binary never asks the firewall for a pass.
+	host         string
 	allowUpload  bool
 	allowDelete  bool
 	allowListing bool
@@ -93,6 +97,7 @@ func (state *State) httpFileConfig() httpfile.Config {
 	return httpfile.Config{
 		Root:         state.httpFile.root,
 		Port:         state.httpFile.port,
+		Host:         state.httpFile.host,
 		AllowUpload:  state.httpFile.allowUpload,
 		AllowDelete:  state.httpFile.allowDelete,
 		AllowListing: state.httpFile.allowListing,

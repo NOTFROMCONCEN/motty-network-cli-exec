@@ -46,6 +46,9 @@ func startRoot(t *testing.T) string {
 
 func runningServer(t *testing.T, config Config) (*Server, string) {
 	t.Helper()
+	// Tests bind the loopback: a wildcard bind from a fresh test binary asks
+	// the firewall for a network pass on every run.
+	config.Host = "127.0.0.1"
 	server, err := New(config)
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -116,7 +119,7 @@ func TestConfigValidate(t *testing.T) {
 
 func TestStartStopLifecycle(t *testing.T) {
 	port := freePort(t)
-	server, err := New(Config{Root: startRoot(t), Port: port, AllowListing: true})
+	server, err := New(Config{Root: startRoot(t), Port: port, Host: "127.0.0.1", AllowListing: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -594,7 +597,7 @@ func TestRootReachedThroughASymlinkServes(t *testing.T) {
 // the interfaces move, and dropped with the run.
 func TestTheSnapshotReportsTheCachedAddresses(t *testing.T) {
 	port := freePort(t)
-	server, err := New(Config{Root: startRoot(t), Port: port})
+	server, err := New(Config{Root: startRoot(t), Port: port, Host: "127.0.0.1"})
 	if err != nil {
 		t.Fatal(err)
 	}
