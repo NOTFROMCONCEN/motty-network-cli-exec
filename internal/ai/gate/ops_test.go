@@ -225,3 +225,83 @@ func TestMaipuReadToolsUseMyPowerCommands(t *testing.T) {
 		t.Fatalf("interface rows missing:/n%s", res.Text)
 	}
 }
+
+// pagedOpsBackend answers every command with an output the tap could not
+// finish: the device stopped at a pager and the result was cut.
+type pagedOpsBackend struct{ opsBackend }
+
+func (b *pagedOpsBackend) Exec(_ context.Context, a tools.TerminalExecArgs) (ExecResult, error) {
+	b.execs.Add(1)
+	b.lastCommand = a.Command
+	return ExecResult{Output: b.outputs[a.Command], Status: "prompt_restored", PagerSeen: true, Truncated: true}, nil
+}
+
+// A paged answer is one screen, not the whole answer: a count read off the
+// first screen must not pose as the full result, so the read tools have to
+// carry the same pager and truncation marks terminal_exec does.
+func TestReadToolsSayWhenTheAnswerIsAPagedFirstScreen(t *testing.T) {
+	backend := &pagedOpsBackend{opsBackend{outputs: map[string]string{
+		"display version": "Version 5.170\n",
+	}}}
+	res := opsGate(backend, nil).Run(context.Background(), tools.NameDeviceFacts, []byte(`{"session":"2"}`))
+	for _, want := range []string{
+		"the device paged its output and this platform has no key to continue it",
+		"output truncated",
+	} {
+		if !strings.Contains(res.Text, want) {
+			t.Fatalf("result missing %q:\n%s", want, res.Text)
+		}
+	}
+}
+
+// shiftingOpsBackend flips session 2's platform after its first listing, the
+// way a host edited while an approval question sits open would.
+type shiftingOpsBackend struct {
+	opsBackend
+	lists atomic.Int32
+}
+
+func (b *shiftingOpsBackend) Sessions(context.Context) ([]SessionInfo, error) {
+	sessions, _ := b.opsBackend.Sessions(context.Background())
+	if b.lists.Add(1) >= 2 {
+		for index := range sessions {
+			if sessions[index].ID == "2" {
+				sessions[index].Platform = "generic"
+			}
+		}
+	}
+	return sessions, nil
+}
+
+// The batch was classified by the platform each session had when it was
+// approved; one whose platform changed under the open question must not run
+// the batch under a classification it never had.
+func TestGroupRunRefusesABatchWhoseSessionChangedUnderTheQuestion(t *testing.T) {
+	backend := &shiftingOpsBackend{opsBackend: opsBackend{outputs: map[string]string{
+		"display version": "Version 5.170\n",
+	}}}
+	g := opsGate(backend, nil)
+	g.Target = &SessionInfo{ID: "2", Title: "sw", Ready: true, ExecMode: ExecModeNetworkCLI, Platform: "huawei_vrp"}
+	res := g.Run(context.Background(), tools.NameGroupRun,
+		[]byte(`{"targets":[{"session":"2","commands":["display version"]}]}`))
+	if !res.IsError || !strings.Contains(res.Text, "nothing was run") {
+		t.Fatalf("result = %+v", res)
+	}
+	if backend.execs.Load() != 0 {
+		t.Fatalf("%d commands ran although the session changed under the question", backend.execs.Load())
+	}
+}
+
+// A session still as approved runs the batch the same as before.
+func TestGroupRunStillRunsWhenTheSessionsAreAsApproved(t *testing.T) {
+	backend := &opsBackend{outputs: map[string]string{
+		"display version": "Version 5.170\n",
+	}}
+	g := opsGate(backend, nil)
+	g.Target = &SessionInfo{ID: "2", Title: "sw", Ready: true, ExecMode: ExecModeNetworkCLI, Platform: "huawei_vrp"}
+	res := g.Run(context.Background(), tools.NameGroupRun,
+		[]byte(`{"targets":[{"session":"2","commands":["display version"]}]}`))
+	if res.IsError || backend.execs.Load() != 1 {
+		t.Fatalf("result = %+v, execs %d", res, backend.execs.Load())
+	}
+}
