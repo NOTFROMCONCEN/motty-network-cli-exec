@@ -67,11 +67,19 @@ func (state *State) aiToolRisk(call llm.ToolCall) (risk.Level, bool) {
 		if json.Unmarshal([]byte(call.Arguments), &args) != nil || args.Command == "" {
 			return 0, false
 		}
-		handle := ""
-		if len(args.Sessions) > 0 {
-			handle = args.Sessions[0]
+		if len(args.Sessions) == 0 {
+			return state.aiCommandRisk("", args.Command), true
 		}
-		return state.aiCommandRisk(handle, args.Command), true
+		// The gate grades a batch by the riskiest session in it, so the badge
+		// has to read the whole list — whichever session happens to be named
+		// first would let a mixed batch wear a read-only badge on a write.
+		level := risk.Level(0)
+		for _, handle := range args.Sessions {
+			if one := state.aiCommandRisk(handle, args.Command); one > level {
+				level = one
+			}
+		}
+		return level, true
 	}
 	return 0, false
 }
