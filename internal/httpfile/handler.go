@@ -84,6 +84,13 @@ func (server *Server) serveRead(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "directory listing is off", http.StatusForbidden)
 			return
 		}
+		// Without the trailing slash the listing's relative links would
+		// resolve one level too high: /docs + "guide.md" is /guide.md. The
+		// redirect puts the base the links are drawn against right.
+		if !strings.HasSuffix(r.URL.Path, "/") {
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+			return
+		}
 		server.writeListing(w, r, full)
 		return
 	}
@@ -290,8 +297,19 @@ button{margin-top:10px;padding:8px 18px;font-size:14px;border:none;border-radius
 </style></head><body><main>`)
 	fmt.Fprintf(&body, "<h1>%s</h1><p class=\"path\">%s</p>", html.EscapeString(title), html.EscapeString(title))
 	if relative != "." {
-		parent := path.Dir("/" + filepath.ToSlash(relative))
-		body.WriteString(`<p><a href="` + html.EscapeString(url.PathEscape(parent)+"/") + `">../</a></p>`)
+		// The parent link is an absolute path from the share root, so it is
+		// escaped a segment at a time: escaping the whole path would hide its
+		// slashes and turn it into one segment the browser resolves relative
+		// to the current directory — never the parent.
+		parts := strings.Split(path.Dir("/"+filepath.ToSlash(relative)), "/")
+		for index, part := range parts {
+			parts[index] = url.PathEscape(part)
+		}
+		href := strings.Join(parts, "/")
+		if !strings.HasSuffix(href, "/") {
+			href += "/"
+		}
+		body.WriteString(`<p><a href="` + html.EscapeString(href) + `">../</a></p>`)
 	}
 	body.WriteString("<table><tr><th>Name</th><th style=\"width:110px\">Size</th><th style=\"width:180px\">Modified</th></tr>")
 	if len(entries) == 0 {

@@ -260,6 +260,43 @@ func TestListingOff(t *testing.T) {
 	}
 }
 
+// A directory URL without its trailing slash used to answer with the listing
+// anyway, and every relative link on it then resolved one level too high. The
+// redirect puts the base right, and the parent link the listing draws must be
+// an absolute path from the share root at any depth.
+func TestADirectoryURLWithoutItsSlashRedirectsAndLinksUp(t *testing.T) {
+	port := freePort(t)
+	root := startRoot(t)
+	if err := os.MkdirAll(filepath.Join(root, "docs", "deep"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, base := runningServer(t, Config{Root: root, Port: port, AllowListing: true})
+	// http.Get follows redirects; a client that does not shows the answer.
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Get(base + "/docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusMovedPermanently {
+		t.Fatalf("/docs = %d, want a redirect", response.StatusCode)
+	}
+	if location := response.Header.Get("Location"); location != "/docs/" {
+		t.Fatalf("redirect = %q, want /docs/", location)
+	}
+	for path, parent := range map[string]string{"/docs/": `href="/"`, "/docs/deep/": `href="/docs/"`} {
+		response, err = http.Get(base + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(response.Body)
+		response.Body.Close()
+		if !strings.Contains(string(body), "<a "+parent+">../</a>") {
+			t.Fatalf("%s misses the parent link %s:\n%s", path, parent, body)
+		}
+	}
+}
+
 func TestUploadPut(t *testing.T) {
 	port := freePort(t)
 	root := startRoot(t)
