@@ -355,7 +355,10 @@ func (g Gate) Run(ctx context.Context, name string, raw []byte) Result {
 		// platform, where anything that is not a known read-only command asks.
 		// A shell-style command sent to a device therefore cannot run
 		// unattended either: it is unrecognized there.
-		mode, platform := g.sessionExec(ctx, args.Session)
+		mode, platform, err := g.sessionExec(ctx, args.Session)
+		if err != nil {
+			return failure(err)
+		}
 		var assessment risk.Assessment
 		switch {
 		case mode == ExecModeNetworkCLI && !isOneLine(args.Command):
@@ -732,18 +735,20 @@ func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''
 // sessionExec reports how a session executes commands: the shell mode unless
 // its Sessions entry says network CLI. A session that is not listed at all
 // reads as a shell session; running in it will fail with the backend's own
-// error instead of a wrong risk rating standing in for one.
-func (g Gate) sessionExec(ctx context.Context, session string) (mode, platform string) {
+// error instead of a wrong risk rating standing in for one. A listing that
+// cannot be read fails the call: a shell reading is what the ratings of an
+// unreachable device CLI would ride on, and guessing it is fail-open.
+func (g Gate) sessionExec(ctx context.Context, session string) (mode, platform string, err error) {
 	sessions, err := g.Backend.Sessions(ctx)
 	if err != nil {
-		return ExecModeShell, ""
+		return "", "", err
 	}
 	for _, candidate := range sessions {
 		if candidate.ID == session && candidate.ExecMode == ExecModeNetworkCLI {
-			return ExecModeNetworkCLI, candidate.Platform
+			return ExecModeNetworkCLI, candidate.Platform, nil
 		}
 	}
-	return ExecModeShell, ""
+	return ExecModeShell, "", nil
 }
 
 // platformOf is a session's platform in a batch lookup, "" when unknown.

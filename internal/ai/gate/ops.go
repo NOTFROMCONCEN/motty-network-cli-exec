@@ -42,7 +42,10 @@ func (g Gate) deviceFacts(ctx context.Context, raw []byte) Result {
 	if args.Session, err = g.targetSession(args.Session); err != nil {
 		return failure(err)
 	}
-	mode, platform := g.sessionExec(ctx, args.Session)
+	mode, platform, err := g.sessionExec(ctx, args.Session)
+	if err != nil {
+		return failure(err)
+	}
 	if mode != ExecModeNetworkCLI {
 		return Result{Text: "device_facts needs a network CLI session; this session runs a shell. Set the host's command execution to Network CLI first.", IsError: true}
 	}
@@ -86,7 +89,10 @@ func (g Gate) interfaceStatus(ctx context.Context, raw []byte) Result {
 	if args.Session, err = g.targetSession(args.Session); err != nil {
 		return failure(err)
 	}
-	mode, platform := g.sessionExec(ctx, args.Session)
+	mode, platform, err := g.sessionExec(ctx, args.Session)
+	if err != nil {
+		return failure(err)
+	}
 	if mode != ExecModeNetworkCLI {
 		return Result{Text: "interface_status needs a network CLI session; this session runs a shell. Set the host's command execution to Network CLI first.", IsError: true}
 	}
@@ -130,6 +136,10 @@ func (g Gate) interfaceStatus(ctx context.Context, raw []byte) Result {
 		}
 		switch {
 		case strings.Contains(state, "administratively"):
+			counts["admin-down"]++
+		case strings.HasPrefix(state, "*"):
+			// A Huawei PHY cell marks an administratively shut port with a
+			// leading asterisk: "*down". Call it what it is.
 			counts["admin-down"]++
 		case state == "up":
 			counts["up"]++

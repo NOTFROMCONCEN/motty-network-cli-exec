@@ -97,6 +97,25 @@ func TestInterfaceStatusParsesAndFilters(t *testing.T) {
 	}
 }
 
+// A Huawei PHY cell marks an administratively shut port with a leading
+// asterisk: "*down". The summary must call it what it is, not plain down.
+func TestInterfaceStatusCountsHuaweiAdminDown(t *testing.T) {
+	backend := &opsBackend{outputs: map[string]string{
+		"display interface brief": "Interface                   PHY     Protocol  InUti OutUti   inErrors  outErrors\n" +
+			"GigabitEthernet0/0/1        up      up           0%     0%          0          0\n" +
+			"GigabitEthernet0/0/2        *down   down         0%     0%          0          0\n" +
+			"GigabitEthernet0/0/3        down    down         0%     0%          0          0\n",
+	}}
+	res := opsGate(backend, nil).Run(context.Background(), tools.NameInterfaceStatus,
+		[]byte(`{"session":"2","include_down":true}`))
+	if res.IsError {
+		t.Fatalf("result = %+v", res)
+	}
+	if !strings.Contains(res.Text, "up 1, down 1, administratively down 1") {
+		t.Fatalf("the *down port was not counted as administratively down:\n%s", res.Text)
+	}
+}
+
 func TestConfigDiffIsReadOnly(t *testing.T) {
 	backend := &opsBackend{}
 	g := Gate{Backend: backend, Policy: risk.Policy{Enabled: true}, Mode: ModeObserve}
