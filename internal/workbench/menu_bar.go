@@ -20,7 +20,7 @@ func (state *State) MenuBar() []app.Menu {
 			Title:    state.shortcutActionLabel(action),
 			Shortcut: state.shortcuts.chords.Chord(action),
 			Disabled: disabled,
-			OnSelect: func() { state.runMenuAction(action) },
+			OnSelect: func() gfx.EventResult { return state.runMenuAction(action) },
 		}
 	}
 	return []app.Menu{
