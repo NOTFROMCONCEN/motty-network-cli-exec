@@ -55,6 +55,10 @@ func TestEverySavedStateFieldIsSharedOrKeptOnThisDevice(t *testing.T) {
 		// Whether the command bar shows, which groups it filters and how it
 		// orders them are this computer's own layout, not a preference to sync.
 		"commands_shown": true, "commands_sort": true, "commands_hidden_groups": true,
+		// fork: the terminal status bar, the interface density and the folded
+		// tool rail are this window's own look, like the command bar's layout
+		// above; another device keeps its own.
+		"status_bar_on": true, "compact_density": true, "toolbar_rail_folded": true,
 		// The shells a computer hides from its pickers name this machine's own
 		// programs and distributions; another device hides its own.
 		"hidden_shells": true,

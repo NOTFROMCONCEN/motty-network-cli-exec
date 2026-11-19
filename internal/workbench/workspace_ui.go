@@ -70,6 +70,10 @@ func (state *State) fullWorkspacePixelBounds(size gfx.Size) gfx.Rect {
 	if reserve := state.commandsDrawerHeight(); reserve > 0 {
 		bounds.Height = max(0, bounds.Height-reserve)
 	}
+	// fork: the status bar keeps the strip under the drawer, on the same terms.
+	if reserve := state.statusBarHeight(); reserve > 0 {
+		bounds.Height = max(0, bounds.Height-reserve)
+	}
 	return bounds
 }
 
