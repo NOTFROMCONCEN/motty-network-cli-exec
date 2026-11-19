@@ -26,11 +26,16 @@ var (
 	hitHostViewTree = tree.ID(hostGridHits, "host-view-tree")
 )
 
-const (
+// fork: variables so the interface-density choice (density.go) can tighten the
+// cards; the values are upstream's own.
+var (
 	hostCardMinWidth = float32(280)
 	hostCardHeight   = float32(64)
 	hostCardGap      = float32(12)
-	hostGridHeader   = float32(42)
+)
+
+const (
+	hostGridHeader = float32(42)
 )
 
 // hostGridDrag is the card grid's drag of a group header onto another group

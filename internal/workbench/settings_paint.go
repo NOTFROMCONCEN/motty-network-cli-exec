@@ -348,6 +348,9 @@ func (state *State) paintGeneralSettings(page *settingsPage) {
 			}
 			state.paintToolbarSettingsRows(page)
 			state.paintSidebarSettingsRow(page)
+			// fork: the compact interface (density.go), last on the page so the
+			// groups upstream's tests reach stay where their heights put them.
+			page.toggleRow(messages.Fork.CompactDensityRow, messages.Fork.CompactDensityDescription, compactDensityOn(), hitForkCompactDensity)
 		})
 		state.paintDiagnosticsSetting(page)
 	})
@@ -409,6 +412,8 @@ func (state *State) paintTerminalSettings(page *settingsPage) {
 				func() { state.tabTitleMode = tabTitle; state.save() },
 				func() { state.tabTitleMode = tabTitle; state.save() })
 			page.toggleRow(state.messages.Tools.LatencyRow, state.messages.Tools.LatencyDescription, state.terminalShowLatency, hitSettingsLatencyToggle)
+			// fork: the terminal status bar (status_bar.go).
+			page.toggleRow(state.messages.Fork.StatusBarRow, state.messages.Fork.StatusBarDescription, !state.statusBarHidden, hitForkStatusBar)
 			page.toggleRow(state.messages.Tools.PasteImageRow, state.messages.Tools.PasteImageDescription, !state.pasteImageOff, hitSettingsPasteImageToggle)
 			page.toggleRow(state.messages.Tools.PasteConfirmRow, state.messages.Tools.PasteConfirmDescription, !state.pasteConfirmOff, hitSettingsPasteConfirmToggle)
 			page.toggleRow(state.messages.Tools.CloseConfirmRow, state.messages.Tools.CloseConfirmDescription, !state.closeConfirmOff, hitSettingsCloseConfirmToggle)

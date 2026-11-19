@@ -313,6 +313,8 @@ func (state *State) Paint(canvas *gfx.Canvas, size gfx.Size) {
 		// The bottom command drawer sits beneath the panes, in the space the
 		// panes gave up for it.
 		state.paintCommandsDrawer(canvas)
+		// fork: the status bar keeps the strip under the drawer (status_bar.go).
+		state.paintStatusBar(canvas, size)
 	} else if fileManager {
 		state.paintSFTPTab(canvas, state.fileManagerPixelBounds(size))
 		state.paintAIPanel(canvas, size)
@@ -403,7 +405,9 @@ const tooltipGap = float32(10)
 // Window-bar metrics. The bar leaves what the platform keeps of the strip's two
 // ends (app.TitlebarInsets: macOS's traffic lights, or the buttons Viva draws on
 // Windows and Linux) and starts barMargin inside what is left.
-const (
+// fork: variables so the interface-density choice (density.go) can tighten them;
+// the values are upstream's own.
+var (
 	barButtonSize = float32(28) // the square hit area of a window-bar button
 	barMargin     = float32(12)
 	barTabHeight  = float32(28)
@@ -2453,13 +2457,15 @@ func (state *State) paintHostGroupTreeRow(canvas *gfx.Canvas, row, content gfx.R
 	state.paintIconButton(canvas, hitHostGroupMore.At(groupIndex), iconEllipsis, button, state.messages.HostGroupActions.Actions, false, iconButtonQuiet, pal.workspace)
 }
 
-const (
-	hostGroupRowHeight = 42
-	hostRowHeight      = 64
+// fork: variables so the interface-density choice (density.go) can tighten the
+// hosts rows; the values are upstream's own.
+var (
+	hostGroupRowHeight = float32(42)
+	hostRowHeight      = float32(64)
 	// The header's rows, shared by its paint and by the page that gives it
 	// room: the filter line and, while hosts are checked, the batch actions.
-	hostHeaderRowHeight = 28
-	hostHeaderRowGap    = 12
+	hostHeaderRowHeight = float32(28)
+	hostHeaderRowGap    = float32(12)
 )
 
 // hostListHeight is the height of every row of the hosts list.

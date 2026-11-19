@@ -254,6 +254,11 @@ var barTitleSize = float32(13)
 
 func workbenchMetrics(scale float32) (gfx.Metrics, radii) {
 	m := gfx.DefaultMetrics()
+	// fork: the compact interface starts from the framework's own compact
+	// density preset, so every component tightens with the workbench's chrome.
+	if compactDensity {
+		m = m.WithDensity(gfx.DensityCompact)
+	}
 	m.FontSizeS *= scale
 	m.FontSizeM *= scale
 	m.FontSizeL *= scale

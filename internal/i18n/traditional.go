@@ -10,6 +10,7 @@ var TraditionalMessages = Messages{
 	Dashboard:      traditionalDashboard,
 	SessionLogs:    traditionalSessionLogs,
 	HTTPFile:       traditionalHTTPFile,
+	Fork:           traditionalFork,
 	SFTPWindow: SFTPWindowMessages{
 		LocalPlaces: "收藏與快捷位置", DirectoryFavorites: "目錄收藏", CommonFolders: "常用目錄", LocalDrives: "磁碟", FavoriteAdd: "收藏目前目錄", FavoriteRemove: "取消收藏目前目錄", FavoriteLimit: "目錄收藏已達上限，請先移除不再使用的收藏。",
 		LocalHome: "主目錄", LocalDesktop: "桌面", LocalDownloads: "下載", LocalDocuments: "文件", LocalPictures: "圖片", LocalMusic: "音樂", LocalVideos: "影片", LocalMovies: "影片", LocalApplications: "應用程式",

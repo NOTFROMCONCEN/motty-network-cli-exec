@@ -112,6 +112,9 @@ type Messages struct {
 	Desktop DesktopMessages
 	// About holds the About page's texts; see about.go.
 	About AboutMessages
+	// Fork holds this fork's own additions' texts; see fork.go. New fork
+	// strings belong there, so upstream files stay free of them.
+	Fork ForkMessages
 
 	// Window and sections.
 
