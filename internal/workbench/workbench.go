@@ -394,8 +394,6 @@ const TitlebarHeight = float32(36)
 
 const (
 	windowBarHeight = TitlebarHeight
-	infoBarHeight   = float32(34)
-	navigationWidth = float32(204)
 	popupLayer      = uint16(300) // a popup inside a page: above the page's text, below dialogs
 	// A layer paints all its shapes and then all its text, so two overlays on
 	// one layer are not stacked: the earlier one's text lands on the later
@@ -411,6 +409,14 @@ const (
 	// using the rest of the window does not cancel it, and below tooltips.
 	transferProgressLayer = uint16(850)
 	tooltipLayer          = uint16(900)
+)
+
+// fork: The interface-density choice resizes these at run time, so they are
+// variables; density.go keeps the values and their defaults. Identifiers stay
+// as upstream named them, so no use site changes.
+var (
+	infoBarHeight   = float32(34)
+	navigationWidth = float32(204)
 )
 
 const (
@@ -954,7 +960,14 @@ type State struct {
 	// and latencyProbe names the sessions Paint saw that need a sample; Wake
 	// starts their requests so a repaint never sends network work.
 	terminalShowLatency bool
-	latencyProbe        []uint32
+	// fork: statusBarHidden hides the terminal status bar (status_bar.go); the
+	// bar is opt-in and stays hidden until the user asks for it in Settings.
+	statusBarHidden bool
+	// fork: toolbarRailFolded collapses the terminal tools' side rail to its
+	// handle (toolbar_rail_fold.go); the column comes back at the handle's
+	// press, and the fold is remembered per device.
+	toolbarRailFolded bool
+	latencyProbe      []uint32
 	// The shared terminal tool rail is a device-local presentation choice.
 	// Its zero value keeps the historical right-edge placement.
 	terminalToolbarPosition terminalToolbarPosition
@@ -1869,6 +1882,11 @@ func (state *State) Click(id gfx.ID) {
 // not make on the control itself, such as a command palette entry standing for a
 // sidebar row: that row's icon stays still, because the row was not chosen.
 func (state *State) click(id gfx.ID, feedback bool) {
+	// fork: the status bar and the fork settings rows answer before any
+	// upstream dispatch learns their identities (status_bar.go).
+	if state.clickFork(id) {
+		return
+	}
 	if state.clickWorkspaceInline(id) {
 		return
 	}

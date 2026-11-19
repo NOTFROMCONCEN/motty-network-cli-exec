@@ -275,6 +275,13 @@ type savedState struct {
 	CommandsSort            string   `json:"commands_sort,omitempty"`
 	// CommandsWidth is the width the sidebar was dragged to; zero is the default.
 	CommandsWidth float32 `json:"commands_width,omitempty"`
+
+	// fork: the fork-only surfaces' state (status_bar.go, density.go,
+	// aligns are left alone. The status bar is opt-in: a fresh state hides it,
+	// so the window reads as upstream's until the user asks for the bar.
+	StatusBarOn     bool `json:"status_bar_on,omitempty"`
+	CompactDensity  bool `json:"compact_density,omitempty"`
+	ToolbarRailFold bool `json:"toolbar_rail_folded,omitempty"`
 }
 
 type savedOutboundProxy struct {
@@ -643,6 +650,10 @@ func (state *State) snapshot() savedState {
 		TerminalPasteConfirmOff:    state.pasteConfirmOff,
 		TerminalInputClickOff:      state.terminalInputClickOff,
 		TerminalLinkPlainClick:     state.terminalLinkPlainClick,
+		// fork: the fork-only surfaces' state.
+		StatusBarOn:                !state.statusBarHidden,
+		CompactDensity:             compactDensity,
+		ToolbarRailFold:            state.toolbarRailFolded,
 		AIPanelWidth:               state.ai.panelWidth,
 		AIComposerHeight:           state.ai.composerHeight,
 		MonitorPanelWidth:          state.monitorWidth,
@@ -1223,6 +1234,9 @@ func (state *State) restoreLocal(saved savedState) {
 	state.sshAgent = agentChoiceFromSaved(saved.SSHAgent, saved.SSHAgentPath)
 	state.networkProxy = networkProxyModeFromString(saved.NetworkProxy)
 	state.sshBrowser = sshbrowser.ParseFamily(saved.SSHBrowser)
+	// fork: restore the interface density before the theme is built from the
+	// metrics; applyDensity skips the work when nothing changed.
+	state.applyDensity(saved.CompactDensity)
 	state.restoreWindowAppearance(saved)
 	state.terminalTransparency.Value = float32(min(max(saved.TerminalTransparency, 0), 100))
 	state.setTerminalFontSize(float32(saved.TerminalFontSize))
@@ -1353,6 +1367,10 @@ func (state *State) restoreShared(saved savedState) {
 	state.pasteConfirmOff = saved.TerminalPasteConfirmOff
 	state.terminalInputClickOff = saved.TerminalInputClickOff
 	state.terminalLinkPlainClick = saved.TerminalLinkPlainClick
+	// fork: the status bar is opt-in — it shows once the user asks for it.
+	state.statusBarHidden = !saved.StatusBarOn
+	// fork: the folded tool rail is this computer's own layout choice.
+	state.toolbarRailFolded = saved.ToolbarRailFold
 	if saved.TerminalSchemeDark == "" && saved.TerminalSchemeLight == "" && saved.TerminalScheme != "" {
 		state.terminalSchemes[appearanceDark], state.terminalSchemes[appearanceLight] = state.migrateTerminalScheme(saved.TerminalScheme)
 	} else {

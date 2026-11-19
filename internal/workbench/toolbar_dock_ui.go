@@ -271,7 +271,7 @@ func (state *State) toolbarDockSideReserveFor(left, includeTerminal bool) float3
 		return state.terminalToolbarMetrics().railExtent
 	}
 	if includeTerminal && state.toolbarRailReservedOnSide(left) {
-		return state.terminalToolbarMetrics().railExtent
+		return state.forkRailExtent(left) // fork: the folded column keeps only its handle
 	}
 	if state.toolbars.dock == nil {
 		return 0
@@ -286,7 +286,7 @@ func (state *State) toolbarDockSideReserveFor(left, includeTerminal bool) float3
 		}
 		spec, ok := toolbarSpecFor(entry.Group, entry.Key)
 		if ok && state.toolbarVisible(entry.Group, spec.id) {
-			return state.terminalToolbarMetrics().railExtent
+			return state.forkRailExtent(left) // fork: the folded column keeps only its handle
 		}
 	}
 	return 0
@@ -469,7 +469,7 @@ func (state *State) toolbarDockSideBoundsFor(size gfx.Size, left bool) gfx.Rect 
 		bounds.X = 0
 	}
 	bounds.Height = max(bounds.Height-state.toolbarDockBottomReserve(state.terminalPage()), 0)
-	extent := state.terminalToolbarMetrics().railExtent
+	extent := state.forkRailExtent(left) // fork: the folded column keeps only its handle
 	bounds.Width = extent
 	if !left {
 		bounds.X = max(right-extent, 0)
@@ -508,8 +508,11 @@ func (state *State) toolbarDockBottomBounds(size gfx.Size, emptyTarget bool) gfx
 	if emptyTarget {
 		extent = state.terminalToolbarMetrics().railExtent
 	}
-	bounds.Y = max(size.Height-extent, windowBarHeight)
-	bounds.Height = min(extent, max(size.Height-windowBarHeight, 0))
+	// fork: the dock anchors to the window's own bottom edge, above the status
+	// bar's strip (workspace_ui.go shrinks the derived bounds by the same height).
+	bottom := size.Height - state.statusBarHeight()
+	bounds.Y = max(bottom-extent, windowBarHeight)
+	bounds.Height = min(extent, max(bottom-windowBarHeight, 0))
 	return bounds
 }
 
@@ -639,11 +642,17 @@ func (state *State) declareToolbarDockSide(c ui.C, left, terminalVisible bool) {
 		scratch.top, scratch.bottom = ui.Box{}, ui.Box{}
 		return
 	}
+	// fork: the folded column declares no groups — the window paints only its
+	// handle (toolbar_rail_fold.go).
+	if state.toolbarRailFoldedOnSide(left) {
+		scratch.top, scratch.bottom = ui.Box{}, ui.Box{}
+		return
+	}
 	topZone, bottomZone := toolbarDockSideTop, toolbarDockSideBottom
 	if left {
 		topZone, bottomZone = toolbarDockLeftTop, toolbarDockLeftBottom
 	}
-	bounds := state.toolbarDockSideBoundsFor(state.viewport, left)
+	bounds := state.forkRailColumnBounds(state.viewport, left) // fork: room above the fold button
 	var topBuffer, bottomBuffer [maxBarTools]barTool
 	top := state.toolbarDockTools(topZone, &topBuffer)
 	bottom := state.toolbarDockTools(bottomZone, &bottomBuffer)
@@ -674,7 +683,16 @@ func (state *State) paintToolbarDockSide(canvas *gfx.Canvas, size gfx.Size) {
 			}
 			continue
 		}
-		bounds := state.toolbarDockSideBoundsFor(size, left)
+		// fork: the folded column paints only its handle and clears the
+		// session's rail state; the tools come back with the fold (toolbar_rail_fold.go).
+		if state.toolbarRailFoldedOnSide(left) {
+			if terminalVisible && primary && session != nil {
+				state.clearTerminalRail(session)
+			}
+			state.paintRailFoldHandle(canvas, state.toolbarDockSideBoundsFor(size, left), left)
+			continue
+		}
+		bounds := state.forkRailColumnBounds(size, left) // fork: room above the fold button
 		topZone, bottomZone := toolbarDockSideTop, toolbarDockSideBottom
 		if left {
 			topZone, bottomZone = toolbarDockLeftTop, toolbarDockLeftBottom
@@ -693,6 +711,11 @@ func (state *State) paintToolbarDockSide(canvas *gfx.Canvas, size gfx.Size) {
 		// read as a column of that surface. A docked panel that takes the same
 		// workspace draws its own line against the rail instead.
 		background := state.windowFrameColor()
+		// fork: the fold button at the foot of the toolbar side's column, above
+		// which every group's room ends (forkRailColumnBounds).
+		if state.toolbarRailFoldCapableOnSide(left) {
+			state.paintRailFoldToggle(canvas, state.toolbarDockSideBoundsFor(size, left))
+		}
 		if terminalVisible && primary {
 			tools := append(top, bottom...)
 			state.setTerminalRailTools(session, tools)

@@ -15,11 +15,16 @@ var (
 // The hosts page's geometry. The toolbar spans the page; below it the group
 // tree, when the user opens it and the window has room for both panes, stands
 // beside the host list or grid.
+// fork: variables so the interface-density choice (density.go) can tighten the
+// hosts page's margins; the values are upstream's own.
+var (
+	hostsToolbarTop = float32(14)
+	hostsBodyMargin = float32(18)
+	hostsBodyBottom = float32(18)
+)
+
 const (
-	hostsToolbarTop       = float32(14)
 	hostsBodyGap          = float32(12)
-	hostsBodyMargin       = float32(18)
-	hostsBodyBottom       = float32(18)
 	hostSideHeaderHeight  = float32(28)
 	hostSideTreeGap       = float32(6)
 	hostSideMinWidth      = float32(160)

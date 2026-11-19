@@ -20,13 +20,16 @@ import (
 
 // Metrics of the panel, in logical pixels.
 const (
-	aiPad          = float32(14)       // the margin around everything in the column
-	aiGap          = float32(10)       // between two messages
-	aiAnswerAction = float32(26)       // the last answer's copy and usage row
-	aiTitleRow     = infoBarHeight - 1 // with the divider under it, as tall as the terminal's info bar beside it, whose last pixel is its line
+	aiPad          = float32(14) // the margin around everything in the column
+	aiGap          = float32(10) // between two messages
+	aiAnswerAction = float32(26) // the last answer's copy and usage row
 	aiButton       = float32(28)
 	aiMaxLines     = 4096 // the most lines one message is laid out in
 )
+
+// fork: aiTitleRow follows the info bar it aligns with, which the interface
+// density resizes; density.go re-derives it with the rest of the chrome.
+var aiTitleRow = infoBarHeight - 1 // with the divider under it, as tall as the terminal's info bar beside it, whose last pixel is its line
 
 // aiTextMetrics are the panel's text sizes at the interface text size in
 // effect. The panel is window text, not a terminal grid: its body is the

@@ -21,7 +21,9 @@ var (
 	hitVerticalTabGroups            = tree.Sub(shellHits, tree.Name("vertical-tab-group"))
 )
 
-const (
+// fork: variables so the interface-density choice (density.go) can tighten the
+// sidebar's column; the values are upstream's own.
+var (
 	verticalTabsWidth  = navigationWidth
 	verticalTabsRail   = float32(48)
 	verticalTabHeight  = float32(34)

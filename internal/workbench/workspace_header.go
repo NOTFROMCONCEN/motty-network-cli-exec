@@ -13,7 +13,9 @@ import (
 // three so the bar reads as a row.
 const workspaceHeaderLabelSize = float32(13)
 
-const workspaceHeaderHeight = float32(38)
+// fork: a variable so the interface-density choice (density.go) can tighten the
+// header; the value is upstream's own.
+var workspaceHeaderHeight = float32(38)
 
 var workspaceHeaderHits = tree.Feature("workspace-header")
 

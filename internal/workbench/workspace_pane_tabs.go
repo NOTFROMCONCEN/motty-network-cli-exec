@@ -8,7 +8,9 @@ import (
 
 // workspacePaneTabsHeight is the strip of tabs a one-pane-at-a-time workspace
 // keeps above its terminal.
-const workspacePaneTabsHeight = float32(36)
+// fork: a variable so the interface-density choice (density.go) can tighten the
+// strip; the value is upstream's own.
+var workspacePaneTabsHeight = float32(36)
 
 // workspacePaneTabWidth is how wide each tab is while the strip has room.
 const workspacePaneTabWidth = float32(160)
