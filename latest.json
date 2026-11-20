@@ -1,0 +1,26 @@
+{
+  "version": "0.4.18.1",
+  "tag": "v0.4.18-netcli-build.1-genshin",
+  "source": "https://github.com/NOTFROMCONCEN/motty-network-cli-exec/releases/tag/v0.4.18-netcli-build.1-genshin",
+  "notes": "基于上游 t8y2/motty **v0.4.18**（tag 提交 `114225ea`；本轮上游一天连发 v0.4.15~v0.4.18 四个版本）的 Genshin 系列版本（0.4.18.1）。基线变更，构建号重置为 1。\n\n本版是纯同步版本：上游四个版本全量并入，fork 自身功能（跳板模式、内网模式、HTTP 文件服务器、Net CLI 设备直发、UI 一期）延续。\n\n## 来自上游 v0.4.15 ~ v0.4.18（精选）\n\n- **系统托盘**：从托盘直接打开已保存主机与工作区（Windows 下崩溃报告的直接入口也在这里）\n- **更新源可选**：官方镜像 ↔ CNB（中国大陆镜像）自动回退；配合新的崩溃通知打开报告\n- **会话导入**：支持 FinalShell 数据目录\n- **RDP**：按主机提供 legacy TLS 套件（对接只支持 RSA 密钥交换的老服务器）\n- **SFTP**：文档预览大小上限可配置\n- **快捷命令**：分组管理器（重命名/删除分组，删除后命令回到未分组）\n- 工作台全面迁移到界面框架的声明式控件（页内 Select/多选/单选组/列表重排/色板/图标标签页），外观行为不变；设置打开快捷键与菜单入口\n\n## fork 侧延续与适配\n\n- UI 一期（状态栏 + 紧凑密度，opt-in）与跳板模式、HTTP 文件服务器（性能修复版）等全部在位\n- 跳板主机选择器随上游范式重写为声明式下拉；文件服务器页注册进侧栏自定义表\n- 顺手修了一个上游小 bug：分组删除提示的英文文案缺计数动词（调用点传两个实参，英文只有 %s）。另发现托盘的工作区项测试在 Windows 上会空指针崩溃（纯上游同样），未由 fork 代修\n\n## 验证\n\n- 105+ 个 fork 提交 rebase 到 v0.4.18；界面框架同步到上游 CI pin 并前进到覆盖其代码所需提交（本轮第三次遇到 pin 与代码脱节）\n- `go build`/`go vet` 干净；全量测试失败项以纯上游 `114225ea` 逐一对照，全部判归环境性（Windows 渲染 golden、托盘测试平台耦合、alloc/计时抖动），**无 fork 回归**\n\n## 已知限制\n\n- 迈普（MyPower）支持仍依据厂商手册推导，未在真机验证\n- 三段号旧版本（0.3.1~0.3.4）收不到自动更新，需手动装一次四段版\n- 本版仅发布 Windows 与 Linux（amd64）\n\n\u003e 0.4.14.x 可应用内自动更新到本版（0.4.14.3 直接更新；更早的四段版逐级升）。内网环境请开启「设置 → 安全 → 内网模式」。\n",
+  "files": [
+    {
+      "name": "motty-0.4.18.1-windows-amd64-setup.exe",
+      "size": 13299095,
+      "sha256": "b460aa8853dd4cadb0201f84b3119903f3b89d5d362afaa1775c72eb1a7bc8c9",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2a3cxb2FDaWhCNlNDNHUweG5JZjBZOEJ0dTZCZ2FZa2xuMEdodnBkMDJPeTNIU3NqMGdCMXBEVlJFUFFjbmxmdU9hQXRPRjBSUXdFZmkyRmVHL2hOUTA9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTUxNjI3MTAJZmlsZTptb3R0eS0wLjQuMTguMS13aW5kb3dzLWFtZDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNC4xOC4xClFGK002b0REdFZIdnZza1RLbEhwOS9vU1V0TUVLaXZLTS8zWkYzMWRhZTZXQ1lxVkkyd1AxelJSeFlIK1VCV0RoRVBhWVl6MTliZktRbC9UKzZuWENRPT0K"
+    },
+    {
+      "name": "motty-0.4.18.1-windows-amd64.zip",
+      "size": 18247160,
+      "sha256": "1098247daa505411b77563ec61dbd8eee52fc8345b9629fa1e26175dcd71c065",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2dlFoUFM5TUZIK3lrUDVyRzY5V1JDZzMzM1N0Y1VBNEpzanErQUUyUnpIK0JRR1hTNktMSEU3SUxtYmViZnNwc3RMWlhFWVVsY2FHbFdjZ1VtRFpkd289CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTUxNjI3MTAJZmlsZTptb3R0eS0wLjQuMTguMS13aW5kb3dzLWFtZDY0LnppcAl2ZXJzaW9uOjAuNC4xOC4xCkNKNHVycCtBQ1BpR1ZXcUdEclFsSE9OdVZKMG5EOHYwSThkZTlUMEhzWlRnak9ER3gxa1YxTkdZcXFJbVZEcVhXOGNmNkJveWNsNlJEd0ZqQStNL0RBPT0K"
+    },
+    {
+      "name": "motty-0.4.18.1-linux-amd64.tar.gz",
+      "size": 18096621,
+      "sha256": "04b839b88e713d446e063d246c0d2966dc5e1ca7067d7534db7827da7722853b",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2a0lWMzNmMzg4U0Z3ZkRSWkFqUGhWT09vSFJjSG05K1NrYW1yWXVyRTB1TTcyQlFDdUhtbWhtRHFUUFhLWDc1NFVyclAxTlNQeEVHOVI5VHJBUWxjd1E9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTUxNjI3MTAJZmlsZTptb3R0eS0wLjQuMTguMS1saW51eC1hbWQ2NC50YXIuZ3oJdmVyc2lvbjowLjQuMTguMQpNbEVBaWZzWTdKME1vUUZlcy8vNjVmblU2OWRrT3EvYmhrdWZMN2lTY3hxbDlRRm5vamtLdXo4cndnME54VldQVnYyZ3RvM2M5WXpEdjhmWHN5aEtEdz09Cg=="
+    }
+  ]
+}
