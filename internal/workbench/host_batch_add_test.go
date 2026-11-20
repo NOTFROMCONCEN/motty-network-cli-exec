@@ -126,7 +126,8 @@ func TestTheGroupMenuPrefillsTheBatchGroup(t *testing.T) {
 	state.activeSection = sectionHosts
 	state.refreshHostGroups()
 	state.openHostGroupActions("Servers", ui.Point{})
-	state.Click(hitGroupBatchHosts)
+	// The menu delivers its rows at paint time now: pick the painted row.
+	clickPageMenuRow(t, state, state.messages.BatchAddMenu)
 	if state.modal != modalForm {
 		t.Fatalf("the group menu did not open the paste form: modal %d", state.modal)
 	}
