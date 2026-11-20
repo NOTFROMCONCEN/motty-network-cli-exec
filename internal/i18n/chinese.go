@@ -2346,7 +2346,7 @@ var chineseTools = ToolsMessages{
 	GeneralUpdateSource:             "更新源",
 	GeneralUpdateSourceDescription:  "检查和下载使用的地址。CNB 是中国大陆的镜像；它不可用时自动回到官方源。",
 	GeneralUpdateSourceOfficial:     "官方镜像",
-	GeneralUpdateSourceCNB:          "CNB",
+	GeneralUpdateSourceCNB:          "CNB 镜像",
 	GeneralUpdateStartup:            "自动检查",
 	GeneralUpdateStartupDescription: "启动五秒后查找新版本，之后每小时一次。检查会让下载主机看到你的地址。",
 	UpdateChecking:                  "正在检查更新…",

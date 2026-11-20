@@ -57,7 +57,7 @@ func TestAboutShowsTheBuildAndOpensTheCommunityLinks(t *testing.T) {
 	state.Click(hitSettings)
 	state.selectSettingsCategory(settingsAbout)
 	var canvas gfx.Canvas
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 1200})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 2400})
 	var texts []string
 	for _, text := range canvas.Texts() {
 		texts = append(texts, text.Value)
@@ -90,7 +90,7 @@ func TestAboutShowsTheBuildAndOpensTheCommunityLinks(t *testing.T) {
 		t.Errorf("copy status = %q", state.status)
 	}
 	canvas = gfx.Canvas{}
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 1200})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 2400})
 	if hit, ok := hitByID(&canvas, hitAboutCopyInfo); !ok || hit.Label != about.CopiedAction {
 		t.Errorf("the copy button says %q after copying, want %q", hit.Label, about.CopiedAction)
 	}
@@ -98,7 +98,7 @@ func TestAboutShowsTheBuildAndOpensTheCommunityLinks(t *testing.T) {
 	state.selectSettingsCategory(settingsGeneral)
 	state.selectSettingsCategory(settingsAbout)
 	canvas = gfx.Canvas{}
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 1200})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 2400})
 	if hit, ok := hitByID(&canvas, hitAboutCopyInfo); !ok || hit.Label != about.CopyAction {
 		t.Errorf("the copy button says %q on a new visit, want %q", hit.Label, about.CopyAction)
 	}

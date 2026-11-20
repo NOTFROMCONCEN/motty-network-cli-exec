@@ -1797,7 +1797,7 @@ var englishTools = ToolsMessages{
 	SnippetGroupDeleteConfirm: "Delete",
 	SnippetGroupsClose:        "Close",
 	StatusGroupRenamedFmt:     "Renamed “%s” to “%s”.",
-	StatusGroupDeletedFmt:     "Deleted “%s”; its commands are now ungrouped.",
+	StatusGroupDeletedFmt:     "Deleted “%s”; its %d commands are now ungrouped.",
 	SnippetCountFilteredFmt:   "Snippets: %d of %d",
 	SnippetColumnCommand:      "COMMAND",
 	SnippetSortAction:         "Activate to sort this column ascending",
