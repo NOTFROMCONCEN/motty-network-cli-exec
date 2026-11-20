@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewer(t *testing.T) {
@@ -299,7 +300,6 @@ func TestAMirrorThatNamesNoPackageForThisPlatformWasChecked(t *testing.T) {
 	}
 }
 
-
 func TestSavedSourceReadsWhatTheSettingWrote(t *testing.T) {
 	for _, test := range []struct {
 		value string
@@ -433,6 +433,7 @@ func TestReleaseNotesEmptyWhenBothFail(t *testing.T) {
 		t.Fatalf("expected empty notes, got %q", notes)
 	}
 }
+
 // TestCheckVivaFeedMapsTheReleaseAndTrustsTheSignedFeed is dropped by the fork:
 // it drives checkVivaPackageAt, the signed Viva feed path the fork never takes
 // (CheckPackage reads the fork feed instead, see fork.go). That path parses
