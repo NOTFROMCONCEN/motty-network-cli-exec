@@ -14,7 +14,9 @@ func TestWindowBarButtonsStayInsideANarrowWindowWithManyTabs(t *testing.T) {
 	for index := 0; index < 12; index++ {
 		state.newHostSession(state.hosts[index%len(state.hosts)])
 	}
-	const width = 640
+	// fork: the window bar carries one more button (log coloring), so the
+	// narrow-window case is exercised one button wider than upstream's.
+	const width = 720
 	var canvas gfx.Canvas
 	state.Paint(&canvas, gfx.Size{Width: width, Height: 520})
 
