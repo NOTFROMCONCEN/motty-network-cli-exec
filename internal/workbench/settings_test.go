@@ -46,7 +46,7 @@ func settingsChoiceInHits(hits []gfx.Hit, label string, last bool) (gfx.Hit, boo
 func settingsChoiceHit(t testing.TB, state *State, label string) gfx.Hit {
 	t.Helper()
 	var canvas gfx.Canvas
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 3400})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 4800})
 	if hit, ok := settingsChoiceIn(&canvas, label); ok {
 		return hit
 	}
@@ -72,7 +72,7 @@ func clickSettingsChoice(t testing.TB, state *State, label string) {
 func clickSettingsChoiceFirst(t testing.TB, state *State, label string) {
 	t.Helper()
 	var canvas gfx.Canvas
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 3400})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 4800})
 	hit, ok := settingsChoiceFirstIn(&canvas, label)
 	if !ok {
 		t.Fatalf("no settings choice labeled %q", label)
@@ -84,7 +84,7 @@ func clickSettingsChoiceHit(t testing.TB, state *State, hit gfx.Hit) {
 	t.Helper()
 	var canvas gfx.Canvas
 	canvas.BeginEventPass(hit.ID, gfx.ClickInfo{})
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 3400})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 4800})
 	canvas.EndEventPass()
 }
 
@@ -125,7 +125,7 @@ func settingsChoiceInRow(canvas *gfx.Canvas, rowLabel, optionLabel string) (gfx.
 func settingsChoiceHitInRow(t testing.TB, state *State, rowLabel, optionLabel string) gfx.Hit {
 	t.Helper()
 	var canvas gfx.Canvas
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 3400})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 4800})
 	if hit, ok := settingsChoiceInRow(&canvas, rowLabel, optionLabel); ok {
 		return hit
 	}
@@ -140,7 +140,7 @@ func clickSettingsChoiceInRow(t testing.TB, state *State, rowLabel, optionLabel 
 	hit := settingsChoiceHitInRow(t, state, rowLabel, optionLabel)
 	var canvas gfx.Canvas
 	canvas.BeginEventPass(hit.ID, gfx.ClickInfo{})
-	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 3400})
+	state.Paint(&canvas, gfx.Size{Width: 1400, Height: 4800})
 	canvas.EndEventPass()
 }
 
@@ -482,7 +482,7 @@ func TestSettingsChoicesHaveRovingKeyboardFocus(t *testing.T) {
 		t.Helper()
 		state.selectSettingsCategory(category)
 		var canvas gfx.Canvas
-		state.Paint(&canvas, gfx.Size{Width: 1400, Height: 3400})
+		state.Paint(&canvas, gfx.Size{Width: 1400, Height: 4800})
 		from, ok := settingsChoiceInRow(&canvas, rowLabel, fromLabel)
 		if !ok {
 			t.Fatalf("%q: no choice labeled %q", rowLabel, fromLabel)
