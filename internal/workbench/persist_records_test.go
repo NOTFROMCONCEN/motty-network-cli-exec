@@ -104,6 +104,9 @@ func TestEverySavedStateFieldIsSharedOrKeptOnThisDevice(t *testing.T) {
 		// So does the intranet mode: whether this machine keeps itself off the
 		// internet is a local decision, never a setting to carry to others.
 		"intranet_mode": true,
+		// Where the update check goes is this machine's network view,
+		// like the intranet mode beside it.
+		"update_source": true,
 		// The jump mode describes where this machine sits: behind which
 		// bastion its connections leave is the computer's own topology, not a
 		// preference to carry to others.

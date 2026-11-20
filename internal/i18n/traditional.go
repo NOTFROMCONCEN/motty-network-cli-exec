@@ -2546,7 +2546,7 @@ var traditionalTools = ToolsMessages{
 	GeneralUpdateSource:             "更新來源",
 	GeneralUpdateSourceDescription:  "檢查和下載使用的位址。CNB 是中國大陸的鏡像；無法使用時會自動回到官方來源。",
 	GeneralUpdateSourceOfficial:     "官方鏡像",
-	GeneralUpdateSourceCNB:          "CNB",
+	GeneralUpdateSourceCNB:          "CNB 鏡像",
 	GeneralUpdateStartup:            "自動檢查",
 	GeneralUpdateStartupDescription: "啟動五秒後查詢新版本，之後每小時一次。檢查會讓下載主機看到你的位址。",
 	UpdateChecking:                  "正在檢查更新…",
