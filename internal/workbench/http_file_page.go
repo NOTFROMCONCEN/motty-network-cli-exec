@@ -198,14 +198,14 @@ func (state *State) declareHTTPFileSettings(c ui.C, m i18n.HTTPFileMessages, pal
 			ui.Text(c, m.LockedHint).FontSize(metrics.FontSizeS).Color(pal.faint)
 		} else {
 			ui.Row(c).Height(36).Gap(8).Items(ui.Center).Children(func() {
-				ui.TextFieldID(c, hitHTTPFileDir, &view.dirField, m.DirectoryLabel, m.DirectoryPlaceholder).
+				ui.TextField(c, &view.dirField, m.DirectoryLabel, m.DirectoryPlaceholder, ui.WithID(hitHTTPFileDir)).
 					Height(36).Grow(1).Shrink(0).NavigationKeys()
 				state.declareButtonSized(c, hitHTTPFileBrowse, m.Browse, iconFolderOpen, false, false, true, toolbarFont, false).
 					Height(toolbarHeight).Shrink(0)
 			})
 			ui.Row(c).Height(36).Gap(10).Items(ui.Center).Children(func() {
 				ui.Text(c, m.PortLabel).FontSize(metrics.FontSizeS).Color(pal.muted).Shrink(0)
-				ui.TextFieldID(c, hitHTTPFilePort, &view.portField, m.PortLabel, m.PortPlaceholder).
+				ui.TextField(c, &view.portField, m.PortLabel, m.PortPlaceholder, ui.WithID(hitHTTPFilePort)).
 					Width(130).Height(36).Shrink(0).NavigationKeys()
 				ui.Spacer(c).Grow(1)
 				ui.Text(c, m.PortHint).FontSize(metrics.FontSizeS).Color(pal.faint)

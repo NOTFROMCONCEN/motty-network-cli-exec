@@ -61,7 +61,7 @@ func (state *State) jumpHostSummary() string {
 	if state.jumpHost == "" {
 		return state.messages.SettingsJumpHostNone
 	}
-	if host, ok := state.hostByRouteEnd(state.jumpHost, "", "", 0); ok {
+	if host, ok := state.hostByRouteEnd(state.jumpHost, "", "", 0, Host.isSSH); ok {
 		return host.Label
 	}
 	return state.messages.SettingsJumpHostNone

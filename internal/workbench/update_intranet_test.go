@@ -1,6 +1,7 @@
 package workbench
 
 import (
+	"net/http"
 	"testing"
 
 	"motty/internal/netguard"
@@ -17,7 +18,7 @@ func TestTheUpdateCheckSaysTheIntranetModeRefusedIt(t *testing.T) {
 
 	_, options := newWorld(t)
 	options.Invalidate = func() {}
-	options.CheckUpdate = func() (update.Release, error) {
+	options.CheckUpdate = func(*http.Client) (update.Release, error) {
 		return update.Release{}, netguard.CheckURL("https://api.github.com/repos/t8y2/motty/releases/latest")
 	}
 	state := newTestState(t, options)

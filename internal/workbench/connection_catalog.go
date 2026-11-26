@@ -476,7 +476,7 @@ func (catalog *hostCatalog) defaultJumpFor(target Host) (jump Host, ok bool) {
 	if !catalog.defaultJump.on || catalog.defaultJump.catalogID == "" {
 		return Host{}, false
 	}
-	resolved, ok := catalog.hostByRouteEnd(catalog.defaultJump.catalogID, "", "", 0)
+	resolved, ok := catalog.hostByRouteEnd(catalog.defaultJump.catalogID, "", "", 0, Host.isSSH)
 	if !ok || resolved.ID == target.ID {
 		return Host{}, false
 	}

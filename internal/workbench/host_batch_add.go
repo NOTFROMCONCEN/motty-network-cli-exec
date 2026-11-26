@@ -73,7 +73,7 @@ func (state *State) submitBatchHosts(form *formDialog) string {
 		builder.plan.hosts = append(builder.plan.hosts, host)
 		builder.connections[key] = host
 	}
-	if err := state.stageSessionImport(builder.plan); err != nil {
+	if err := state.stageSessionImport(builder.plan, true); err != nil {
 		return fmt.Sprintf(state.messages.Tools.ImportHostSaveFailedFmt, err)
 	}
 	state.completeSessionImport(builder.plan, fmt.Sprintf(state.messages.BatchAddSummaryFmt, len(builder.plan.hosts), builder.plan.duplicateHosts), 0)
