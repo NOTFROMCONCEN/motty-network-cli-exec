@@ -1,0 +1,26 @@
+{
+  "version": "0.4.35.2",
+  "tag": "v0.4.35-netcli-build.2-genshin",
+  "source": "https://github.com/NOTFROMCONCEN/motty-network-cli-exec/releases/tag/v0.4.35-netcli-build.2-genshin",
+  "notes": "基于上游 t8y2/motty **v0.4.35**（tag 提交 `d19eda8a`）的 Genshin 系列版本（0.4.35.2）。基线未变，构建号延续 +1。\n\n本版是一个修复版：堵掉更新源里一个会把 fork 替换回上游的隐患。上游 v0.4.35 全量功能与 fork 自身功能（跳板模式、内网模式、HTTP 文件服务器、Net CLI 设备直发、AI 网络运维工具、UI 一期状态栏/紧凑密度）均与 0.4.35.1 一致。\n\n## 修复：更新只查 fork 自己的发布，不再读上游 CNB 镜像\n\n- 上游在 v0.4.18 引入了「更新源可选：官方 ↔ CNB（中国大陆镜像）」。但 **CNB 镜像承载的是上游 `dbxio.com/motty` 及其签名钥匙，并没有本 fork 的构建**。\n- 隐患：一旦上游版本号超过 fork 的基线，选了 CNB 源的机器会从镜像读到**上游的安装包**并据此「更新」，等于把 fork 覆盖回上游、丢掉跳板模式/内网模式/设备直发等全部 fork 功能。当前上游 0.4.35 尚低于 fork 0.4.35.x，所以暂未触发，但属于必须提前堵掉的定时问题。\n- 处理：\n  - 更新检查无论保存的源是什么，**一律走 fork 自己的发布 feed**（GitHub `NOTFROMCONCEN/motty-network-cli-exec` + jsDelivr 镜像），不再读 CNB。\n  - 设置里的更新源选择器**移除 CNB 选项**，只保留官方；旧配置里保存的 CNB 在恢复时归一为官方。\n- 对绝大多数用户无感：fork 的自动更新本来就走自己的 feed，此修复只是把那条不该存在的上游分支彻底封死。\n\n## 验证\n\n- `go build` / `go vet` 干净；`internal/update` 全量测试、workbench 更新源/跳板/内网相关测试全过\n- 仅改 `internal/update/update.go`、`internal/workbench/settings.go`、`internal/workbench/sftp_extra.go` 三处，无其它行为变化\n\n## 已知限制\n\n- 迈普（MyPower）支持仍依据厂商手册推导，未在真机验证\n- 三段号旧版本（0.3.1~0.3.4）收不到自动更新，需手动装一次四段版\n- 本版仅发布 Windows 与 Linux（amd64）\n\n\u003e 0.4.35.1 及更早的四段版可应用内自动更新到本版。内网环境请开启「设置 → 安全 → 内网模式」。",
+  "files": [
+    {
+      "name": "motty-0.4.35.2-windows-amd64-setup.exe",
+      "size": 15330186,
+      "sha256": "036889e4142578070b65b77fdcdfe620f82ad26e6286f74e997a2c5220da4f24",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2cFhoOW4vMmJ3QWRkSFVES2JHRWVIVmFWZGZDeGtXZ25GalRZTnZRcjhEZjZJeDAvRFFMTTdocjFUOGhYMlhkSUJNOUh5TVU0NHkzejRkYXBCSFI4UTA9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTU3NDYzNzkJZmlsZTptb3R0eS0wLjQuMzUuMi13aW5kb3dzLWFtZDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNC4zNS4yCkhTb3NteUg4cHNpQmI4ckRJZjZiR3VGeTBhVFNLZHdCQUt0eUpNTmhuekNtYWZrU1pTRHhzaEl5bHZZeWIxcXNyUkNnNnRvaFFhZnNsZzNUbUhPd0F3PT0K"
+    },
+    {
+      "name": "motty-0.4.35.2-windows-amd64.zip",
+      "size": 20805051,
+      "sha256": "e7ed8e0adc7cad4a212e1e96c00ab50ada6b0821fb48582291d464359ccd182e",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2cEVYLzAvRU0wRytrRnIveisxSDg1MGp6LytmUXhjZmJaSnhDNHQvNG13L0pGc2c0YU12a0l4MEFmUnRxQzdLcktEakJpVGp6RC9OaGFDcURpOENhUXM9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTU3NDYzODAJZmlsZTptb3R0eS0wLjQuMzUuMi13aW5kb3dzLWFtZDY0LnppcAl2ZXJzaW9uOjAuNC4zNS4yCklaVU1lTFR4cUw1dlBESFRFVmlwYTBOY2d1U0JKc3doQ29YWUJ3YTF4cFVjRVBpS0h2Qk5CWGVHQzVuNFNMVU53dzc1SFhybUFlTU5Bd0RBdmpSOERBPT0K"
+    },
+    {
+      "name": "motty-0.4.35.2-linux-amd64.tar.gz",
+      "size": 20625871,
+      "sha256": "23b3badfdf900f279d2f9cf5559cff6c0c578628d15af92d70d3651fc9efb8b2",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRoZSBNb3R0eSByZWxlYXNlIGtleQpSVVFxdjZ3K1hPZzk2aFpyTnNBd0I4OUxjWENaNTZqdUEvT3FITm1RNnNsaE95N0pZMUJ0WUxnN3p4UFdDSytJZXlJOUVGeEFNd25nQnpEMjNIN1dtdDFVSHo3bW5NMHZ6Z1E9CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3OTU3NDYzODAJZmlsZTptb3R0eS0wLjQuMzUuMi1saW51eC1hbWQ2NC50YXIuZ3oJdmVyc2lvbjowLjQuMzUuMgpsaEZtbnZJSittWlJWY29aQ3gzRkRlOWw5aWl4V2swWEcwZ290YnRXdUVBWFhicEV1WlNSWXJHY21udU1LSVN2U2xiVHhVQzQvY3F1d3NaOWxsMnVEZz09Cg=="
+    }
+  ]
+}
