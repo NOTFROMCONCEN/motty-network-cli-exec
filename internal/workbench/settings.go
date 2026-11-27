@@ -659,7 +659,7 @@ var (
 	settingsCloseChoices           = [...]closeAction{closeToTray, closeQuits}
 	settingsKeepWindowsChoices     = [...]keepWindowsPolicy{keepWindowsAlways, keepWindowsNever, keepWindowsAsk}
 	settingsRelaunchChoices        = [...]relaunchAction{relaunchRaise, relaunchNewWindow}
-	settingsUpdateSourceChoices    = [...]update.Source{update.SourceOfficial, update.SourceCNB}
+	settingsUpdateSourceChoices    = [...]update.Source{update.SourceOfficial}
 )
 
 // settingsUpdateSourceLabel names an update source for its choice row.

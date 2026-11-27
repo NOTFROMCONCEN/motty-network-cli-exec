@@ -712,10 +712,10 @@ func (state *State) restoreSFTPSettings(saved savedState) {
 	// The check is off until the user turns it on — the README says so, and a
 	// copy that has never saved a choice must not start calling the release
 	// feed on its own. Older files written before this line say "on" for the
-	// same read, and keep it. The fork feed ignores the source choice, which
-	// stays for the surface upstream shares.
+	// same read, and keep it. The fork has no CNB copy of its builds, so a saved
+	// source is normalized to the official one; the fork feed ignores it anyway.
 	state.updateAtStart = saved.UpdateCheck == "on"
-	state.update.source = update.ParseSource(saved.UpdateSource)
+	state.update.source = update.SourceOfficial
 	state.closeAction = closeActionFromString(saved.CloseAction)
 	state.keepWindows = keepWindowsPolicyFromString(saved.KeepWindowsOnExit)
 	state.relaunchAction = relaunchActionFromString(saved.RelaunchAction)

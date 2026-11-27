@@ -268,26 +268,17 @@ func CheckPackage(ctx context.Context, client *http.Client, goos, goarch string,
 	return checkFork(ctx, client, goos, goarch, pkg)
 }
 
-// CheckPackageFrom asks the source the user selected. The CNB source reads the
-// same signed feed from the CNB copy and points the package at the CNB release.
-// When that copy cannot answer, the official feeds still decide, so a mirror
-// that is not published yet never makes updates impossible; the returned error
-// is then the CNB one, because that is the source the user chose. A .deb has no
-// asset in the signed feed, so it keeps the official path whatever the source.
+// CheckPackageFrom keeps the source-selected surface upstream shares, but the
+// fork always checks its own releases. The CNB copy mirrors upstream, not this
+// fork, so reading it would offer upstream's package and drop the fork's
+// features; the source argument is accepted and ignored. See the body.
 func CheckPackageFrom(ctx context.Context, client *http.Client, goos, goarch string, pkg Package, source Source) (Release, error) {
-	if source != SourceCNB || pkg == PackageDeb {
-		return CheckPackage(ctx, client, goos, goarch, pkg)
-	}
-	attempt, cancel := context.WithTimeout(ctx, feedAttemptTimeout)
-	release, err := checkVivaPackageAt(attempt, client, CNBFeed, []string{VivaPublicKey}, goos, goarch, pkg)
-	cancel()
-	if err == nil {
-		return cnbRelease(release, goos, goarch, pkg), nil
-	}
-	if official, officialErr := CheckPackage(ctx, client, goos, goarch, pkg); officialErr == nil {
-		return official, nil
-	}
-	return Release{}, err
+	// fork: the CNB copy mirrors the upstream repository, not this fork, and the
+	// fork's builds are not published there. Reading it would offer upstream's
+	// package once upstream's version passes the fork's base, replacing the fork
+	// and dropping its features. Whatever the saved source, the fork checks its
+	// own releases; the source argument stays for the surface upstream shares.
+	return CheckPackage(ctx, client, goos, goarch, pkg)
 }
 
 // cnbRelease points the package and the patches of a release read from the CNB
